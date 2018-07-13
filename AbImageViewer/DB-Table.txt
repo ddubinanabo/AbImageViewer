@@ -1,0 +1,48 @@
+CREATE TABLE AB_DOC
+(
+	ID VARCHAR(32),
+    IP VARCHAR(15),
+    IMG_WID NUMBER,
+    IMG_HGT NUMBER,
+    IMG_SRC BLOB,
+    IMG_SRC_SIZ NUMBER,
+    IMG_RSLT BLOB,
+    IMG_RSLT_SIZ NUMBER,
+    SHAPES CLOB,
+    THUMB_WID NUMBER,
+    THUMB_HGT NUMBER,
+    THUMB_SRC BLOB,
+    THUMB_SRC_SIZ NUMBER,
+    REG_DT VARCHAR(14)
+);
+
+--
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+--
+
+SELECT *
+FROM AB_DOC
+;
+
+SELECT ID, COUNT(*)
+FROM AB_DOC
+GROUP BY ID
+;
+
+SELECT
+	ID,
+    SEQ,
+    IP,
+    IMG_WID,
+    IMG_HGT,
+    IMG_SRC_SIZ,
+    IMG_RSLT_SIZ,
+    SHAPES,
+    THUMB_WID,
+    THUMB_HGT,
+    THUMB_SRC_SIZ,
+    REG_DT
+FROM AB_DOC
+WHERE ID=:ID
+ORDER BY SEQ
+

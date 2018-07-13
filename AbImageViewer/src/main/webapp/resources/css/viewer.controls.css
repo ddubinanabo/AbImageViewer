@@ -1,0 +1,1319 @@
+
+/* ------------------------------------------------------------------------------- */
+/* Shape Styler */
+/* ------------------------------------------------------------------------------- */
+
+.abstyler {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	display: inline-block;
+}
+
+.abstyler * {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	margin: 0;
+	padding: 0;
+
+	font-size: 12px;
+	vertical-align: middle;
+}
+
+.abstyler fieldset.abstyler-group {
+	display: inline-block;
+	position: relative;
+	border: 0;
+}
+
+.abstyler fieldset.abstyler-group>legend {
+	letter-spacing: -1px;
+	line-height: 37px;
+	float: left;
+	font-weight: 700;
+	position: relative;
+	margin: 0 5px;
+	background-color2: #f3f3f3;
+    border-left: 1px solid #f3f3f3;
+    font-size: 12px;
+    padding: 0 10px;
+}
+/*
+.abstyler fieldset.abstyler-group>legend:before {
+	content: "|";
+	margin: 0 5px;
+}
+
+.abstyler fieldset.abstyler-group>legend:after {
+	content: "|";
+	margin: 0 5px;
+}
+*/
+.abstyler .abstyler-field {
+	display: inline-block;
+	position: relative;
+	line-height: 37px;
+}
+
+.abstyler .abstyler-field .abstyler-field-text {
+	display: inline-block;
+	margin: 0 5px;
+	letter-spacing: -1px;
+}
+
+.abstyler .abstyler-field .abstyler-input {
+	display: inline-block;
+	position: relative;
+	vertical-align: middle;
+}
+
+.abstyler .abstyler-field .abstyler-input[abs-kind="color"] {
+	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAG0lEQVR42mM4c+bMf2SMDhjooABdAF0DHRQAAJ4P6+G77p9NAAAAAElFTkSuQmCC);
+    width: 30px;
+    height: 20px;
+    border: 1px solid #d4d4d4;
+    color: #909090;
+}
+
+.abstyler .abstyler-field .abstyler-input[abs-kind="color"]>div {
+	display: inline-block;
+	width: 100%;
+	height: 18px;
+	line-height: 17px;
+	font-size: 8px;
+	text-align: center;
+	vertical-align: top;
+
+	cursor: default;
+}
+
+.abstyler .abstyler-field .custom-select {
+	display: inline-block;
+	background: #fff;
+	border: 0;
+
+	-webkit-box-shadow: none;
+	-moz-box-shadow: none;
+	box-shadow: none;
+
+	padding: 0 20px 0 0;
+	min-width: 45px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.abstyler .abstyler-field .custom-select:after {
+	right: 5px;
+}
+
+.abstyler .abstyler-field select {
+	width: -webkit-calc(100% + 20px);
+	width: -moz-calc(100% + 20px);
+	width: calc(100% + 20px);
+	
+	margin-bottom: 2px;
+    height: 26px;
+    line-height: 26px;
+    border: 0;
+	font-size: 12px;
+	
+	-webkit-transition: -webkit-box-shadow 0.5s;
+	-moz-transition: -moz-box-shadow 0.5s;
+    transition: box-shadow 0.5s;
+	
+	padding: 0;
+}
+
+.abstyler .abstyler-field select>option {
+	font-size: 14px;
+}
+
+.abstyler .abstyler-field>label {	
+	letter-spacing: -1px;
+	margin: 0 5px;
+	cursor: pointer;
+}
+
+.abstyler .abstyler-field label>div {
+    display: inline-block;
+    position: absolute;
+    font-size: 1px;
+    left: 0px;
+    top: 5px;
+    right: 0px;
+	bottom: 5px;
+	
+	-webkit-border-radius: 3px;
+    border-radius: 2px;
+}
+
+.abstyler .abstyler-field input:checked ~ div {
+    background: rgba(26,161,253,.2);
+    border: 1px solid #1aa1fd;
+}
+
+.abstyler .abstyler-field .abstyler-input[abs-kind="check"] {
+	display: none;
+	margin2: 0 0 0 5px;
+}
+
+.abstyler .abstyler-field input[type="text"] {
+	width: 40px;
+	height: 26px;
+	-webkit-border-radius: 3px;
+    border-radius: 2px;
+}
+
+.abstyler .abstyler-field .abstyler-input-suffix {
+	letter-spacing: -1px;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Color Picker */
+/* ------------------------------------------------------------------------------- */
+
+.ab-color-picker {
+	position: absolute;
+	visibility: hidden;
+
+	-webkit-box-shadow: 0px 12px 34px -9px rgba(0,0,0,0.51);
+	-moz-box-shadow: 0px 12px 34px -9px rgba(0,0,0,0.51);
+	box-shadow: 0px 12px 34px -9px rgba(0,0,0,0.51);
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Loader */
+/* ------------------------------------------------------------------------------- */
+
+.loader {
+	border2: 16px solid #f3f3f3;
+	border: 5px solid transparent;
+	border-radius: 50%;
+	border-top: 5px solid #3498db;
+	width: 60px;
+	height: 60px;
+
+	-webkit-animation: spin 2s linear infinite; /* Safari */
+	animation: spin 2s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+	0% { -webkit-transform: rotate(0deg); }
+	100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Progress Bar */
+/* ------------------------------------------------------------------------------- */
+
+.progress {
+	width: 100%;
+	height: 30px;
+	background: #DCDCDC;
+}
+
+.progress .bar {
+	width: 20%;
+	height: 100%;
+	background: #2196F3;
+}
+
+
+/* ------------------------------------------------------------------------------- */
+/* Checkbox */
+/* ------------------------------------------------------------------------------- */
+
+/* The container */
+.checkbox {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-moz-tap-highlight-color: rgba(0, 0, 0, 0);
+	
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+	font-size: 22px;
+}
+
+/* Hide the browser's default checkbox */
+.checkbox input {
+	display: none;
+	/* position: absolute;
+	cursor: pointer;
+	left: 0;
+
+	opacity: 0; */
+}
+
+/* Create a custom checkbox */
+.checkbox .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 25px;
+    width: 25px;
+	background-color: #eee;
+	
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+
+}
+
+/* On mouse-over, add a grey background color */
+.checkbox:hover input ~ .checkmark {
+    background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.checkbox input:checked ~ .checkmark {
+    background-color: #2196F3;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkbox .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+/* Show the checkmark when checked */
+.checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+/* Style the checkmark/indicator */
+.checkbox .checkmark:after {
+    left: 9px;
+    top: 5px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+	border-width: 0 3px 3px 0;
+	
+    -webkit-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#f2f6f8+0,b5c6d0+43,b5c6d0+51,d8e1e7+66,e0eff9+100 */
+/*
+.checkpoint .checkmark {
+	background: rgba(242,246,248, 0.8);
+	background: -moz-linear-gradient(-45deg, rgba(242,246,248,0.6) 0%, rgba(181,198,208, 0.8) 43%, rgba(181,198,208, 0.8) 51%, rgba(216,225,231, 0.8) 66%, rgba(224,239,249, 0.8) 100%);
+	background: -webkit-linear-gradient(-45deg, rgba(242,246,248,0.6) 0%,rgba(181,198,208, 0.8) 43%,rgba(181,198,208, 0.8) 51%,rgba(216,225,231, 0.8) 66%,rgba(224,239,249, 0.8) 100%);
+	background: linear-gradient(135deg, rgba(242,246,248,0.6) 0%,rgba(181,198,208, 0.8) 43%,rgba(181,198,208, 0.8) 51%,rgba(216,225,231, 0.8) 66%,rgba(224,239,249, 0.8) 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='rgba(242,246,248, 0.8)', endColorstr='rgba(224,239,249, 0.8)',GradientType=1 );
+}
+*/
+
+/* ------------------------------------------------------------------------------- */
+/* Checkbox - Circle */
+/* ------------------------------------------------------------------------------- */
+
+/* The container */
+.checkpoint {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-moz-tap-highlight-color: rgba(0, 0, 0, 0);
+		
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+	font-size: 22px;
+}
+
+/* Hide the browser's default checkbox */
+.checkpoint input {
+	display: none;
+	/* position: absolute;
+	cursor: pointer;
+	left: 0;
+
+	opacity: 0; */
+}
+
+/* Create a custom checkbox */
+.checkpoint .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 10px;
+    width: 10px;
+	background-color: #eee;
+	
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+
+}
+
+/* On mouse-over, add a grey background color */
+.checkpoint:hover input ~ .checkmark {
+    background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.checkpoint input:checked ~ .checkmark { background-color: #2196F3; }
+/*
+.checkpoint input:checked ~ .checkmark, .checkpoint input[checked="checked"] ~ .checkmark { background-color: #2196F3; }
+*/
+
+/* ------------------------------------------------------------------------------- */
+/* Radio */
+/* ------------------------------------------------------------------------------- */
+
+/* Customize the label (the container) */
+.radiobox {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-moz-tap-highlight-color: rgba(0, 0, 0, 0);
+	
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+
+	display: block;
+	position: relative;
+	padding-left: 35px;
+	cursor: pointer;
+	font-size: 22px;
+}
+
+/* Hide the browser's default radio button */
+.radiobox input {
+	position: absolute;
+	opacity: 0;
+}
+
+/* Create a custom radio button */
+.radiobox .checkmark {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 25px;
+	width: 25px;
+	background-color: #eee;
+	border-radius: 50%;
+}
+
+/* On mouse-over, add a grey background color */
+.radiobox:hover input ~ .checkmark {
+background-color: #ccc;
+}
+
+/* When the radio button is checked, add a blue background */
+.radiobox input:checked ~ .checkmark {
+background-color: #2196F3;
+}
+
+/* Create the indicator (the dot/circle - hidden when not checked) */
+.radiobox .checkmark:after {
+content: "";
+position: absolute;
+display: none;
+}
+
+/* Show the indicator (dot/circle) when checked */
+.radiobox input:checked ~ .checkmark:after {
+	display: block;
+}
+
+/* Style the indicator (dot/circle) */
+.radiobox .checkmark:after {
+	top: 9px;
+	left: 9px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: white;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Checkbox - Bookmark */
+/* ------------------------------------------------------------------------------- */
+
+/*
+.bookmark {
+	border: 10px solid rgba(255, 0, 0, 0.2);
+	border-top: 0;
+	border-bottom: 10px solid transparent;
+	height: 20px;
+	width: 0px;
+}
+
+.bookmark:hover {
+	border-left-color: rgba(255, 0, 0, 0.4);
+	border-right-color: rgba(255, 0, 0, 0.4);
+}
+*/
+
+.bookmark {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-moz-tap-highlight-color: rgba(0, 0, 0, 0);
+	
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	
+    display: block;
+	position: relative;
+	padding: 0;
+
+	padding-left: 12px;
+	
+    cursor: pointer;
+}
+
+/* Hide the browser's default checkbox */
+.bookmark input {
+	display: none;
+}
+
+/* Create a custom checkbox */
+.bookmark .checkmark {
+    position: absolute;
+    top: 0;
+	left: 0px;
+	
+	border: 6px solid rgba(255,126,126, 0.2);
+	border-top: 0;
+	border-bottom: 8px solid transparent;
+	height: 14px;
+	width: 0px;
+
+	padding: 0;
+}
+
+/* On mouse-over, add a grey background color */
+.bookmark:hover input ~ .checkmark {
+	border-left-color: rgba(255,126,126, 0.4);
+	border-right-color: rgba(255,126,126, 0.4);
+}
+
+/* When the checkbox is checked, add a blue background */
+.bookmark input:checked ~ .checkmark {
+	border-left-color: rgba(169, 38, 38, 0.8);
+	border-right-color: rgba(169, 38, 38, 0.8);
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.bookmark .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+
+/*
+.bookmark {
+	width: 60px;
+	box-sizing: border-box;
+	height: 80px;
+	border: (60px * .5) solid red;
+	border-bottom: 15px solid transparent;
+	border-top: none;
+}
+
+.bookmark a {
+	display: block;
+	box-sizing: border-box;
+	height: 60px;
+	width: 60px;
+	margin-left: 60px * -.5;
+	text-align: center;
+	padding: 20px;
+	color: white;
+	text-decoration: none;
+}
+
+.bookmark a:hover {
+    border-left-color: darken(red, 20%);
+    border-right-color: darken(red, 20%);
+}
+*/
+
+/*
+.bookmark{
+	background: #b00;
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b00), color-stop(100%,#900));
+	background-image: -webkit-linear-gradient(top, #b00 0%, #900 100%);
+	background-image: -moz-linear-gradient(top, #b00 0%, #900 100%);
+	background-image: -o-linear-gradient(top, #b00 0%, #900 100%);
+	background-image: -ms-linear-gradient(top, #b00 0%, #b00 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b00', endColorstr='#900',GradientType=0 );
+	background-image: linear-gradient(top, #b00 0%, #900 100%);
+
+	height:30px;
+	position:absolute;top:0;right:20px;
+	width:20px;
+}
+
+.bookmark:after{
+	content:'';
+	display:block;
+	border:10px solid transparent;
+	border-bottom-color: #fff;
+	position:absolute;
+	bottom:0;
+}
+*/
+
+/* ------------------------------------------------------------------------------- */
+/* Toolbar */
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar ul {
+	padding: 0;
+}
+
+.tb-toolbar li {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	position: relative;
+	height: 100%;
+}
+
+.tb-toolbar [tb-type="click"]::before, .tb-toolbar [tb-type="radio"]::before, .tb-toolbar [tb-type="check"]::before {
+	content: " ";
+	position: absolute;
+	left: 5px;
+	top: 5px;
+	right: 5px;
+	height: 38px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.tb-toolbar ul.vert [tb-type]::before {
+	content: " ";
+	position: absolute;
+	left: 2px;
+	top: 2px;
+	right: 2px;
+	height: 38px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.tb-toolbar [tb-type="click"], .tb-toolbar [tb-type="radio"], .tb-toolbar [tb-type="check"] {
+	display: inline-block;
+	cursor: pointer;
+}
+
+.tb-toolbar [tb-type="click"]:hover::before, .tb-toolbar [tb-type="radio"]:hover::before, .tb-toolbar [tb-type="check"]:hover::before {
+	background-color: rgba(157,215,253,.2);
+	border: 1px solid rgba(157,215,253,.8);
+}
+
+.tb-toolbar [tb-status="checked"]::before {
+	background-color: rgba(26,161,253,.2);
+	border: 1px solid rgba(26,161,253,.8);
+}
+
+.tb-toolbar [tb-status="checked"]:hover::before {
+	background-color: rgba(26,161,253,.4);
+	border: 1px solid rgba(26,161,253,1);
+}
+
+.tb-toolbar img[tb-type] {
+	border: 1px solid transparent;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.tb-toolbar img[tb-type]:hover {
+	background-color: rgba(157,215,253,.2);
+	border: 1px solid rgba(157,215,253,.8);
+}
+
+/*
+.tb-toolbar div[tb-type] {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	position: relative;
+	vertical-align: middle;
+
+	height: 25px;
+}
+
+.tb-toolbar div.tb-lpad[tb-type]::before {
+	content: " ";
+	position: absolute;
+	left: 7px;
+	top: 2px;
+	right: 2px;
+	height: 20px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.tb-toolbar div.tb-rpad[tb-type]::before {
+	content: " ";
+	position: absolute;
+	left: 2px;
+	top: 2px;
+	right: 7px;
+	height: 20px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+*/
+
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar ul.horiz {
+	display: table;
+}
+
+.tb-toolbar ul.horiz li {
+	display: table-cell;
+	vertical-align: middle;
+
+	height: 100%;
+}
+
+.tb-toolbar ul.horiz li.sep {
+	border-right: 1px solid #ECECEC;
+}
+
+.tb-toolbar ul.horiz li img {
+	vertical-align: middle;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar ul.vert {
+	text-align: center;
+	margin: 10px 0 0;
+}
+
+.tb-toolbar ul.vert li {
+	width: 100%;
+	padding: 10px 0 10px;
+}
+
+.tb-toolbar ul.vert li.sep {
+	border-bottom: 1px solid #ECECEC;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar ul.inline {
+	display: inline-block;
+	margin: 0;
+	padding: 0;
+}
+
+.tb-toolbar ul.inline li {
+	display: inline-block;
+	padding: 4px;
+}
+
+.tb-toolbar ul.inline li.sep {
+	border-bottom: 1px solid #ECECEC;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar ul.tb-main {
+	height: 50px;
+}
+
+.tb-toolbar ul.tb-main li img.tb-btn {
+	padding: 0 20px;
+}
+
+.tb-toolbar .vblock {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	height: 40px;
+	border-bottom: 1px solid #ECECEC;
+}
+
+.tb-toolbar .vhblock {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	height: 20px;
+	border-top: 1px solid #ECECEC;
+	border-bottom: 1px solid #ECECEC;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.tb-toolbar .tb-lmar {
+	margin: 0 5px 0 10px;
+}
+
+.tb-toolbar .tb-rmar {
+	margin: 0 10px 0 5px;
+}
+
+.tb-toolbar input[type="text"].center {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	text-align: center;
+	height: 26px;
+	line-height: 26px;
+
+	font-size: 16px;
+	padding: 0;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;	
+}
+
+.tb-toolbar select2 {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	margin: 0 0 0 10px;
+	
+	width: 100px;
+	height: 30px;
+	background: #fff;
+	border: 1px solid #e7e7e7;
+	font-size: 14px;
+	color: #858585;
+	padding-left: 12px;
+}
+
+.tb-toolbar select {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	-webkit-transition: -webkit-box-shadow 0.5s;
+	-moz-transition: -moz-box-shadow 0.5s;
+    transition: box-shadow 0.5s;
+
+	width: 110px;
+	padding: 5px 30px 5px 10px;
+
+	font-size: 14px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;	
+}
+
+.tb-toolbar select:hover {
+	-webkit-box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+	-moz-box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+	box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+
+	color: #222; /* Match-02 */
+}
+
+.tb-toolbar .custom-select {
+	background: #f3f3f3; /* Old browsers */
+	background: #fff -webkit-gradient(linear, left top, left bottom, from(#ffffff),to(rgba(229,229,229,.36)));
+	background: #fff linear-gradient(to bottom, #ffffff 0%,rgba(229,229,229,.36) 100%); /* W3C */
+
+	margin: 0 0 0 10px;
+
+	border: 1px solid #CDCDCD;
+	
+	-webkit-box-shadow: 0 1px 0 1px rgba(229,229,229,.4);
+	-moz-box-shadow: 0 1px 0 1px rgba(229,229,229,.4);
+	box-shadow: 0 1px 0 1px rgba(229,229,229,.4);
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;	
+}
+
+.tb-toolbar [tb-enabled="disabled"] {
+	background-color2: #FDFDFD;
+	background-color: transparent;
+	cursor: default;
+}
+
+.tb-toolbar img[tb-enabled="disabled"]:hover, .tb-toolbar [tb-enabled="disabled"]:hover, .tb-toolbar [tb-enabled="disabled"]::before, .tb-toolbar [tb-enabled="disabled"]:hover::before {
+	background-color2: rgba(253,253,253,.2);
+	background-color: transparent;
+	border-color: transparent;	
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Image List View */
+/* ------------------------------------------------------------------------------- */
+
+ol[lt-topic="cover"] .cover .content::before { content: " "; }
+
+ol[lt-status="ready"] .cover img { display: none; }
+ol[lt-status="ready"] .cover .content {
+	position: relative;
+	border-radius: 50%;
+
+	x-border: 28px solid #f3f3f3;
+	x-border1: 28px solid transparent;
+	x-border-top: 28px solid #3498db;
+	x-width: 5px;
+	x-height: 5px;
+	x-left: 38px;
+
+	border: 5px solid transparent;
+	border-top: 5px solid #3498db;
+	width: 60px;
+	height: 60px;
+	left: 35px;
+
+	-webkit-animation: spin 2s linear infinite;
+	animation: spin 2s linear infinite;
+}
+/*
+ol[lt-status="ready"] .cover .content::before { content: "준비 중"; font-size: 12px; }
+*/
+ol[lt-status="ready"] .bookmark, ol[lt-status="ready"] .info { display: none; }
+
+ol[lt-status="loading"] .cover img { display: none; }
+ol[lt-status="loading"] .cover .content {
+	position: relative;
+	border-radius: 50%;
+
+	x-border: 28px solid #f3f3f3;
+	x-border1: 28px solid transparent;
+	x-border-top: 28px solid #3498db;
+	x-width: 5px;
+	x-height: 5px;
+	x-left: 38px;
+
+	border: 5px solid transparent;
+	border-top: 5px solid #3498db;
+	width: 60px;
+	height: 60px;
+	left: 35px;
+
+	-webkit-animation: spin 2s linear infinite; /* Safari */
+	animation: spin 2s linear infinite;
+}
+ol[lt-status="loading"] .bookmark, ol[lt-status="loading"] .info { display: none; }
+
+ol[lt-status="loaded"] .cover img { display: inline-block; }
+ol[lt-status="loaded"] .cover .content { display: none; }
+
+ol[lt-status="error"] .cover img { display: none; }
+ol[lt-status="error"] .cover .content { display: inline-block; cursor: pointer; }
+ol[lt-status="error"] .cover .content::before { content: "로드 실패"; font-size: 12px; }
+ol[lt-status="error"] .cover .content::after {
+	content: "재시도";
+	font-size: 12px;
+	display: block;
+	text-decoration: underline;
+	color: rgb(43, 120, 209);
+}
+ol[lt-status="error"] .bookmark, ol[lt-status="error"] .info { display: none; }
+
+/* ------------------------------------------------------------------------------- */
+/* Grid Pager */
+/* ------------------------------------------------------------------------------- */
+
+nav.foot { display: table; }
+.paginate {
+	display: table-cell;
+	font-size: 12px;
+	text-align:center;
+	vertical-align: middle;
+}
+.paginate ol.pages {
+	margin: 0;
+	display: inline-block;
+	vertical-align:middle;
+}
+.paginate li {
+	margin: 0 2px;
+	display: inline-block;
+	vertical-align:middle;
+}
+.paginate li a {
+	display:block;
+	width:24px;
+	height:22px;
+	line-height:22px;
+	border:1px solid #999;
+	background:#fff;
+	border-radius:3px;
+}
+.paginate .curpage a { cursor: default; }
+.paginate .curpage a, .paginate li:hover a {
+	color:#fff;
+	border:1px solid #6a5447;
+	background:#8b705f;
+}
+.paginate .first { background: url(../icon/first.png); }
+.paginate .last { background: url(../icon/last.png); }
+.paginate .prev { background: url(../icon/prev.png); }
+.paginate .next { background: url(../icon/next.png); }
+.paginate .block {
+	display: inline-block;
+	width: 16px;
+	height: 24px;
+	background-repeat: no-repeat;
+	background-position: center center;
+	vertical-align:middle;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Message Box */
+/* ------------------------------------------------------------------------------- */
+
+.modal, .modal * {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+.modal {
+	-webkit-transform: translate3d(0, 0, 0);
+	-moz-transform: translate3d(0, 0, 0);
+	-ms-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
+	
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 0;
+	height: 0;
+
+	-webkit-transition: opacity 300ms cubic-bezier(0.45, 0, 0, 1);
+	-moz-transition: opacity 300ms cubic-bezier(0.45, 0, 0, 1);
+	transition: opacity 300ms cubic-bezier(0.45, 0, 0, 1);
+
+	opacity: 0;
+	
+	overflow: auto;
+	background-color: rgba(0,0,0,.4);
+}
+
+.modal .body {
+	position: relative;
+	background: #fff;
+	margin: -500px auto 0;
+	padding: 20px;
+	border2: 1px solid #888;
+	max-width: 600px;
+
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+
+	-webkit-transition: margin 300ms cubic-bezier(0.45, 0, 0, 1);
+	-moz-transition: margin 300ms cubic-bezier(0.45, 0, 0, 1);
+	transition: margin 300ms cubic-bezier(0.45, 0, 0, 1);
+
+	-webkit-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+	-moz-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+    box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+}
+
+
+.modal .close {
+	color: #aaa;
+	position: absolute;
+	right: 10px;
+	top: 0;
+	font-size: 28px;
+	font-weight: bold;
+	z-index: 1;
+}
+
+.modal .close:hover, .modal .close:focus {
+	color: black;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.modal .body>header {
+	position: relative;
+	padding: 5px;
+}
+
+.modal .body>div {
+	position: relative;
+	padding: 15px 5px;
+}
+
+.modal .body>footer {
+	position: relative;
+	padding: 5px;
+	text-align: center;
+}
+
+.modal .body>footer input[type="button"] {
+	color: black;	
+	border: 2px solid #e7e7e7;
+    border-radius: 5px;
+    background-color: rgba(0,0,0,0);
+    padding: 14px 28px;
+    font-size: 16px;
+    cursor: pointer;
+    display: inline-block;
+    margin: 4px 2px;
+}
+
+.modal .body>footer input[type="button"]:hover {
+	background: #e7e7e7;
+}
+
+.modal .body>footer input[type="button"]:focus {
+	border-color: #D1D1D1;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.modal .error, .modal .error .close, .modal .error>footer input[type="button"]{
+	background: #f44336;
+	color: white;
+}
+
+.modal .error .close:hover, .modal .error .close:focus { color: #FFD7D4; }
+
+.modal .error>footer input[type="button"]:hover {
+	background: #FFD7D4;
+	color: black;
+	border-color: #FFD7D4;
+}
+
+.modal .error>footer input[type="button"]:focus {
+	background: #FFD7D4;
+	color: black;
+	border-color: #D1D1D1;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.modal .success, .modal .success .close, .modal .success>footer input[type="button"] {
+	background: #6EBB76;
+	color: white;
+}
+
+.modal .success .close:hover, .modal .success .close:focus { color: #C9FFD1; }
+
+.modal .success>footer input[type="button"]:hover {
+	background: #C9FFD1;
+	color: black;
+	border-color: #C9FFD1;
+}
+
+.modal .success>footer input[type="button"]:focus {
+	background: #C9FFD1;
+	color: black;
+	border-color: #D1D1D1;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.modal .info, .modal .info .close, .modal .info>footer input[type="button"] {
+	background: #50A6F0;
+	color: white;
+}
+
+.modal .info .close:hover, .modal .info .close:focus { color: #B4DCFF; }
+
+.modal .info>footer input[type="button"]:hover {
+	background: #B4DCFF;
+	color: black;
+	border-color: #B4DCFF;
+}
+
+.modal .info>footer input[type="button"]:focus {
+	background: #B4DCFF;
+	color: black;
+	border-color: #D1D1D1;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.modal .warn, .modal .warn .close, .modal .warn>footer input[type="button"] {
+	background: #FEA955;
+	color: white;
+}
+
+.modal .warn .close:hover, .modal .warn .close:focus { color: #FEE3C8; }
+
+.modal .warn>footer input[type="button"]:hover {
+	background: #FEE3C8;
+	color: black;
+	border-color: #FEE3C8;
+}
+
+.modal .warn>footer input[type="button"]:focus {
+	background: #FEE3C8;
+	color: black;
+	border-color: #D1D1D1;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.modal-ready {
+	z-index: 100;
+	width: 100%;
+	height: 100%;
+}
+
+.modal-show {
+	opacity: 1;
+}
+
+.modal-show .body {
+	margin: 90px auto 0;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* Loading Box */
+/* ------------------------------------------------------------------------------- */
+
+.flybox, .flybox *, .center-flybox, .center-flybox * {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.flybox {
+	-webkit-transform: translate3d(0, 0, 0);
+	-moz-transform: translate3d(0, 0, 0);
+	-ms-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
+
+	display2: none;
+	
+	position: absolute;
+	z-index: 1000;
+
+	overflow: auto;
+
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+
+	background: #fff;
+
+	-webkit-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+	-moz-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+    box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+}
+
+.flybox>ul {
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+
+	-webkit-align-items: center;
+	align-items: center;
+
+	text-align: center;
+}
+
+.flybox>ul>li {
+	-webkit-flex: 1 1 auto;
+	-moz-flex: 1 1 auto;
+	-ms-flex: 1 1 auto;
+	flex: 1 1 auto;
+
+	display: inline-block;
+	position: relative;
+}
+
+.flybox .window {
+	display: inline-block;
+	padding: 20px;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.center-flybox {
+	-webkit-transform: translate3d(0, 0, 0);
+	-moz-transform: translate3d(0, 0, 0);
+	-ms-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
+
+	display2: none;
+	
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 1000;
+
+	overflow: auto;
+	background-color: rgba(0,0,0,.4);
+}
+
+.center-flybox>ul {
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+
+	-webkit-align-items: center;
+	align-items: center;
+
+	width: 100%;
+	height: 100%;
+
+	text-align: center;
+}
+
+.center-flybox>ul>li {
+	display: inline-block;
+	position: relative;
+	width: 100%;
+}
+
+.center-flybox .window {
+	display: inline-block;
+	height: 100%;
+	background: #fff;
+	padding: 20px;
+
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+
+	-webkit-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+	-moz-box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+    box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19);
+}
