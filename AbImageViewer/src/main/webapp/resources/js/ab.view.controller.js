@@ -9,8 +9,18 @@ $(function(){
 	
 	AbImageLoader.urlConverter = 'api/doc';
 	
-	AbImageViewer.prototype.saveUrl = 'api/save';
+	AbImageViewer.prototype.allocUrl = 'api/alloc';
+	AbImageViewer.prototype.saveUrl = 'api/save-image';
+	AbImageViewer.prototype.removeUrl = 'api/remove';
 	AbImageViewer.prototype.openImageUrl = 'api/images';
+	
+	/*
+	 * 이미지 전송 시 분할 사이즈
+	 * 기본값은 30KB
+	 * 
+	 * 전송이 너무 느리다 싶으면 이 사이즈를 더 키우세요 
+	 */
+	AbImageViewer.prototype.SPLIT_DATA_SIZE = 30720;
 
 	//-----------------------------------------------------------
 	

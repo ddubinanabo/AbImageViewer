@@ -62,6 +62,11 @@ function AbToolbar(options){
 		this.change(topic, e.val(), e);
 	}.bind(this);
 
+	this.keydownHandler = function(event){
+		event.stopPropagation(); // 현재 이벤트가 상위로 전파되지 않도록 중단한다.
+		event.stopImmediatePropagation(); // 현재 이벤트가 상위뿐 아니라 현재 레벨에 걸린 다른 이벤트도 동작하지 않도록 중단한다.			
+	}.bind(this);
+
 	this.keyupHandler = function(event){
 		if (event.keyCode == 13){
 			var e = $(event.currentTarget);
@@ -194,6 +199,7 @@ AbToolbar.prototype = {
 
 			switch(type){
 			case 'text':
+				e.keydown(this.keydownHandler);
 				e.keyup(this.keyupHandler);
 				e.change(this.inputChangeHandler);
 				break;

@@ -28,9 +28,11 @@
 <script type="text/javascript" src="resources/js/ab.viewer/15.ab.box.edit.indicator.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/16.ab.line.edit.indicator.js"></script>
 
+<script type="text/javascript" src="resources/js/ab.viewer/17-01.ab.shape.image.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/17.ab.shape.rect.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/18.ab.shape.textbox.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/19.ab.shape.ellipse.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/20-01.ab.shape.line.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/20.ab.shape.arrow.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/21.ab.shape.pen.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/22.ab.shape.highlight.pen.js"></script>

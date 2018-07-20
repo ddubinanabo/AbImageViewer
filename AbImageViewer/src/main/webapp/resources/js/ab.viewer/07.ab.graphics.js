@@ -665,11 +665,9 @@ var AbGraphics = {
 		},
 
 		toImage: function (ctx, type){
-			if (AbCommon.isBool(type)){
-				if (type) type = 'image/png';
-				else type = 'image/jpeg';
-			}else if (!type){
-				type = 'image/jpeg';
+			switch (type){
+			case 'jpg': case 'jpeg': type = 'image/jpeg'; break;
+			default: type = 'image/png'; break;
 			}
 			return ctx.canvas.toDataURL(type, 1);	
 		},
@@ -701,6 +699,109 @@ var AbGraphics = {
 			var ctx = this.createContext(imgElement.width, imgElement.height);
 			ctx.drawImage(imgElement, 0, 0);
 			return this.toImage(ctx, type);
+		},
+
+		DASH_SIZ: 8,
+		DOT_SIZ: 4,
+		SPACE_SIZ: 4,
+
+		dashStyle: function (style, defaultStyle){
+			if (!style) return defaultStyle;
+	
+			switch (style){
+			case 'solid': case 'dash': case 'dot': case 'dash-dot': case 'dash-dot-dot': return style;
+			}
+			return defaultStyle;
+		},
+	
+		makeDash: function(s){
+			var r = [];
+			if (!s) return r;
+			
+			var a = s.toLowerCase().split('-');
+			var len = a.length;
+			for (var i=0; i < len; i++){
+				var siz = 0;
+				switch (a[i]){
+				case 'dash': siz = this.DASH_SIZ; break;
+				case 'dot': siz = this.DOT_SIZ; break;
+				}
+				if (siz > 0){
+					r.push(siz);
+					r.push(this.SPACE_SIZ);
+				}
+			}
+			return r;
+		},
+
+		measureText: function (ctx, lineHeight, cache, text){
+			var e1 = cache['$measureElement1'];
+			var e2 = cache['$measureElement2'];
+			if (!e1){
+				e1 = $('<div/>');
+				e1.css({
+					position: 'absolute',
+					padding: '0',
+					margin: '0',
+					// top: 10,
+					// left: 10,
+					// zIndex: 100,
+					// background: 'red',
+					// color: 'white',
+					top: -10000,
+					left: -10000,
+					zIndex: -1,
+					visibility: 'hidden'
+				});
+				cache['$measureElement1'] = e1;
+			}
+			if (!e2){
+				e2 = $('<div/>');
+				e2.css({
+					position: 'absolute',
+					padding: '0',
+					margin: '0',
+					// top: 100,
+					// left: 10,
+					// zIndex: 100,
+					// background: 'red',
+					// color: 'white',
+					top: -10000,
+					left: -10000,
+					zIndex: -1,
+					visibility: 'hidden'
+				});
+				cache['$measureElement2'] = e2;
+			}
+
+			e1.css('font', ctx.font);
+			if (lineHeight)
+				e1.css('line-height', (lineHeight * 100) + '%');
+			e1.text(text);
+
+			e2.css('font', ctx.font);
+			e2.text(text);
+
+			var ebody = $(document.body);
+
+			ebody.append(e1);
+			ebody.append(e2);
+
+			var element = e1.length ? e1.get(0) : null;
+			var size1 = element ? { width: element.offsetWidth, height: element.offsetHeight } : { width: 0, height: 0 };
+
+			element = e2.length ? e2.get(0) : null;
+			var size2 = element ? { width: element.offsetWidth, height: element.offsetHeight } : { width: 0, height: 0 };
+
+			//e1.detach();
+			//e2.detach();
+
+			return {
+				width: size1.width,
+				height: size1.height,
+				contentWidth: size2.width,
+				contentHeight: size2.height,
+			};
 		},
 	},
 

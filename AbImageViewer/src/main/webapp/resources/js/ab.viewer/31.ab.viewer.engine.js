@@ -22,7 +22,8 @@ function AbViewerEngine(options){
 	//-----------------------------------------------------------
 
 	this.waterMark = options.waterMark && options.waterMark instanceof AbWaterMark ? options.waterMark : null;
-	this.waterMark.observe(this);
+	if (this.waterMark)
+		this.waterMark.observe(this);
 	
 	//-----------------------------------------------------------
 
@@ -405,6 +406,8 @@ AbViewerEngine.prototype = {
 		highlightpen: new AbShapeHighlightPen(),
 		ellipse: new AbShapeEllipse(),
 		arrow: new AbShapeArrow(),
+		line: new AbShapeLine(),
+		checker: new AbShapeImage({ source: AbIcons.CHECKER }),
 	},
 	
 	//-----------------------------------------------------------
@@ -622,7 +625,7 @@ AbViewerEngine.prototype = {
 		//func.call(this);
 	},
 
-	execCommand: function(cmd){
+	execCommand: function(cmd, value){
 		if (!this.maniplatable()) return;
 
 		var f = function(){
@@ -635,7 +638,8 @@ AbViewerEngine.prototype = {
 			case 'paste': this.paste(); break;
 			case 'cut': this.cut(); break;
 			case 'delete': this.deleteShapes(); break;
-			case 'selectAll': this.selectAll(); break
+			case 'selectAll': this.selectAll(); break;
+			case 'z-index': this.zIndex(value); break;
 			}
 		};
 		f.cmd = cmd;
@@ -1049,9 +1053,17 @@ AbViewerEngine.prototype = {
 			if ((edit = s.editable(x, y, this.viewContext)) != null){
 				sel = s;
 				break;
-			}else if (s.contains(x, y, this.viewContext)){
-				sel = s;
-				break;
+			}
+		}
+
+		if (!edit){
+			for (var i = this.selectedShapes.length - 1; i >= 0; i--){
+				var s = this.selectedShapes[i];
+
+				if (s.contains(x, y, this.viewContext)){
+					sel = s;
+					break;
+				}
 			}
 		}
 
@@ -1112,31 +1124,44 @@ AbViewerEngine.prototype = {
 			}else{
 				var s = null;
 	
-				if (this.selectedShapes.length && (s = this.getContainsSelection(states.x, states.y))){
-					if (states.additional){
-						if (s.selected){
-							this.unselectShape(s);
-							this.render();
-							return;
-						}else{
-							this.focusShape(s);
-							this.selection.mode = 'move';
-						}
-					}else{
-						this.focusShape(s);
-						this.selection.mode = 'move';
-					}
-					this.render();
-				}
+				// [20180719] 파워포인트 처럼 처기하기 위해 아래 코드 삭제
+				// if (this.selectedShapes.length && (s = this.getContainsSelection(states.x, states.y))){					
+				// 	if (states.additional){
+				// 		if (s.selected){
+				// 			this.unselectShape(s);
+				// 			this.render();
+				// 			return;
+				// 		}else{
+				// 			this.focusShape(s);
+				// 			this.selection.mode = 'mmove';
+				// 		}
+				// 	}else{
+				// 		this.focusShape(s);
+				// 		this.selection.mode = 'move';
+				// 	}
+				// 	this.render();
+				// }
 	
 				if (!this.selection.mode){
 					s = this.getShape(states.x, states.y);
 					if (s){
-						if (!states.additional)
-							this.unselect(false);
-						this.selectShape(s);
-						this.selection.mode = 'move';
-						this.render();
+						if (s.selected){
+							if (states.additional){
+								this.unselectShape(s);
+								this.render();
+								return;
+							}else{
+								this.focusShape(s);
+								this.selection.mode = 'move';
+							}
+							this.render();
+						}else{
+							if (!states.additional)
+								this.unselect(false);
+							this.selectShape(s);
+							this.selection.mode = 'move';
+							this.render();
+						}
 					}
 				}
 	
@@ -2334,15 +2359,15 @@ AbViewerEngine.prototype = {
 	},
 
 	unselectShape: function (s){
-		var focused = s.focuesd;
-
-		s.selected = false;
-		s.focused = false;
+		var focused = s.focused;
 
 		var idx = this.getIndexOfSelection(s);
 		if (idx>=0)
 			this.selectedShapes.splice(idx, 1);
 
+		s.selected = false;
+		s.focused = false;
+	
 		if (focused){
 			this.focusedShape = null;
 
@@ -2354,17 +2379,17 @@ AbViewerEngine.prototype = {
 	//-----------------------------------------------------------
 
 	getIndexOfSelection: function (s){
-		for (var i = this.selectedShapes.length - 1; i <= 0; i--)
+		for (var i = this.selectedShapes.length - 1; i >= 0; i--)
 			if (this.selectedShapes[i] == s)
 				return i;
 		return -1;
 	},
 
 	getContainsSelection: function (x, y){
-		if (this.focusedShape){
-			if (this.focusedShape.contains(x, y, this.viewContext))
-				return this.focusedShape;
-		}
+		// if (this.focusedShape){
+		// 	if (this.focusedShape.contains(x, y, this.viewContext))
+		// 		return this.focusedShape;
+		// }
 
 		var len = this.selectedShapes.length;
 		for (var i = 0; i < len; i++){
@@ -2469,8 +2494,8 @@ AbViewerEngine.prototype = {
 			}
 		}else{
 			var x = this.selection.end.x, y = this.selection.end.y;
-			if (this.focusedShape && this.focusedShape.contains(x, y, this.viewContext))
-				return;
+			// if (this.focusedShape && this.focusedShape.contains(x, y, this.viewContext))
+			// 	return;
 
 			if (!opt.additional)
 				this.focusedShape = null;
@@ -2847,6 +2872,39 @@ AbViewerEngine.prototype = {
 
 			// Notify
 			this.notifyObservers('shape', 'all.remove');
+			
+			// Notify modified
+			this.modified();
+		});
+	},
+
+	//-----------------------------------------------------------
+
+	removeRangePageShapes: function (pages, history){
+		if (!AbCommon.isBool(history)) history = true;
+		
+		this.exec(function (){
+			//var bak = { index: this.currentPageIndex, page: this.currentPage };
+
+			//-----------------------------------------------------------
+			// begin record history
+			if (history) this.history.begin('shape', 'range', this, pages);
+			//-----------------------------------------------------------
+
+			for (var i = pages.length - 1; i >= 0; i--){
+				var shapes = pages[i].shapes;
+				shapes.splice(0, shapes.length);
+			}
+
+			//-----------------------------------------------------------
+			// end record history
+			if (history) this.history.end(this);
+			//-----------------------------------------------------------
+
+			this.render();
+
+			// Notify
+			this.notifyObservers('shape', 'range.remove');
 			
 			// Notify modified
 			this.modified();
@@ -3471,5 +3529,85 @@ AbViewerEngine.prototype = {
 
 	toBlob: function(callback){
 		return AbGraphics.canvas.toBlob(this.context);
+	},
+
+	zIndex: function (cmd){
+		if (!this.currentPage || !this.maniplatable()) return;
+		if (!this.selectedShapes.length && !this.focusedShape) return;
+
+		// validation command
+		switch(cmd){
+		case 'top': case 'up': case 'down': case 'bottom': break;
+		default: return;
+		}
+	
+		var page = this.currentPage;
+
+		// rollback selected shapes
+		//var backupSelectedShapes = this.selectedShapes;
+		//this.selectedShapes = page.shapes;
+
+		//-----------------------------------------------------------
+		// begin record history
+		this.history.begin('shape', 'zindex', this, cmd);
+
+		if (cmd == 'top' || cmd == 'bottom'){
+			var a = [];
+			for (var i=page.shapes.length - 1; i >= 0; i--){
+				if (page.shapes[i].selected){
+					var s = page.shapes.splice(i, 1);
+					if (s.length)
+						a.unshift(s[0]);
+				}
+			}
+	
+			if (cmd == 'top')
+				Array.prototype.push.apply(page.shapes, a);
+			else
+				Array.prototype.unshift.apply(page.shapes, a);
+		}else if (cmd == 'up' || cmd == 'down'){
+			var a = [];
+			for (var i=page.shapes.length - 1; i >= 0; i--){
+				if (page.shapes[i].selected){
+					a.unshift(i);
+				}
+			}
+
+			if (cmd == 'up'){
+				for (var i=a.length; i >= 0; i--){
+					var idx = a[i];
+
+					if (idx + 1 == page.shapes.length)
+						break;
+					
+					var tmp = page.shapes[idx + 1];
+					page.shapes[idx + 1] = page.shapes[idx];
+					page.shapes[idx] = tmp;
+				}
+			}else{
+				var alen = a.length;
+				for (var i=0; i < alen; i++){
+					var idx = a[i];
+
+					if (idx == 0)
+						break;
+					
+					var tmp = page.shapes[idx - 1];
+					page.shapes[idx - 1] = page.shapes[idx];
+					page.shapes[idx] = tmp;
+				}
+			}
+		}
+
+		//-----------------------------------------------------------
+		// end record history
+		this.history.end(this);
+
+		// rollback selected shapes
+		//this.selectedShapes = backupSelectedShapes;
+
+		this.exec(function(){
+			this.render();
+		});
 	},
 };

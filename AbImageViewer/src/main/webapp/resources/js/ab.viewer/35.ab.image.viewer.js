@@ -84,7 +84,9 @@ AbImageViewer.prototype = {
 
 	//-----------------------------------------------------------
 
-	saveUrl: 'http://localhost:8084/wiv/api/save',
+	allocUrl: 'http://localhost:8084/wiv/api/alloc',
+	saveUrl: 'http://localhost:8084/wiv/api/save-image',
+	removeUrl: 'http://localhost:8084/wiv/api/remove',
 	openImageUrl: 'http://localhost:8084/wiv/api/images',
 
 	//-----------------------------------------------------------
@@ -240,6 +242,12 @@ AbImageViewer.prototype = {
 			'print',
 			'zoom.in',
 			'zoom.out',
+
+			'zindex.front',
+			'zindex.forward',
+			'zindex.backward',
+			'zindex.back',
+
 			'fit.horiz',
 			'fit.vert',
 			'fit.in',
@@ -254,10 +262,13 @@ AbImageViewer.prototype = {
 			'annotation.cursor',
 			'annotation.rectangle',
 			'annotation.ellipse',
+			'annotation.line',
 			'annotation.arrow',
 			'annotation.pen',
 			'annotation.highlightpen',
 			'annotation.textbox',
+			'annotation.checker',
+			
 			'masking.rectangle',
 			'masking.ellipse'
 		];
@@ -307,6 +318,10 @@ AbImageViewer.prototype = {
 		case 'zoom.in': this.zoom('in'); break;
 		case 'zoom.out': this.zoom('out'); break;
 
+		case 'zindex.front': this.engine.execCommand('z-index', 'top'); break;
+		case 'zindex.forward': this.engine.execCommand('z-index', 'up'); break;
+		case 'zindex.backward': this.engine.execCommand('z-index', 'down'); break;
+		case 'zindex.back': this.engine.execCommand('z-index', 'bottom'); break;
 		case 'fit.horiz':
 		case 'fit.vert':
 		case 'fit.in':
@@ -325,18 +340,7 @@ AbImageViewer.prototype = {
 			this.engine.showShapes(value);
 			break;
 
-		case 'clear.shapes':
-			if (this.images.numShapes()){
-				AbMsgBox.confirm('모든 주석/마스킹을 삭제하시겠습니까?', null, 'warn')
-					.then(function (r){
-						console.log('[MSGBOX] result=' + r);
-
-						if (r == 'ok'){
-							this.engine.removeAllPageShapes();
-						}
-					}.bind(this));
-			}
-			break;
+		case 'clear.shapes': this.clearShapes(); break;
 			
 		case 'page.prev': this.prevPage(); break;
 		case 'page.next': this.nextPage(); break;
@@ -362,10 +366,12 @@ AbImageViewer.prototype = {
 		case 'annotation.cursor': break;
 		case 'annotation.rectangle':
 		case 'annotation.ellipse':
+		case 'annotation.line':
 		case 'annotation.arrow':
 		case 'annotation.pen':
 		case 'annotation.highlightpen':
 		case 'annotation.textbox':
+		case 'annotation.checker':
 			if (!this.engine.editable()){
 				sender.set('annotation.cursor', true);
 				break;
@@ -1120,43 +1126,100 @@ AbImageViewer.prototype = {
 	},
 
 	saveToLocalImage: function(){
-		var a = this.images;
-		if (!a.length() || !this.supportFileSaver())
+		if (!this.supportFileSaver()){
+			AbMsgBox.info('이 브라우저는 파일 저장을 지원하지 않습니다');
 			return;
+		}
 
-		var page = this.engine.currentPage;
 		var pageIdx = this.engine.currentPageIndex;
 
-		if (!page) return;
+		// 체크된 페이지 또는 현재 페이지 수집
+		var collect = this.collectSelectedOrAllPages({
+			start: pageIdx,
+			end: pageIdx
+		});
 
-		AbMsgBox.show('어떤 형식으로 저장하시겠습니까?', null, {
+		if (!collect.pages.length)
+			return;
+
+		var msg = '';
+		if (collect.type == 'single'){
+			msg = '어떤 형식으로 저장하시겠습니까?';
+		}else{
+			msg = '선택한 이미지(들)를 어떤 형식으로 저장하시겠습니까?';
+		}
+
+		AbMsgBox.show(msg, null, {
 			png: 'PNG 형식',
 			jpg: 'JPG 형식',
 		})
 			.then(function (r){
 				if (r == 'png' || r == 'jpg'){
-					var ctx = AbGraphics.canvas.createContext(page.width, page.height);
-					this.engine.renderImage(ctx, page);
-		
-					AbGraphics.canvas.toBlob(ctx, r == 'jpg' ? 'image/jpeg' : null)
-						.then(function (blob){
-							AbVendor.save(blob, 'image_'+(pageIdx+1)+'.' + r);
-							this.notifyObservers('file.save.image');
-						}.bind(this))
-						.catch(function (e){
-							console.log(e);
+					var self = this;
+					var ps = [];
+					var len = collect.pages.length;
+					for (var i=0; i < len; i++){
+						var page = collect.pages[i];
+						var index = this.images.indexOf(page.uid);
 
+						// 실행 함수
+						var func = function (resolve, reject){
+							var type = arguments.callee.type;
+							var page = arguments.callee.page;
+							var index = arguments.callee.index;
+							var self = arguments.callee.self;
+
+							var ctx = AbGraphics.canvas.createContext(page.width, page.height);
+							self.engine.renderImage(ctx, page);
+	
+							AbGraphics.canvas.toBlob(ctx, type == 'jpg' ? 'image/jpeg' : null)
+								.then(function (blob){
+									AbVendor.save(blob, 'image_'+(index+1)+'.' + type);
+									resolve(index);
+								})
+								.catch(function (e){
+									reject(e);
+								});
+						};
+						func.type = r;
+						func.page = page;
+						func.index = index;
+						func.self = self;
+
+						ps.push(new Promise(func));
+					}
+
+					AbCommon.sequencePromiseAll(ps, null, { term: { progress: 10, promise: 10 } })
+						.then(function (){
+							self.notifyObservers('file.save.image');
+						})
+						.catch(function(e){
+							console.log(e);
 							AbMsgBox.error(e);
-						}.bind(this));
+						});
 				}
 			}.bind(this));
 	},
 
 	saveToLocalText: function(){
-		if (!this.images.numShapes())
+		// 체크된 페이지 또는 전체 페이지 수집
+		var collect = this.collectSelectedOrAllPages();
+
+		var numShapes = 0, msg = null, isAll = false;
+		if (collect.type == 'all'){
+			numShapes = this.images.numShapes();
+			msg = '모든 이미지의 주석/마스킹 정보를 저장하시겠습니까';
+			isAll = true;
+		}else{
+			for (var i = collect.pages.length - 1; i >= 0; i--)
+				numShapes += collect.pages[i].shapes.length;
+			msg = '선택한 이미지(들)의 주석/마스킹 정보를 저장하시겠습니까';
+		}
+
+		if (!numShapes)
 			return;
 
-		AbMsgBox.confirm('주석/마스킹 정보를 저장하시겠습니까?')
+		AbMsgBox.confirm(msg)
 			.then(function (r){
 				if (r == 'ok'){
 					// var blob = new Blob(["Hello, world!"], {type: "text/plain;charset=utf-8"});
@@ -1165,13 +1228,19 @@ AbImageViewer.prototype = {
 					// this.notifyObservers('file.save.annotation');
 
 					var output = [AbCommon.xmlHeader()];
-					output.push('<pages>');
 
-					var cnt = this.images.length();
+					if (isAll)
+						output.push('<pages all="true">');
+					else
+						output.push('<pages all="false">');
+
+					var cnt = collect.pages.length;
 					for (var i=0; i < cnt; i++){
-						var page = this.images.get(i);
+						var page = collect.pages[i];
 
-						output.push('<page index="'+i+'">');
+						var index = this.images.indexOf(page.uid);
+
+						output.push('<page index="'+index+'">');
 
 						var nums = page.shapes.length;
 						for (var j=0; j < nums; j++){
@@ -1197,26 +1266,74 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	sendToServer: function (){
-		var a = this.images;
-		if (!a.length())
+		// 체크된 페이지 또는 전체 페이지 수집
+		var collect = this.collectSelectedOrAllPages();
+		var msg = null, isAll = false;
+		if (collect.type == 'all'){
+			msg = '모든 이미지를 서버로 전송하시겠습니까?';
+			isAll = true;
+		}else{
+			msg = '선택한 이미지(들)를 서버로 전송하시겠습니까?';
+		}
+
+		if (!collect.pages.length)
 			return;
 
-		AbMsgBox.confirmHtml('서버로 전송하시겠습니까?<br/><br/>※ 오류 이미지는 전송되지 않습니다.')
+		AbMsgBox.confirmHtml(msg + '<br/><br/>※ 오류 이미지는 전송되지 않습니다.')
 			.then(function (r){
-				this.exec(function (){
-					this.submitImages();
-				}, 300);
+				if (r == 'ok'){
+					this.exec(function (){
+						this.submitImages(collect.pages);
+					}, 300);
+				}
 			}.bind(this));
 	},
 
 	//-----------------------------------------------------------
-
-	submitImages: function(){
-		var length = this.images.length();
+	
+	submitImages: function(pages){
+		var removeUrl = this.removeUrl;
+		
+		this.prepareSI(pages)
+			.then(function(e){
+				return this.renderSI(e.id, e.cp);
+			}.bind(this))
+			.then(function(e){
+				var id = e.id;
+				return this.submitSI(e.id, e.cp)
+					.then(function (e){
+						e.formContoller.form.remove();
+						e.cp.end();
+						
+						AbMsgBox.success('이미지들을 전송했습니다');					
+					})
+					.catch(function(e){
+						AbMsgBox.error('이미지 전송 중 오류가 발생했습니다');
+						
+						// 기록 중인 이미지 정보 삭제
+						AbCommon.ajax({
+							url: removeUrl,
+							data: {
+								id: id,
+							},
+							
+							logFail: true,
+							nomsg: true,
+						});
+						
+					});
+			}.bind(this))
+			.catch(function(e){
+				console.log(e);
+			});
+	},
+	
+	prepareSI: function(pages){
+		var length = pages.length;
 		if (!length)
 			return;
 
-		var cp = this.collectPages(0, length - 1, {
+		var cp = this.collectPages(pages, {
 			selector: '#server-saving',
 			printShapes: true,
 			inProc: 'saving',
@@ -1233,117 +1350,387 @@ AbImageViewer.prototype = {
 			cp.end();
 			return;
 		}
+		
+		var length = cp.source.length;
+		var allocUrl = this.allocUrl;
+		
+		return new Promise(function(resolve, reject){
 
+			//-----------------------------------------------------------
+			// 아아디 할당
+			
+			AbCommon.ajax({
+				title: '아이디 할당',
+				url: allocUrl,
+				data: {
+					pages: length
+				},
+				success: function(r){
+					resolve({
+						id: r.text,
+						cp: cp
+					});
+				},
+				error: function (e){
+					cp.end();
+					AbMsgBox.error('이미지 전송 준비 중 오류가 발생했습니다');
+					
+					reject(e);
+				},
+			});
+			
+		});
+	},
+	
+	renderSI: function(id, cp){
+		
+		//-----------------------------------------------------------
+		// 렌더링
+		
 		this.promiseRenderCollectPages(cp);
 
 		var saveUrl = this.saveUrl;
 		var images = this.images;
 		return AbCommon.promiseAll(cp.ps, cp.progress, { term: { progress: 10, promise: 10 } })
 			.then(function(){
-				var sdatas = [], currnet = 0;
-				var length = cp.source.length;
-				for (var i=0; i < length; i++){
-					var pageData = cp.source[i];
-
-					// base64 로 저장
-					console.log(pageData);
-
-					var page = pageData.page;
-					var abimg = page.source;
-
-					var imgElement = abimg.imageElement();
-					var thumbElement = abimg.originThumbnailElement();
-
-					var img = AbGraphics.canvas.renderImage(imgElement);
-					var thumb = AbGraphics.canvas.renderImage(thumbElement);
-					var r = cp.urls[cp.map[page.uid]];
-
-					var b64img = img.substr(img.indexOf(",") + 1);
-					var b64thumb = thumb.substr(thumb.indexOf(",") + 1);
-					var b64 = r.substr(r.indexOf(",") + 1);
-
-					var output = [];
-					if (page.shapes.length){
-						output.push(AbCommon.xmlHeader());
-						output.push('<page index="'+i+'">');
+				return new Promise(function (resolve, reject){
+					cp.status('send');
+					
+					setTimeout(function(){
+						resolve({
+							id: id,
+							cp: cp
+						});
+					}, 50);
+				});
+			})
+			.catch(function(e){
+				cp.end();
+				AbMsgBox.error('이미지 렌더링 중 오류가 발생했습니다');
+			});
+	},
 	
-						var nums = page.shapes.length;
-						for (var j=0; j < nums; j++){
-							var s = page.shapes[j];
-							output.push(s.serialize());
-						}
-	
-						output.push('</page>');	
-					}
+	IMAGE_TYPES: [ 'image', 'image-source', 'image-result', 'thumb' ],
 
-					sdatas.push({
-						image: {
-							width: imgElement.width,
-							height: imgElement.height,
-							source: b64img,
-							result: b64,
-							shapes: output.length ? output.join('') : null
-						},
-						thumbnail: {
-							width: thumbElement.width,
-							height: thumbElement.height,
-							source: b64thumb,
-						},
-						// shape 포함
-					});
+	submitSI: function(id, cp){
+		var forms = $('#save-forms');
+		var html = '<form enctype="multipart/form-data">';
+		html += '<input type="hidden" name="id"/>';
+		html += '<input type="hidden" name="index"/>';
+		html += '<input type="hidden" name="type"/>';
+		html += '<input type="hidden" name="info"/>';
+		html += '<input type="hidden" name="partials"/>';
+		html += '<input type="hidden" name="partial"/>';
+		html += '<input type="hidden" name="content"/>';
+		html += '</form>';
+		var eform = $(html);
 
-					cp.progress(i, length);
-				}
+		forms.append(eform);
+		
+		//-----------------------------------------------------------
+		
+		eform.find('[name="id"]').val(id);
+		
+		//-----------------------------------------------------------
 
-				//-----------------------------------------------------------
+		var inpIndex = eform.find('[name="index"]');
+		var inpType = eform.find('[name="type"]');
+		var inpInfo = eform.find('[name="info"]');
+		var inpContent = eform.find('[name="content"]');
+		
+		//-----------------------------------------------------------
+		
+		var formContoller = {
+			forms: forms,
+			form: eform,
+			
+			index: eform.find('[name="index"]'),
+			type: eform.find('[name="type"]'),
+			info: eform.find('[name="info"]'),
+			partials: eform.find('[name="partials"]'),
+			partial: eform.find('[name="partial"]'),
+			content: eform.find('[name="content"]'),
+		};
+		
+		//-----------------------------------------------------------
 
-				cp.status('send');
+		var types = this.IMAGE_TYPES;
+		var numTypes = types.length;
+		
+		//-----------------------------------------------------------
+		// 전송 데이터 수집
 
-				//-----------------------------------------------------------
-				// 전송 
+		var datas = [];
+		var length = cp.source.length;
+		for (var ipage=0; ipage < length; ipage++){
+			var pageData = cp.source[ipage];
 
-				var forms = $('#save-forms');
-
-				var html = '<form enctype="multipart/form-data"><input type="hidden" name="content"/></form>';
-				var e = $(html);
-
-				var s = JSON.stringify(sdatas);
-
-				e.find('[name="content"]').val(s);
-
-				forms.append(e);
-
+			var page = pageData.page;
+			var abimg = page.source;
+			
+			for (var itype=0; itype < numTypes; itype++){
+				var type = types[itype];
+				
+				datas.push({
+					length: length,
+					index: ipage,
+					type: type,
+					
+					page: page,
+					abimg: abimg,
+				});
+			}
+		}
+		
+		//-----------------------------------------------------------
+		// 전송
+		
+		var dindex = 0, dlength = datas.length;
+		var self = this;
+		var delay = 10;
+		
+		return new Promise(function(resolve, reject){
+			var exec = function(){
+				var d = null;
+				var r = null, info = null, content = null;
+				var imgElement = null, img = null;
+				
 				try
 				{
-					AbCommon.ajaxSubmit(e, {
-						title: '이미지 전송',
-						url: saveUrl,
-						//dataType: 'text',
-						success: function(r, status, xhr, $form){
-							$form.remove();
-							cp.end();
-
-							AbMsgBox.success('이미지들을 전송했습니다');
-						},
-
-						error: function(e, $form){
-							$form.remove();
-							cp.end();
-
-							console.log(e);
-						},
-					});
+					d = datas[dindex];
+					var output = [];
+					
+					switch (d.type){
+					case 'image':
+						imgElement = d.abimg.imageElement();
+						
+						output.splice(0, output.length);
+						
+						if (d.page.shapes.length){
+							output.push(AbCommon.xmlHeader());
+							output.push('<page index="'+d.index+'">');
+		
+							var nums = d.page.shapes.length;
+							for (var j=0; j < nums; j++){
+								var s = d.page.shapes[j];
+								output.push(s.serialize());
+							}
+							output.push('</page>');
+						}
+						
+						info = JSON.stringify({
+							width: imgElement.width,
+							height: imgElement.height,
+							shapes: output.length ? output.join('') : null
+						});
+						break;
+					case 'image-source':
+						imgElement = d.abimg.imageElement();
+						img = AbGraphics.canvas.renderImage(imgElement);
+						
+						content = img.substr(img.indexOf(",") + 1);
+						break;
+					case 'image-result':
+						r = cp.urls[cp.map[d.page.uid]];
+						
+						content = r.substr(r.indexOf(",") + 1);
+						break;
+					case 'thumb':
+						imgElement = d.abimg.originThumbnailElement();
+						img = AbGraphics.canvas.renderImage(imgElement);
+						
+						info = JSON.stringify({
+							width: imgElement.width,
+							height: imgElement.height,
+						});					
+						
+						content = img.substr(img.indexOf(",") + 1);
+						break;
+					}
 				}
 				catch (e)
 				{
+					formContoller.form.remove();
 					cp.end();
-					forms.empty();
+					reject(e);
+					return;
 				}
+				
+				//-----------------------------------------------------------
+				
+				self.submitContent(formContoller, id, d.index, d.type, info, content, function (){
+					try
+					{
+						if (dindex + 1 >= dlength){
+							resolve({
+								id: id,
+								cp: cp,
+								formContoller: formContoller
+							});
+						}else{
+							dindex++;
+							setTimeout(exec, delay);
+						}
+					}
+					catch (e){
+						formContoller.form.remove();
+						cp.end();
+						reject(e);						
+					}
+				}, function (e){
+					formContoller.form.remove();
+					
+					cp.end();
+					reject(e);
+				});
+			};
+			
+			exec();
+		});
+	},
 
-			})
-			.catch(function(e){
-				AbMsgBox.error('이미지 전송 준비 중 오류가 발생했습니다');
+	//-----------------------------------------------------------
+	
+	SPLIT_DATA_SIZE: 30720, // 30KB
+	
+	submitContent: function (formContoller, id, index, type, info, content, success, error, delay){
+		if (!delay) delay = 10;
+		
+		var saveUrl = this.saveUrl;
+		var splitDataSiz = this.SPLIT_DATA_SIZE;
+		
+		if (content){
+			var ca = [], ci = 0, clen = content.length;
+			
+			while (ci < clen){
+				var s = null;
+				if (ci + splitDataSiz < clen){
+					s = { index: ci, length: splitDataSiz };
+				}else{
+					s = { index: ci, length: clen - ci };
+				}
+				
+				ca.push(s);
+				ci += splitDataSiz;
+			}
+			
+			if (ca.length){
+				var caIndex = 0, caLength = ca.length;
+				
+				var exec = function(){
+					var caitem = ca[caIndex];
+					
+					formContoller.index.val(index);
+					formContoller.type.val(type);
+					formContoller.info.val(info);
+					formContoller.partials.val(caLength);
+					formContoller.partial.val(caIndex);
+					formContoller.content.val(content.substr(caitem.index, caitem.length));
+					
+					AbCommon.ajaxSubmit(formContoller.form, {
+						url: saveUrl,
+						
+						logFail: true,
+						nomsg: true,
+						
+						success: function(r, status, xhr, $form){
+							if (caIndex + 1 >= caLength){
+								if (AbCommon.isFunction(success))
+									success();
+							}else{
+								caIndex++;
+								setTimeout(exec, delay);
+							}							
+						},
+						
+						error: function(e, $form){
+							if (AbCommon.isFunction(error))
+								error(e);
+						}
+					});
+					
+//					AbCommon.ajax({
+//						url: saveUrl,
+//						data: {
+//							id: id,
+//							index: index,
+//							type: type,
+//							info: info,
+//							partials: caLength,
+//							partial: caIndex,
+//							content: content.substr(caitem.index, caitem.length),
+//						},
+//						
+//						logFail: true,
+//						nomsg: true,
+//						
+//						success: function (r){
+//							if (caIndex + 1 >= caLength){
+//								if (AbCommon.isFunction(success))
+//									success();
+//							}else{
+//								caIndex++;
+//								setTimeout(exec, delay);
+//							}
+//						},
+//						
+//						error: function (e){
+//							if (AbCommon.isFunction(error))
+//								error(e);
+//						}
+//					});
+				};
+				
+				exec();
+			}
+		}else{
+			formContoller.index.val(index);
+			formContoller.type.val(type);
+			formContoller.info.val(info);
+			formContoller.partials.val('');
+			formContoller.partial.val('');
+			formContoller.content.val('');
+			
+			AbCommon.ajaxSubmit(formContoller.form, {
+				url: saveUrl,
+				
+				logFail: true,
+				nomsg: true,
+				
+				success: function(r, status, xhr, $form){
+					if (AbCommon.isFunction(success))
+						success();
+				},
+				
+				error: function(e, $form){
+					if (AbCommon.isFunction(error))
+						error(e);
+				}
 			});
+			
+//			AbCommon.ajax({
+//				url: saveUrl,
+//				data: {
+//					id: id,
+//					index: index,
+//					type: type,
+//					info: info
+//				},
+//				
+//				logFail: true,
+//				nomsg: true,
+//				
+//				success: function (r){
+//					if (AbCommon.isFunction(success))
+//						success();
+//				},
+//				
+//				error: function (e){
+//					if (AbCommon.isFunction(error))
+//						error(e);
+//				}
+//			});
+		}
 	},
 
 	//-----------------------------------------------------------
@@ -1381,7 +1768,59 @@ AbImageViewer.prototype = {
 
 	//-----------------------------------------------------------
 
-	collectPages: function (start, end, options){
+	selectedPages: function (type){
+		var listView = this.listView;
+
+		switch(type){
+		case 'pages': listView = this.imageListView; break;
+		case 'bookmarks': listView = this.bookmarkListView; break;
+		}
+
+		var list = listView.selectedPages();
+		var a = [];
+		for (var i = list.length - 1; i >= 0; i--){
+			if (!list[i].uid)
+				continue;
+
+			var page = this.images.getById(list[i].uid);
+			if (page)
+				a.unshift(page);
+		}
+		return a;
+	},
+
+	//-----------------------------------------------------------
+
+	// 체크된 페이지 또는 전체 페이지 수집
+	collectSelectedOrAllPages: function (options){
+		// 체크된 페이지가 있는 경우
+		var a = this.selectedPages();
+		if (a.length)
+			return { type: 'range', pages: a };
+
+		// 기본 전체 페이지 지정
+		var start = 0, end = this.images.length() - 1;
+		var type = 'all';
+
+		// 옵션에 따라 범위 지정
+		if (options && (AbCommon.isNumber(options.start) || AbCommon.isNumber(options.end))){
+			if (AbCommon.isNumber(options.start)) start = options.start;
+			if (AbCommon.isNumber(options.end)) end = options.end;
+			type = (start >= 0 || end >= 0) && start === end ? 'single' : 'range';
+		}
+
+		// 페이지 수집
+		var source = [], pages = [], urls = [], map = {};
+		for (var i=start; i >= 0 && i <= end; i++){
+			var page = this.images.get(i);
+			a.push(page);
+		}
+		return { type: type, pages: a };
+	},
+
+	//-----------------------------------------------------------
+
+	collectPages: function (pages, options){
 		if (!options) options = {};
 
 		var eloading = $(options.selector);
@@ -1391,17 +1830,17 @@ AbImageViewer.prototype = {
 		var printShapes = options.printShapes === true;
 		var images = this.images;
 
-		var src = null;
-		var source = [], pages = [], urls = [], map = {};
-		for (var i=start; i <= end; i++){
-			var page = this.images.get(i);
+		var src = null, pageLength = pages.length;
+		var source = [], pageInfos = [], urls = [], map = {};
+		for (var i=0; i < pageLength; i++){
+			var page = pages[i];
 
 			if (page.isError()){
 				if (options.exitError === true){
 					if (AbCommon.isFunction(options.error)){
 						options.error(i);
 					}
-					pages.splice(0, pages.length);
+					pageInfos.splice(0, pageInfos.length);
 
 					eloading.hide();
 					return null;
@@ -1423,7 +1862,7 @@ AbImageViewer.prototype = {
 			var dat = { type: type, index: i, page: page };
 
 			if (type)
-				pages.push(dat);
+				pageInfos.push(dat);
 
 			source.push(dat);
 		}
@@ -1431,7 +1870,7 @@ AbImageViewer.prototype = {
 		var bar = eloading.find('.bar');
 		bar.css('width', '0%');
 
-		var total = AbCommon.isFunction(options.getTotal) ? options.getTotal(pages.length, urls.length, source.length) : pages.length + urls.length;
+		var total = AbCommon.isFunction(options.getTotal) ? options.getTotal(pageInfos.length, urls.length, source.length) : pageInfos.length + urls.length;
 		var index = 0;
 
 		return {
@@ -1440,7 +1879,7 @@ AbImageViewer.prototype = {
 
 			loader: eloading,
 			source: source,
-			pages: pages,
+			pages: pageInfos,
 			urls: urls,
 			map: map,
 			ps: [],
@@ -1453,7 +1892,7 @@ AbImageViewer.prototype = {
 				eloading.attr('pl-topic', text);
 			},
 
-			total: pages.length + urls.length,
+			total: pageInfos.length + urls.length,
 			bar: bar,
 
 			progress: function (){
@@ -1528,34 +1967,37 @@ AbImageViewer.prototype = {
 		if (idx < 0)
 			return;
 
+		var page = this.images.get(idx);
+
 		this.exec(function(){
-			this.print(idx, idx);
+			this.print([page]);
 			this.notifyObservers('page.print');
 		}, 200);
 	},
 
 	printAllPages: function (){
-		var siz = this.images.length();
+		var collect = this.collectSelectedOrAllPages();
+		var siz = collect.pages.length;
 
 		if (siz > 40){
 			AbMsgBox.confirmHtml('인쇄하는 데 오래 걸릴 수 있습니다.<br/>계속 진행하시겠습니까?')
 				.then(function(r){
 					if (r == 'ok'){
 						this.exec(function (){
-							this.print(0, siz - 1);
+							this.print(collect.pages);
 							this.notifyObservers('print');
 						}, 300);
 					}
 				}.bind(this));
 		}else{
 			this.exec(function(){
-				this.print(0, siz - 1);
+				this.print(collect.pages);
 				this.notifyObservers('print');
 			}, 200);
 		}
 	},
 
-	print: function (start, end){
+	print: function (pages){
 		var eframe = $('#print-frame');
 		var frameDoc = AbCommon.contentDocument(eframe);
 
@@ -1564,7 +2006,7 @@ AbImageViewer.prototype = {
 			return;
 		}
 
-		var cp = this.collectPages(start, end, {
+		var cp = this.collectPages(pages, {
 			selector: '#print-loading',
 			printShapes: this.engine.showShapes(),
 			inProc: 'loading',
@@ -1585,18 +2027,24 @@ AbImageViewer.prototype = {
 
 		this.promiseRenderCollectPages(cp);
 
-		return AbCommon.promiseAll(cp.ps, cp.progress, { term: { progress: 10, promise: 10 } })
+		return AbCommon.sequencePromiseAll(cp.ps, cp.progress, { term: { progress: 10, promise: 10 } })
 			.then(function (){
 				//-----------------------------------------------------------
 				// IFRAME
 
+				console.log('인쇄 이미지 준비 완료');
+
 				var eprint = $('<div id="print"/>');
 				AbPrint.generate(eprint, cp.urls, { orientation: 'auto', progress: cp.progress, term: { progress: 10, promise: 10 } })
 					.then(function (){
+						console.log('인쇄 준비 완료');
+
 						var le = $('#loading');
 						le.remove();
 
 						setTimeout(function (){
+							frameDoc.open();
+
 							var html = '<!doctype html>';
 							html += '<html lang="en">';
 							html += '<head>';
@@ -1615,13 +2063,20 @@ AbImageViewer.prototype = {
 							html += '</head>';
 							html += '<body onload="parent.AbImageViewer$$doPrint()" onafterprint="setTimeout(function(){ console.log(\'[PRINT] clear printed data...\'); document.body.innerHTML=\'\'; }, 100);">';
 							//html += '<body onload="parent.AbImageViewer$$doPrint()">';
-							html += eprint.html();
+
 							html += '</body>';
 							html += '</html>';
 
-							frameDoc.open();
 							frameDoc.write(html);
 							frameDoc.close();
+
+							$(frameDoc.body).append(eprint);
+
+							console.log('[PRINT] WRITE OK!!');
+
+							//setTimeout(AbImageViewer$$doPrint, 100);
+
+							//frameDoc.close();
 							
 						}, 100);
 					});
@@ -1642,6 +2097,37 @@ AbImageViewer.prototype = {
 		// 	this.windowPrint.focus();
 
 		// this.windowPrint = window.open('viewer.print.html', '_print', 'toolbar=no,menubar=no,status=no');
+	},
+
+	//-----------------------------------------------------------
+
+	clearShapes: function(){
+		// 체크된 페이지 또는 전체 페이지 수집
+		var collect = this.collectSelectedOrAllPages();
+		
+		var numShapes = 0, msg = null, isAll = false;
+		if (collect.type == 'all'){
+			numShapes = this.images.numShapes();
+			msg = '모든 이미지의 주석/마스킹을 삭제하시겠습니까?';
+			isAll = true;
+		}else{
+			for (var i = collect.pages.length - 1; i >= 0; i--)
+				numShapes += collect.pages[i].shapes.length;
+			msg = '선택한 이미지의 주석/마스킹을 삭제하시겠습니까?';
+		}
+		
+		if (numShapes){
+			AbMsgBox.confirm(msg, null, 'warn')
+				.then(function (r){
+					if (r == 'ok'){
+						if (isAll)
+							this.engine.removeAllPageShapes();
+						else
+							this.engine.removeRangePageShapes(collect.pages);
+					}
+				}.bind(this));
+		}
+
 	},
 
 	//-----------------------------------------------------------

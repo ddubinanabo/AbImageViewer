@@ -13,7 +13,7 @@
 
 	<script type="text/javascript" src="resources/js/es6-promise.auto.js"></script>
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript" src="resources/js/jquery.form.min.js"></script>
+	<script type="text/javascript" src="resources/js/jquery.form.js"></script>
 	<%/*
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.js"></script>
 	*/%>
@@ -81,19 +81,23 @@
 				<li class="sep" tb-topic="print" title="전체 이미지 인쇄" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_06.png"/></li>
 				<li tb-topic="zoom.in" title="확대" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_07.png"/></li>
 				<li class="sep" tb-topic="zoom.out" title="축소" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_08.png"/></li>
-				<li tb-topic="fit.horiz" title="너비 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_09.png"/></li>
-				<li tb-topic="fit.vert" title="높이 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_10.png"/></li>
-				<li class="sep" tb-topic="fit.in" title="화면 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_11.png"/></li>
-				<li tb-topic="page.rotate.ccw" title="화면 회전 (반시계)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_12.png"/></li>
-				<li tb-topic="page.rotate.cw" title="화면 회전" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_13.png"/></li>
-				<li class="sep" tb-topic="page.rotate.180" title="화면 회전 (180º)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_14.png"/></li>
-				<li tb-topic="mode" title="편집/보기 모드" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_15.png" ></li>
-				<li class="sep" tb-topic="show.shapes" title="주석/마스킹 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_16.png"></li>
-				<li class="sep" tb-topic="clear.shapes" title="주석/마스킹 초기화" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_17.png"></li>
+				<li tb-topic="zindex.front" title="맨 앞으로 가져오기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_09.png"/></li>
+				<li tb-topic="zindex.forward" title="앞으로 가져오기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_10.png"/></li>
+				<li tb-topic="zindex.backward" title="뒤로 보내기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_11.png"/></li>
+				<li class="sep" tb-topic="zindex.back" title="맨 뒤로 보내기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_12.png"/></li>
+				<li tb-topic="fit.horiz" title="너비 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_13.png"/></li>
+				<li tb-topic="fit.vert" title="높이 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_14.png"/></li>
+				<li class="sep" tb-topic="fit.in" title="화면 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_15.png"/></li>
+				<li tb-topic="page.rotate.ccw" title="화면 회전 (반시계)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_16.png"/></li>
+				<li tb-topic="page.rotate.cw" title="화면 회전" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_17.png"/></li>
+				<li class="sep" tb-topic="page.rotate.180" title="화면 회전 (180º)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_18.png"/></li>
+				<li tb-topic="mode" title="편집/보기 모드" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_19.png" ></li>
+				<li class="sep" tb-topic="show.shapes" title="주석/마스킹 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_20.png"></li>
+				<li class="sep" tb-topic="clear.shapes" title="주석/마스킹 초기화" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_21.png"></li>
 				<li class="sep nowrap">
-					<img src="resources/icon/tbm_15-01.png" class="tb-lmar" tb-topic="page.prev" title="이전 이미지" tb-type="click"/>
+					<img src="resources/icon/tbm_22-01.png" class="tb-lmar" tb-topic="page.prev" title="이전 이미지" tb-type="click"/>
 					<input type="text" class="center" tb-topic="page.no" tb-type="text" size="1" value="0" disabled="disabled"/> / <span tb-topic="page.total" tb-type="label">0</span>
-					<img src="resources/icon/tbm_15-02.png" class="tb-rmar" tb-topic="page.next" title="다음 이미지" tb-type="click"/>
+					<img src="resources/icon/tbm_22-02.png" class="tb-rmar" tb-topic="page.next" title="다음 이미지" tb-type="click"/>
 				</li>
 				<li>
 					<div class="custom-select">
@@ -213,15 +217,17 @@
 				<li tb-topic="annotation.cursor" title="선택하기" tb-type="radio" tb-group="draw" tb-status="checked"><img class="tb-btn" src="resources/icon/cursor.png"/></li>
 				<li ve-type="creation" tb-topic="annotation.rectangle" title="사각형 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_01.png"/></li>
 				<li ve-type="creation" tb-topic="annotation.ellipse" title="원형 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_02.png"/></li>
-				<li ve-type="creation" tb-topic="annotation.arrow" title="화살표 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_03.png"/></li>
-				<li ve-type="creation" tb-topic="annotation.pen" title="펜으로 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_04.png"/></li>
-				<li ve-type="creation" tb-topic="annotation.highlightpen" title="형판펜으로 칠하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_05.png"/></li>
-				<li ve-type="creation" tb-topic="annotation.textbox" title="메모하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_06.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.line" title="선 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_03.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.arrow" title="화살표 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_04.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.pen" title="펜으로 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_05.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.highlightpen" title="형판펜으로 칠하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_06.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.textbox" title="메모하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_07.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.checker" title="체크" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_08.png"/></li>
 			</ul>
 			<div class="vhblock" title="마스킹"></div>
 			<ul class="vert">
-				<li ve-type="creation" tb-topic="masking.rectangle" title="사각형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_07.png"/></li>
-				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_08.png"/></li>
+				<li ve-type="creation" tb-topic="masking.rectangle" title="사각형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_09.png"/></li>
+				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_10.png"/></li>
 			</ul>
 		</aside>
 	</section>

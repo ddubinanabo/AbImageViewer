@@ -386,3 +386,224 @@ AbHistoryRemoveAllShapeState.prototype = {
 	},
 };
 
+
+
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+
+
+function AbHistoryRemoveRangeShapeState(){
+	this.type = 'shape';
+	this.cmd = 'range';
+
+	this.pages = [];
+	this.numShapes = 0;
+};
+	
+//-----------------------------------------------------------
+
+AbHistoryRemoveRangeShapeState.prototype = {
+	constructor: AbHistoryRemoveRangeShapeState,
+	
+	begin: function(engine, pages){
+		var siz = pages.length;
+		for (var i=0; i < siz; i++){
+			var page = pages[i];
+
+			if (!page.shapes.length)
+				continue;
+			
+			var shapes = page.shapes.slice(0);
+			var index = engine.pages.indexOf(page.uid);
+
+			this.pages.push({
+				index: index,
+				source: shapes
+			});
+
+			this.numShapes += shapes.length;
+		}
+	},
+
+	end: function(engine){
+		if (!this.numShapes)
+			return false;
+	},
+
+	undo: function(engine){
+		var mod = engine.unselect(false);
+
+		var len = this.pages.length, last = -1;
+		for (var i=0; i < len; i++){
+			var d = this.pages[i];
+
+			var page = engine.pages.get(d.index);
+			Array.prototype.push.apply(page.shapes, d.source);
+
+			last = d.index;
+		}
+
+		if (last >= 0){
+			if (last == engine.currentPageIndex)
+				engine.render();
+			else
+				engine.selectPage(last);
+		}
+	},
+
+	redo: function(engine){
+		var len = this.pages.length, last = -1;
+		for (var i=0; i < len; i++){
+			var d = this.pages[i];
+
+			var page = engine.pages.get(d.index);
+			page.shapes.splice(0, page.shapes.length);
+
+			last = d.index;
+		}
+
+		if (last >= 0){
+			if (last == engine.currentPageIndex)
+				engine.render();
+			else
+				engine.selectPage(last);
+		}
+	},
+
+	dispose: function(){
+		this.pages.splice(0, this.pages.length);
+	},
+};
+
+
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+
+
+function AbHistoryZIndexShapeState(){
+	this.type = 'shape';
+	this.cmd = 'zindex';
+
+	this.pageIndex = -1;
+	this.moveCmd = null;
+	this.direction = 0;
+
+	this.un = [];
+	this.re = [];
+};
+
+//-----------------------------------------------------------
+
+AbHistoryZIndexShapeState.prototype = {
+	constructor: AbHistoryZIndexShapeState,
+	
+	begin: function(engine, cmd){
+		if (!engine.selectedShapes.length)
+			return false;
+
+		this.moveCmd = cmd;
+		this.direction = cmd === 'top' || cmd === 'up' ? 1 : -1;
+		this.pageIndex = engine.currentPageIndex;
+
+		var page = engine.currentPage;
+
+		for (var i=page.shapes.length - 1; i >= 0; i--){
+			if (page.shapes[i].selected){
+				this.un.unshift(i);
+			}
+		}
+	},
+
+	end: function(engine){
+		if (!engine.selectedShapes.length)
+			return false;
+
+		var page = engine.pages.get(this.pageIndex);
+
+		for (var i=page.shapes.length - 1; i >= 0; i--){
+			if (page.shapes[i].selected){
+				this.re.unshift(i);
+			}
+		}
+
+		if (!this.un.length || !this.re.length || this.un.length != this.re.length)
+			return false;
+
+		var mod = false;
+		for (var i=0; i < len; i++){
+			var un = this.un[i];
+			var re = this.re[i];
+
+			if (un != re){
+				mod = true;
+				break;
+			}
+		}
+		return mod;
+	},
+
+	undo: function(engine){
+		var page = engine.pages.get(this.pageIndex);
+
+		engine.selectPage(this.pageIndex);
+		var mod = engine.unselect(false);
+
+		var a = [];
+		for (var i=this.re.length - 1; i >= 0; i--){
+			var idx = this.re[i];
+
+			var r = page.shapes.splice(idx, 1);
+			a.unshift(r[0]);
+		}
+
+		var len = this.un.length;
+		for (var i=0; i < len; i++){
+			var idx = this.un[i];
+
+			page.shapes.splice(idx, 0, a[i]);
+		}
+
+		if (len > 0 || mod){
+			engine.render();
+
+			// Notify modified
+			engine.modified();
+		}
+	},
+
+	redo: function(engine){
+		var page = engine.pages.get(this.pageIndex);
+
+		engine.selectPage(this.pageIndex);
+		var mod = engine.unselect(false);
+		
+		var a = [];
+		for (var i=this.un.length - 1; i >= 0; i--){
+			var idx = this.un[i];
+
+			var r = page.shapes.splice(idx, 1);
+			a.unshift(r[0]);
+		}
+
+		var len = this.re.length;
+		for (var i=0; i < len; i++){
+			var idx = this.re[i];
+
+			page.shapes.splice(idx, 0, a[i]);
+		}
+
+		if (len > 0 || mod){
+			engine.render();
+
+			// Notify modified
+			engine.modified();
+		}
+	},
+
+	dispose: function(){
+		this.un.splice(0, this.un.length);
+		this.re.splice(0, this.re.length);
+	},
+};

@@ -68,6 +68,9 @@ AbShapeStyler.prototype = {
 		case 'lineWidth': return [ { text: '없음', value: 0 }, 1, 2, 3, 4, 5];
 		case 'fontSize': return [ 8, 10, 12, 14, 16, 20, 24, 36, 48, 64];
 		case 'font': return [ { text: '맑은 고딕', value: 'Malgun Gothic' }, { text: '굴림', value: 'gulim' }, { text: '돋움', value: 'Dotum' }, 'Arial', 'Courier New', 'Times New Roman', 'Verdana', 'Helvetica', 'Tahoma', ];
+		case 'textAlign': return [ { text: '왼쪽', value: 'left' }, { text: '중앙', value: 'center' }, { text: '오른쪽', value: 'right' }, { text: '맞춤', value: 'justify' }, ];
+		case 'arrow': return [ { text: '없음', value: 'none' }, { text: '◀', value: 'triangle' }, { text: '◆', value: 'diamond' }, { text: '●', value: 'circle' }, { text: '&lt;', value: 'bracket' }, ];
+		case 'dots': return [ { text: '──', value: 'solid' }, { text: '─ ─', value: 'dash' }, { text: '- -', value: 'dot' }, { text: '─ -', value: 'dash-dot' }, { text: '─ - -', value: 'dash-dot-dot' }, ];
 		}
 		return null;
 	},
@@ -162,6 +165,15 @@ AbShapeStyler.prototype = {
 			this.style(topic, checked);
 		}.bind(this));
 
+		this.e.find('input[type="text"]').keydown(function (event){
+			if (event.keyCode == 13){
+				$(this).trigger('change');
+			}
+
+			event.stopPropagation(); // 현재 이벤트가 상위로 전파되지 않도록 중단한다.
+			event.stopImmediatePropagation(); // 현재 이벤트가 상위뿐 아니라 현재 레벨에 걸린 다른 이벤트도 동작하지 않도록 중단한다.			
+		});
+
 		this.e.find('input[type="text"]').change(function(event){
 			var e = $(event.currentTarget);
 			var topic = e.attr('abs-topic');
@@ -246,6 +258,9 @@ AbShapeStyler.prototype = {
 		if (!$.isArray(this.styleDesc.select))
 			return true;
 		
+		if ($.inArray(emptyTopic, this.styleDesc.select) < 0)
+			return true;
+		
 		var len = this.styleDesc.select.length;
 		for (var i=0; i < len; i++){
 			var topic = this.styleDesc.select[i];
@@ -285,8 +300,8 @@ AbShapeStyler.prototype = {
 	//-----------------------------------------------------------
 
 	alert: function (s){
-		//alert(s);
-		AbMsgBox.warning(s);
+		alert(s);
+		//AbMsgBox.warning(s);
 	},
 
 	//-----------------------------------------------------------
@@ -597,15 +612,16 @@ AbShapeStyler.prototype = {
 		var type = e.attr('abs-type');
 		var unit = e.attr('abs-unit');
 
-		value = this.output(value, type, unit);
+		value = this.input(style, type, unit);
 
-		e.val(style);
+		e.val(value);
 	},
 
 	//-----------------------------------------------------------
 
 	typeValue: function (type, value){
 		switch (type){
+		case 'number-unit':
 		case 'number': value = parseFloat(value); break;
 		case 'boolean': value = value == 'true'; break;
 		}
@@ -615,7 +631,7 @@ AbShapeStyler.prototype = {
 	input: function(value, type, unit){
 		if (unit == '%')
 			return parseFloat(value) * 100;
-		return type == 'number' ? parseFloat(value) : type == 'boolean' ? value == 'true' : value;
+		return type == 'number' || type == 'number-unit' ? parseFloat(value) : type == 'boolean' ? value == 'true' : value;
 	},
 
 	output: function (value, type, unit){

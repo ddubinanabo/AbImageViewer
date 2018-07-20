@@ -235,44 +235,37 @@ AbPage.prototype = {
 		if (!AbCommon.isBool(drawIndicator)) drawIndicator = true;
 
 		var len = this.shapes.length;
-		var sel = null;
+		var sels = [], fsel = null;
 		var bak = { selected: false, focused: false };
 		for (var i=0; i < len; i++){
 			var s = this.shapes[i];
 			if (s.focused)
-				sel = s;
-			else{
-				if (drawIndicator === false){
-					bak.selected = s.selected;
-					bak.focused = s.focused;
+				fsel = s;
+			else if (s.selected)
+				sels.push(s);
 
-					s.selected = false;
-					s.focused = false;
-				}
+			if (drawIndicator === false){
+				bak.selected = s.selected;
+				bak.focused = s.focused;
 
-				s.draw(ctx, this);
+				s.selected = false;
+				s.focused = false;
+			}
 
-				if (drawIndicator === false){
-					s.selected = bak.selected;
-					s.focused = bak.focused;
-				}
+			s.draw(ctx, this);
+
+			if (drawIndicator === false){
+				s.selected = bak.selected;
+				s.focused = bak.focused;
 			}
 		}
-		if (sel){
-			if (drawIndicator === false){
-				bak.selected = sel.selected;
-				bak.focused = sel.focused;
+		if (sels.length && drawIndicator){
+			for (var i = sels.length - 1; i >= 0; i--)
+				sels[i].indicator.draw(ctx);
+		}
 
-				sel.selected = false;
-				sel.focused = false;
-			}
-
-			sel.draw(ctx, this);
-
-			if (drawIndicator === false){
-				sel.selected = bak.selected;
-				sel.focused = bak.focused;
-			}
+		if (fsel && drawIndicator){
+			fsel.indicator.draw(ctx);
 		}
 	},
 

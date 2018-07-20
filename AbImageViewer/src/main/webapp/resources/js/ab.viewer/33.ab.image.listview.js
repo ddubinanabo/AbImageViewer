@@ -577,6 +577,9 @@ AbImageListView.prototype = {
 	startIndex: function () { return this.pager.startRow(); },
 	inPage: function(index){ return this.pager.startRow() <= index && index < this.pager.startRow() + this.pager.lineCount(); },
 
+	// 전체 선택이 체크되어 있는 지 여부
+	checkedAll: function (){ return this.eCheckAll.is(':checked'); },
+
 	//-----------------------------------------------------------
 
 	loadable: function (page){ return page.status != AbPage.prototype.LOADED && page.loader; },
@@ -633,7 +636,7 @@ AbImageListView.prototype = {
 		this.notifyObservers('bookmark.remove.list', ua);
 	},
 
-	removeList: function(){
+	selectedPages: function(){
 		var a = [], siz = this.renderedChildren.length;
 		for (var i=0; i < siz; i++){
 			var e = this.renderedChildren[i];
@@ -647,7 +650,7 @@ AbImageListView.prototype = {
 		}
 
 		if (!a.length)
-			return;
+			return a;
 
 		for (var i=a.length - 1; i >= 0; i--){
 			var d = a[i];
@@ -660,6 +663,11 @@ AbImageListView.prototype = {
 			}
 		}
 
+		return a;
+	},
+
+	removeList: function(){
+		var a = this.selectedPages();
 		this.notifyObservers('page.remove.list', { pages: a });
 	},
 
@@ -966,7 +974,7 @@ AbImageListView.prototype = {
 		if (end > this.children.length)
 			end = this.children.length;
 
-		var checked = this.eCheckAll.is(':checked');
+		var checked = this.checkedAll();
 		var enabled = this.enabled();
 	
 		for (var i=start, r = 0; i < end; i++, r++){

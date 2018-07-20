@@ -182,8 +182,10 @@ AbShapeEllipse.prototype = {
 
 	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
 	contains: function(x, y, w, h){
-		if (arguments.length < 4 && !this.style.color){			
-			return this.hitTest(x, y, w);
+		if (arguments.length < 4){
+			if (this.style.color)
+				return this.hitTest(x, y, w);
+			return this.hitTestSkeleton(x, y, w);
 		}
 		return this.indicator.contains.apply(this.indicator, arguments);
 	},
@@ -195,6 +197,48 @@ AbShapeEllipse.prototype = {
 	//-----------------------------------------------------------
 
 	hitTest: function(x, y, ctx){
+		var page = this.engine.currentPage;
+
+		var tbox = this.box();
+		var tpadding = this.padding();
+
+		tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+		tbox = page.toCanvasBox(tbox);
+
+		var pc = page.toCanvas(x, y);
+		x = pc.x; y = pc.y;
+		
+		var centerX = tbox.x + (tbox.width >> 1), centerY = tbox.y + (tbox.height >> 1);
+		if (this.angle){
+			var r = AbGraphics.angle.point(-this.angle, centerX, centerY, x, y);
+			x = r.x;
+			y = r.y;
+		}
+
+		//-------------------------------------------------------
+		// 클릭한 포인트 표시
+
+		// ctx.fillStyle = 'red';
+		// ctx.beginPath();
+		// ctx.moveTo(x, y);
+		// ctx.arc(x, y, 5, 0, 360);
+		// ctx.fill();
+		// ctx.closePath();
+
+		//-------------------------------------------------------
+
+		var x2 = centerX - x, y2 = centerY - y;
+
+		var r = x2 * x2 / (tbox.width * tbox.width) + (y2 * y2) / (tbox.height * tbox.height);
+
+		//console.log('[타원] ' + r);
+
+		return r <= 0.25;
+	},
+
+	//-----------------------------------------------------------
+
+	hitTestSkeleton: function(x, y, ctx){
 		var page = this.engine.currentPage;
 
 		var tbox = this.box();

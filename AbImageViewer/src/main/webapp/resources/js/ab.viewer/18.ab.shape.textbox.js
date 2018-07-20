@@ -53,11 +53,14 @@ function AbShapeTextBox(options){
 
 		text: {
 			size: textStyle.size || '16px',
-			font: textStyle.font || 'tahoma',
+			font: textStyle.font || 'tahoma', // 맑은 고딕(Malgun Gothic), 굴림(gulim), 돋움(Dotum), Arial, Courier New, Times New Roman, Verdana, Helvetica, Tahoma
 			italic: textStyle.italic || false,
 			bold: textStyle.bold || false,
+			cancel: textStyle.cancel || false,
+			under: textStyle.under || false,
 			color: textStyle.color || 'black',
 			lineHeight: textStyle.lineHeight || 1.25,
+			align: this.textAlign(textStyle.align, 'left'), // left, center, right, justify
 		},
 
 		color: style.color || 'rgba(254,238,176,1)' //'#FFE679',
@@ -73,6 +76,17 @@ AbShapeTextBox.prototype = {
 
 	//-----------------------------------------------------------
 
+	textAlign: function (style, defaultStyle){
+		if (!style) return defaultStyle;
+
+		switch (style){
+		case 'left': case 'center': case 'right': case 'justify': return style;
+		}
+		return defaultStyle;
+	},
+
+	//-----------------------------------------------------------
+
 	styleDesc: function(){
 		return {
 			select: [ 'color', 'stroke.width' ],
@@ -83,12 +97,15 @@ AbShapeTextBox.prototype = {
 					{ name: 'color', text: '색상', style: 'color', alpha: false },
 				] },
 				{ name: 'text', text: '글자 스타일', childs: [
-					{ name: 'size', text: '크기', style: 'select', unit: 'px', values: 'fontSize' },
+					{ name: 'size', text: '크기', style: 'text', type: 'number-unit', unit: 'px', range: { start: 1 } },
 					{ name: 'font', text: '글자모양', style: 'select', type: 'string', values: 'font' },
 					{ name: 'italic', text: '기울림', style: 'check' },
 					{ name: 'bold', text: '굵게', style: 'check' },
+					{ name: 'under', text: '밑줄', style: 'check' },
+					{ name: 'cancel', text: '취소선', style: 'check' },
 					{ name: 'color', text: '색상', style: 'color', alpha: false, notset: false },
 					{ name: 'lineHeight', text: '글자높이', style: 'text', type: 'number', unit: '%', range: { start: 10 } },
+					{ name: 'align', text: '정렬', style: 'select', type: 'string', values: 'textAlign' },
 				] },
 			],
 		};
@@ -135,8 +152,11 @@ AbShapeTextBox.prototype = {
 		serializer.add(text, 'font', this.style.text.font);
 		serializer.add(text, 'italic', this.style.text.italic);
 		serializer.add(text, 'bold', this.style.text.bold);
+		serializer.add(text, 'under', this.style.text.under);
+		serializer.add(text, 'cancel', this.style.text.cancel);
 		serializer.add(text, 'color', this.style.text.color);
 		serializer.add(text, 'lineHeight', this.style.text.lineHeight);
+		serializer.add(text, 'align', this.style.text.align);
 
 		return serializer.serialize();
 	},
@@ -293,10 +313,10 @@ AbShapeTextBox.prototype = {
 		
 		var textPadding = this.textPadding;
 		var gap = this.style.stroke.width;
-		var px = AbCss.pixel(this.style.text.size);
-		var lineHeight = px * this.style.text.lineHeight;
 
-		var r = this.wrapMeasureText(ctx, text, width - textPadding.horiz() - (gap << 1), lineHeight);
+		var r = this.wrapMeasureText(ctx, text, {
+			maxWidth: width - textPadding.horiz() - (gap << 1)
+		});
 
 		ctx.restore();
 
@@ -320,7 +340,33 @@ AbShapeTextBox.prototype = {
 
 		var gap = this.style.stroke.width;
 		var textPadding = this.textPadding;
-		return AbGraphics.contains.box(this.x + textPadding.left + gap, this.y + textPadding.top + gap, this.textWidth, this.textHeight, x, y);
+		var dblgap = gap << 1;
+		var hs = textPadding.horiz(), vs = textPadding.vert();
+		var textRect = {
+			x: textPadding.left + gap,
+			y: textPadding.top + gap,
+			width: this.width - dblgap - hs,
+			height: this.height - dblgap - vs
+		};
+
+		var tx = textRect.x, ty = textRect.y, tw = this.textWidth, th = this.textHeight;
+
+		switch (this.style.text.align){
+		case 'center':
+			tx = (textRect.width - this.textWidth) >> 1;
+			break;
+		case 'right':
+			tx = textRect.width - this.textWidth;
+			break;
+		case 'justify':
+			tx = textRect.x;
+			tw = textRect.width;
+			break;
+		default:
+			break;
+		}
+
+		return AbGraphics.contains.box(this.x + tx, this.y + ty, tw, th, x, y);
 	},
 
 	inlineEdit: function(engine, endEdit){
@@ -331,7 +377,8 @@ AbShapeTextBox.prototype = {
 			var s = e.data.shape;
 
 			s.text = element.val();
-			textbox.off();
+			textbox.off('focusout');
+			textbox.off('input');
 			textbox.hide();
 
 			s.measure();
@@ -346,7 +393,7 @@ AbShapeTextBox.prototype = {
 			// end record history
 			e.data.engine.history.end(e.data.engine);
 
-			e.data.engine.render();	
+			e.data.engine.render();
 		});
 
 		textbox.on('input', { engine: engine, shape: this, textbox: textbox }, function (e){
@@ -431,7 +478,9 @@ AbShapeTextBox.prototype = {
 			color: this.style.text.color,
 			fontFamily: this.style.text.font,
 			fontSize: px + 'px',
-			lineHeight: (this.style.text.lineHeight * 100) + '%'
+			lineHeight: (this.style.text.lineHeight * 100) + '%',
+			wordWrap: 'break-word',
+			wordBreak: 'keep-all',
 		});
 
 		if (this.style.text.italic)
@@ -439,6 +488,20 @@ AbShapeTextBox.prototype = {
 
 		if (this.style.text.bold)
 			textbox.css('font-weight', '700');
+
+		if (this.style.text.under || this.style.text.cancel){
+			var tda = [];
+			if (this.style.text.under) tda.push('underline');
+			if (this.style.text.cancel) tda.push('line-through');
+
+			textbox.css('text-decoration', tda.join(' '));
+		}
+	
+		if (this.style.text.align){
+			var align = this.style.text.align;
+			//if (align === 'justify') align = 'left';
+			textbox.css('text-align', align);
+		}
 
 		var gap = this.style.stroke.width;
 
@@ -455,78 +518,165 @@ AbShapeTextBox.prototype = {
 
 	//-----------------------------------------------------------
 
-	wrapMeasureText: function (ctx, text, maxWidth, lineHeight, scaleX){
-		if (!scaleX) scaleX = 1;
-		maxWidth = Math.round(maxWidth);
+	measureText: function(ctx, text){
+		return AbGraphics.canvas.measureText(ctx, this.style.text.lineHeight, this, text);
+	},
 
-		var lineSize = [], w = 0, h = 0;
+	//-----------------------------------------------------------
+
+	analysis: function(ctx, text, options){
+		if (!options) options = {};
+		if (options.maxWidth) options.maxWidth = Math.round(options.maxWidth);
+
 		var lines = text.split('\n');
-		var lineLen = lines.length, tm = null, testLine = null, line = null, words = null, n = 0, txtWidth = 0;
+		var lineLen = lines.length;
+		var a = [], w = 0, h = 0;
+
 		for (var iline=0; iline < lineLen; iline++){
-			words = lines[iline].split(' ');
+			var lineText = lines[iline];
+			var words = lineText.split(/\s{1}/g), wlen = words.length;
 
-			line = '';
-			for(n = 0; n < words.length; n++) {
-				testLine = line + (line.length ? ' ' : '') + words[n];
-				tm = ctx.measureText(testLine);
-				txtWidth = Math.round(tm.width * scaleX);
-	
-				if (txtWidth > maxWidth && n > 0) {
-					tm = ctx.measureText(line);
-					txtWidth = Math.round(tm.width * scaleX);
-					if (w == 0 || w < txtWidth) w = txtWidth;
-					lineSize.push(txtWidth);
+			var line = '', rwords = [];
+			var pTestWidth = 0;
+			for (var i=0; i < wlen; i++){
+				var testLine = line + (line.length ? ' ' : '') + words[i];
+				var testWidth = ctx.measureText(testLine).width;
 
-					h += lineHeight;
-					line = words[n];
-				}else {
+				if (options.maxWidth && testWidth > options.maxWidth && i > 0) {
+					if (w == 0 || w < pTestWidth) w = pTestWidth;
+					var lh = this.measureText(ctx, line);
+					h += lh.height;
+
+					a.push({
+						end: false,
+						text: line,
+						words: rwords.splice(0, rwords.length),
+						width: pTestWidth,
+						height: lh.height,
+						size: lh,
+					});
+
+					line = words[i];
+					rwords.push({
+						word: words[i],
+						width: ctx.measureText(words[i]).width,
+					});
+				}else{
 					line = testLine;
+					rwords.push({
+						word: words[i],
+						width: ctx.measureText(words[i]).width,
+					});
 				}
+
+				pTestWidth = testWidth;
 			}
+
 			if (line){
-				tm = ctx.measureText(line);
-				txtWidth = Math.round(tm.width * scaleX);
-				if (w == 0 || w < txtWidth) w = txtWidth;
-					lineSize.push(txtWidth);
-			
-				h += lineHeight;
+				var testWidth = ctx.measureText(line).width;
+
+				if (w == 0 || w < testWidth) w = testWidth;
+				var lh = this.measureText(ctx, line);
+				h += lh.height;
+
+				a.push({
+					end: true,
+					text: line,
+					words: rwords.splice(0, rwords.length),
+					width: testWidth,
+					height: lh.height,
+					size: lh,
+				});
 			}
 		}
-
 		return {
 			width: w,
 			height: h,
-			lines: lineSize
+			lines: a,
 		};
 	},
 
-	wrapText: function(ctx, text, x, y, maxWidth, lineHeight, scaleX) {
-		if (!scaleX) scaleX = 1;
-		maxWidth = Math.round(maxWidth);
+	//-----------------------------------------------------------
 
-		var lines = text.split('\n');
-		var lineLen = lines.length, tm = null, testLine = null, line = null, words = null, n = 0, txtWidth = 0;
+	wrapMeasureText: function (ctx, text, options){
+		return this.analysis(ctx, text, options);
+	},
+
+	wrapText: function(ctx, text, rect, options) {
+		if (!options) options = {};
+		if (!options.scaleX) options.scaleX = 1;
+		if (!options.align) options.align = 'left';
+		if (options.maxWidth) options.maxWidth = Math.round(options.maxWidth);
+		
+		var r = this.analysis(ctx, text, options);
+
+		var lineLen = r.lines.length, x = rect.x, y = rect.y, yc = 0;
+		var line = null, totalLen = 0, wlen = 0, wsiz = 0, justified = false;
 		for (var iline=0; iline < lineLen; iline++){
-			words = lines[iline].split(' ');
+			line = r.lines[iline];
+			totanLen = 0;
+			justified = false;
 
-			line = '';
-			for(n = 0; n < words.length; n++) {
-				testLine = line + (line.length ? ' ' : '') + words[n];
-				tm = ctx.measureText(testLine);
-				txtWidth = Math.round(tm.width * scaleX);
-	
-				if (txtWidth > maxWidth && n > 0) {
-					ctx.fillText(line, x, y);
-					y += lineHeight;
-					line = words[n];
-				}else {
-					line = testLine;
+			switch (options.align){
+			case 'center':
+				x = (rect.width - line.width) >> 1;
+				break;
+			case 'right':
+				x = rect.width - line.width;
+				break;
+			case 'justify':
+				if (!line.end){
+					justified = true;
+
+					wsiz = wlen = line.words.length;
+					totalLen = 0;
+					for (var i=0; i < wlen; i++) totalLen += line.words[i].width;
+					// exclude last space
+					for (var i = wlen - 1; i >= 0; i--, wsiz--) if (line.words[i].word === '') totalLen -= line.words[i].width; else break;
+					break;
 				}
+			default:
+				x = rect.x;
+				break;
 			}
-			if (line){
-				ctx.fillText(line, x, y);
-				y += lineHeight;
+
+			yc = (line.height - line.size.contentHeight >> 1);
+
+			var displayedWidth = line.width, displayedHeight = line.size.contentHeight;
+
+			if (justified){
+				displayedWidth = rect.x;
+				x = displayedWidth;
+				var spaceWidth = wsiz > 1 ? (rect.width - totalLen) / (wsiz - 1) : 0;
+				for (var i=0; i < wsiz; i++){
+					ctx.fillText(line.words[i].word, displayedWidth, y + yc);
+					displayedWidth += line.words[i].width + spaceWidth;
+				}
+				displayedWidth -= spaceWidth;
+				// ctx.strokeStyle = 'green';
+				// ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+			}else{
+				ctx.fillText(line.text, x, y + yc);
 			}
+
+			if (options.under === true || options.cancel === true){
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+
+				if (options.cancel === true){
+					ctx.moveTo(x, y + yc + (displayedHeight >> 1));
+					ctx.lineTo(x + displayedWidth, y + yc + (displayedHeight >> 1));
+				}
+
+				if (options.under === true){
+					ctx.moveTo(x, y + yc + displayedHeight);
+					ctx.lineTo(x + displayedWidth, y + yc + displayedHeight);
+				}
+				ctx.stroke();
+				ctx.closePath();
+			}
+
+			y += line.height;
 		}
 	},
 
@@ -535,18 +685,28 @@ AbShapeTextBox.prototype = {
 	setTextSyle: function (ctx){
 		var style = this.style.text;
 		
-		var font = '';
-		if (style.italic) font += 'italic ';
-		if (style.bold) font += '700 ';
-		if (style.size) font += style.size + ' ';
-		if (style.font) font += style.font + ' ';
+		var parts = [], sf = '';
+
+		if (style.italic) parts.push('italic');
+		if (style.bold) parts.push('700');
+
+		if (style.size) sf += style.size;
+		// canvas에는 line-height가 안 먹힘
+		//if (style.lineHeight) sf += '/' + style.lineHeight;
+
+		if (sf) parts.push(sf);
+
+		if (style.font) parts.push(style.font);
 
 		var engineScale = this.engine.currentPage.scale;
+		var font = parts.join(' ');
+
+		//console.log('[FONT] ' + font + ' [SCALE] x=' + engineScale.x + ', y=' + engineScale.y);
 
 		ctx.lineWidth = 1;
 		ctx.fillStyle = style.color;
 		ctx.strokeStyle = style.color;
-		ctx.font = $.trim(font);
+		ctx.font = font;
 		ctx.scale(engineScale.x, engineScale.y);
 		//ctx.textBaseline = 'hanging';
 		ctx.textBaseline = 'top';
@@ -574,7 +734,8 @@ AbShapeTextBox.prototype = {
 
 		var gap = this.style.stroke.width;
 		var textPadding = this.textPadding;
-		var hs = textPadding.horiz();
+		var dblgap = gap << 1;
+		var hs = textPadding.horiz(), vs = textPadding.vert();
 
 		this.setTextSyle(ctx);
 
@@ -582,16 +743,24 @@ AbShapeTextBox.prototype = {
 		//ctx.strokeText(this.text, textPadding.left, textPadding.top + tm.height);
 		//ctx.fillText(this.text, textPadding.left, textPadding.top);
 
-		if (!this.textEditMode){
-			var px = AbCss.pixel(this.style.text.size);
-			var lineHeight = px * this.style.text.lineHeight;
+		var textRect = {
+			x: textPadding.left + gap,
+			y: textPadding.top + gap,
+			width: this.width - dblgap - hs,
+			height: this.height - dblgap - vs
+		};
 
-			this.wrapText(ctx, this.text, textPadding.left + gap, textPadding.top + gap, this.width - hs - (gap << 1), lineHeight);
-		}
+		if (!this.textEditMode)
+			this.wrapText(ctx, this.text, textRect, {
+				maxWidth: this.width - hs - dblgap,
+				align: this.style.text.align,
+				under: this.style.text.under,
+				cancel: this.style.text.cancel,
+			});
 
 		//-------------------------
 
-		// var r = this.wrapMeasureText(ctx, this.text, this.width - textPadding.horiz(), lineHeight);
+		// var r = this.wrapMeasureText(ctx, this.text, { maxWidth: this.width - textPadding.horiz() });
 		// ctx.strokeStyle = 'blue';
 		// ctx.fillStyle = 'blue';
 		// //ctx.arc(0, 0, 300, 0, 360);
@@ -608,13 +777,31 @@ AbShapeTextBox.prototype = {
 		// ctx.strokeStyle = 'red';
 		// ctx.fillStyle = 'red';
 		// ctx.lineWidth = 1;
-		// ctx.strokeRect(textPadding.left + gap, textPadding.top + gap, this.textWidth, this.textHeight);
+
+		// var tx = textRect.x, ty = textRect.y, tw = this.textWidth, th = this.textHeight;
+
+		// switch (this.style.text.align){
+		// case 'center':
+		// 	tx = (textRect.width - this.textWidth) >> 1;
+		// 	break;
+		// case 'right':
+		// 	tx = textRect.width - this.textWidth;
+		// 	break;
+		// case 'justify':
+		// 	tx = textRect.x;
+		// 	tw = textRect.width;
+		// 	break;
+		// default:
+		// 	break;
+		// }
+
+		// ctx.strokeRect(tx, ty, tw, th);
 		// ctx.scale(0.7, 1.2);
 		// ctx.fillStyle = 'cyan';
 		// ctx.font = '700 16px tahoma';
 		// ctx.fillText('text(width='+this.textWidth+', height='+this.textHeight+')', 0, textPadding.top + gap + this.textHeight + 5);
 
-		//console.log('[INLINE][DRAW] width=' + this.width + ', textWidth(Measured)=' + this.textHeight);
+		// console.log('[INLINE][DRAW] width=' + this.width + ', textWidth(Measured)=' + this.textHeight);
 
 		//-------------------------
 		

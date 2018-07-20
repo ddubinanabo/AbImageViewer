@@ -26,6 +26,9 @@ AbHistory.prototype = {
 			remove: new AbHistoryRemoveShapeState(),
 
 			all: new AbHistoryRemoveAllShapeState(),
+			range: new AbHistoryRemoveRangeShapeState(),
+
+			zindex: new AbHistoryZIndexShapeState(),
 		},
 
 		page: {

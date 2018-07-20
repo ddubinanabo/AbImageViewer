@@ -2,6 +2,7 @@ function AbShapeArrow(options){
 	if (!options) options = {};
 	var style = options.style || {};
 	var headStyle = style.head || {};
+	var tailStyle = style.tail || {};
 
 	this.name = 'arrow';		// name of shape
 	this.type = 'annotation';	// annotation, masking
@@ -29,12 +30,22 @@ function AbShapeArrow(options){
 	this.angle = 0;
 	//console.log('[INIT][ANGLE] ' + this.angle);
 
+	var lw = style.width || 1;
+
 	this.style = {
-		width: style.width || 1,
+		width: lw,
 		color: style.color || '#FF0000', //'#840200',
+		dots: AbGraphics.canvas.dashStyle(style.dots, 'solid'), // solid, dash, dot, dash-dot, dash-dot-dot
 		head: {
-			size: headStyle.size || 14,
-		}
+			//size: headStyle.size || 14 ,
+			size: (headStyle.size || 14),
+			style: this.arrowStyle(headStyle.style, 'triangle'), // triangle, diamond, circle, bracket, none
+		},
+		tail: {
+			//size: tailStyle.size || 14,
+			size: (tailStyle.size || 14),
+			style: this.arrowStyle(tailStyle.style, 'none'), // triangle, diamond, circle, bracket, none
+		},
 	};
 
 	this.prepare();
@@ -47,15 +58,34 @@ function AbShapeArrow(options){
 AbShapeArrow.prototype = {
 	constructor: AbShapeArrow,
 
+	BRACKET_SIZE: 0.4,
+
+	//-----------------------------------------------------------
+
+	arrowStyle: function (style, defaultStyle){
+		if (!style) return defaultStyle;
+
+		switch (style){
+		case 'triangle': case 'diamond': case 'circle': case 'bracket': case 'none': return style;
+		}
+		return defaultStyle;
+	},
+
 	//-----------------------------------------------------------
 
 	styleDesc: function(){
 		return {
 			descs: [
-				{ name: 'width', text: '두께', style: 'select', type: 'number', values: 'lineWidth' },
+				{ name: 'width', text: '두께', style: 'text', type: 'number-unit', range: { start: 1 } },
 				{ name: 'color', text: '색상', style: 'color', notset: false },
-				{ name: 'head', text: '', childs: [
+				{ name: 'dots', text: '무늬', style: 'select', values: 'dots' },
+				{ name: 'head', text: '머리', childs: [
 					{ name: 'size', text: '크기', style: 'text', type: 'number', range: { start: 8, end: 30 } },
+					{ name: 'style', text: '스타일', style: 'select', values: 'arrow' },
+				] },
+				{ name: 'tail', text: '꼬리', childs: [
+					{ name: 'size', text: '크기', style: 'text', type: 'number', range: { start: 8, end: 30 } },
+					{ name: 'style', text: '스타일', style: 'select', values: 'arrow' },
 				] },
 			],
 		};
@@ -90,9 +120,15 @@ AbShapeArrow.prototype = {
 		var style = serializer.addGroup('style');
 		serializer.add(style, 'color', this.style.color);
 		serializer.add(style, 'width', this.style.width);
+		serializer.add(style, 'dots', this.style.dots);
 		
 		var head = serializer.addGroup(style, 'head');
 		serializer.add(head, 'size', this.style.head.size);
+		serializer.add(head, 'style', this.style.head.type);
+		
+		var tail = serializer.addGroup(style, 'tail');
+		serializer.add(tail, 'size', this.style.tail.size);
+		serializer.add(tail, 'style', this.style.tail.style);
 
 		return serializer.serialize();
 	},
@@ -168,13 +204,17 @@ AbShapeArrow.prototype = {
 
 	center: function (){ return { x: this.x1 + ((this.x2 - this.x1) / 2), y: this.y1 + ((this.y2 - this.y1) / 2) }; },
 	restoreMinimumSize: function() {
+		var siz = this.controlSize();
 		//return AbGraphics.box.inflate(box.x, box.y, box.width, box.height, this.style.head.size, this.style.head.size);
-		return { width: this.style.head.size, height: this.style.head.size };
+		return { width: siz, height: siz };
 	},
 
 	//-----------------------------------------------------------
 
-	padding: function() { return { left: 0, top: this.style.head.size >> 1, right: 0, bottom: this.style.head.size >> 1 }; },
+	padding: function() {
+		var siz = this.controlSize();
+		return { left: 0, top: siz >> 1, right: 0, bottom: siz >> 1 };
+	},
 	contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	editable: function (x, y){ if (this.selected){ return this.indicator.editable(x, y); } return null; },
 	editPos: function (point){ return this.indicator.editPos(point); },
@@ -183,13 +223,145 @@ AbShapeArrow.prototype = {
 
 	//-----------------------------------------------------------
 
+	headSize: function() { return this.style.head.type != 'none' ? this.style.head.size : 0; },
+	tailSize: function() { return this.style.tail.type != 'none' ? this.style.tail.size : 0; },
+	controlSize: function() {
+		var headSize = this.headSize();
+		var tailSize = this.tailSize();
+		return headSize > tailSize ? headSize : tailSize;
+	},
+
+	//-----------------------------------------------------------
+
+	drawHeadArrow: function(ctx, d){
+		var style = d.style;
+		var halfSize = d.size ? d.size / 2 : 0;
+
+		if (style === 'triangle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y + halfSize);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'diamond'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize,  d.y - halfSize);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize,  d.y + halfSize);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'circle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize, d.y);
+
+			ctx.beginPath();
+			ctx.arc(Math.round(p1.x), Math.round(p1.y), halfSize, 0, 360);
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'bracket'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y + halfSize);
+			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - (d.size * AbShapeArrow.prototype.BRACKET_SIZE),  d.y);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE));
+		}
+
+		return { x: 0, y: 0 };
+	},
+
+	//-----------------------------------------------------------
+
+	drawTailArrow: function(ctx, d){
+		var style = d.style;
+		var halfSize = d.size ? d.size / 2 : 0;
+
+		if (style === 'triangle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y + halfSize);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'diamond'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize,  d.y - halfSize);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize,  d.y + halfSize);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'circle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize, d.y);
+
+			ctx.beginPath();
+			ctx.arc(Math.round(p1.x), Math.round(p1.y), halfSize, 0, 360);
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+		} else if (style === 'bracket'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y + halfSize);
+			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + (d.size * AbShapeArrow.prototype.BRACKET_SIZE),  d.y);
+
+			ctx.beginPath();
+			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
+			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
+			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
+			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
+			ctx.fill();		
+			ctx.closePath();
+
+			return AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE));
+		}
+		return { x: 0, y: 0 };
+	},
+
+	//-----------------------------------------------------------
+
 	draw: function(ctx, page, direct){
 		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
 		
 		ctx.save();
-
-		var headSize = this.style.head.size;
-		var halfHeadSize = headSize / 2;
 
 		var x1 = this.x1 * scaleX, y1 = this.y1 * scaleY;
 		var x2 = this.x2 * scaleX, y2 = this.y2 * scaleY;
@@ -205,23 +377,48 @@ AbShapeArrow.prototype = {
 		
 		//console.log('[RAD]' + rad + ', angle=' + AbGraphics.angle.rad2deg(rad) + ', distance=' + distance + ', angle2=' + AbGraphics.angle.get(x1, y1, x2, y2));
 
-		var pend = AbGraphics.rotate.pointByDistance(rad, distance - headSize);
-		var ox2 = x2, oy2 = y2;
+		ctx.fillStyle = this.style.color;
+		ctx.strokeStyle = this.style.color;
+		ctx.lineWidth = this.style.width;
+		ctx.lineCap = 'butt';
+		
+		// head arrow
+		var r = this.drawHeadArrow(ctx, {
+			distance: distance,
+			style: this.style.head.style,
+			size: this.headSize(),
+			rad: rad,
+			x: x2 - cx2,
+			y: y2 - cy2,
+		});
 
-		x2 = x1 + pend.x;
-		y2 = y1 + pend.y;
+		x2 = x2 - r.x;
+		y2 = y2 - r.y;
+		
+		// tail arrow
+		r = this.drawTailArrow(ctx, {
+			distance: distance,
+			style: this.style.tail.style,
+			size: this.tailSize(),
+			rad: rad,
+			x: x1 - cx2,
+			y: y1 - cy2,
+		});
 
+		x1 = x1 + r.x;
+		y1 = y1 + r.y;
+
+		// calc for line
 		x1 -= cx2;
 		y1 -= cy2;
 		x2 -= cx2;
 		y2 -= cy2;
 
-		ox2 -= cx2;
-		oy2 -= cy2;
-
-		ctx.fillStyle = this.style.color;
-		ctx.strokeStyle = this.style.color;
-		ctx.lineWidth = this.style.width;
+		if (this.style.dots){
+			var r = AbGraphics.canvas.makeDash(this.style.dots);
+			if (r.length)
+				ctx.setLineDash(r);
+		}
 
 		// line
 		ctx.beginPath();
@@ -229,25 +426,30 @@ AbShapeArrow.prototype = {
 		ctx.lineTo(Math.round(x2), Math.round(y2));
 		ctx.stroke();
 		ctx.closePath();
-		
-		// arrow
-		var p1 = AbGraphics.rotate.point(rad, ox2, oy2, ox2 - headSize,  oy2 - halfHeadSize);
-		var p2 = AbGraphics.rotate.point(rad, ox2, oy2, ox2,  oy2);
-		var p3 = AbGraphics.rotate.point(rad, ox2, oy2, ox2 - headSize,  oy2 + halfHeadSize);
 
-		/*
-		var p1 = { x: ox2 - headSize,  y: oy2 - halfHeadSize };
-		var p2 = { x: ox2,  y: oy2 };
-		var p3 = { x: ox2 - headSize,  y: oy2 + halfHeadSize };
-		*/
+		//-----------------------------------------------------------
+		// DEBUG
+		//-----------------------------------------------------------
 
-		ctx.beginPath();
-		ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-		ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-		ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-		ctx.fill();		
-		ctx.closePath();
+		if (false){
+			var x1 = this.x1 * scaleX, y1 = this.y1 * scaleY + 5;
+			var x2 = this.x2 * scaleX, y2 = this.y2 * scaleY + 5;
 	
+			x1 -= cx2;
+			y1 -= cy2;
+			x2 -= cx2;
+			y2 -= cy2;
+	
+			ctx.strokeStyle = 'green';
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(Math.round(x1), Math.round(y1));
+			ctx.lineTo(Math.round(x2), Math.round(y2));
+			ctx.stroke();
+			ctx.closePath();
+		}
+
+
 		AbShapeTool.endDraw(this, ctx);
 	},
 }

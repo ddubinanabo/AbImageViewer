@@ -104,6 +104,6 @@ AbThumbnailGenerator.prototype = {
 
 	generate: function (image, type){
 		this.draw(image);
-		return this.toImage();
+		return this.toImage(type);
 	},
 };

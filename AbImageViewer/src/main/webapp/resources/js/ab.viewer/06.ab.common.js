@@ -52,6 +52,23 @@ var AbCommon = {
 
 	//-----------------------------------------------------------
 
+	ieVersion: function(){
+		var agent = navigator.userAgent.toLowerCase();
+
+		var word = null;
+		
+		if (navigator.appName == 'Microsoft Internet Explorer') word = 'msie'; // IE old version (IE10 or Lower)
+		else if (agent.search('trident') > -1) word = 'trident/.*rv:'; // IE11
+		else if ( agent.search('edge/') > -1 ) word = 'edge/'; // Microsoft Edge
+		else return -1;
+
+		var reg = new RegExp(word +'([0-9]{1,})(\\.{0,}[0-9]{0,1})');
+		if (reg.exec(agent) != null) return parseFloat( RegExp.$1 + RegExp.$2 );
+		return -1;
+	},
+
+	//-----------------------------------------------------------
+
 	requestAnimFrame: function (){
 		return window.requestAnimationFrame ||
 			window.webkitRequestAnimationFrame || 
@@ -167,8 +184,10 @@ var AbCommon = {
 
 	escape: function (value){ return value ? value.replace ( /&/gi, '&amp;' ).replace ( /&/gi, '&nbsp;' ).replace ( /</gi, '&lt;' ).replace ( />/gi, '&gt;' ).replace ( /'/g, '&#039;' ).replace ( /"/g, '&quot;' ) : value; },
 
+	ENABLE_WEB_WORKER : true,
+
 	supportWebWorker: function(){
-		return window.Worker != null && window.Worker != undefined;
+		return window.Worker != null && window.Worker != undefined && AbCommon.ENABLE_WEB_WORKER;
 	},
 
 	contentWindow: function(e){
@@ -275,6 +294,52 @@ var AbCommon = {
 
 				setTimeout(func, 0);
 			}
+		});
+	},
+
+	sequencePromiseAll: function (a, progress, options){
+		var resolveDelay = 0, progreeDelay = 0, promiseDelay = 0, execDelay = 0;
+		if (AbCommon.isNumber(options)){
+			resolveDelay = options;
+		}else{
+			if (!options) options = {};
+			var termOptions = options.term || {};
+
+			resolveDelay = termOptions.resolve || 0;
+			progreeDelay = termOptions.progree || 0;
+			promiseDelay = termOptions.promise || 0;
+			execDelay = termOptions.exec || 0;
+		}
+		if (!$.isArray(a)) a = [a];
+
+		return new Promise(function(resolve, reject){
+			var siz = a.length;
+			var cnt = 0;
+
+			if (siz == 0){
+				setTimeout(resolve.bind(null), resolveDelay);
+				return;
+			}
+
+			var exec = function(){
+				var promise = a[cnt];
+
+				promise.then(function (){
+					cnt++;
+					if (cnt >= siz){
+						if (progress) setTimeout(function (){ progress(cnt, siz) }, progreeDelay);
+						setTimeout(resolve.bind(null), resolveDelay);
+					}else{
+						if (progress) setTimeout(function (){ progress(cnt, siz) }, progreeDelay);
+
+						setTimeout(exec, execDelay);
+					}
+				}).catch(function (e){
+					reject(e);
+				})
+			};
+
+			setTimeout(exec, execDelay);
 		});
 	},
 
@@ -406,9 +471,24 @@ var AbCommon = {
 	cloneShape: function (s){
 		function copyProp(dest, src, excludes){
 			if (!$.isArray(excludes)) excludes = [];
+
+			var advice = null;
+			if (AbCommon.isFunction(s.adviceClone)){
+				advice = s.adviceClone();
+			}
+	
 			for (var p in src){				
 				if (src.hasOwnProperty(p) && $.inArray(p, excludes) < 0){
 					var o = src[p];
+
+					if (advice){
+						if ($.inArray(p, advice.moveProps) >= 0){
+							dest[p] = o;
+							delete src[p];
+
+							continue;
+						}
+					}
 
 					if (!AbCommon.isSetted(o)){
 						dest[p] = null;
@@ -416,6 +496,8 @@ var AbCommon = {
 						dest[p] = o.slice(0);
 					}else if (AbCommon.isString(o) || AbCommon.isNumber(o) || AbCommon.isBool(o)){
 						dest[p] = o;
+					}else if (AbCommon.isFunction(o)){
+						dest[p] = o.bind(dest);
 					}else{
 						// var hasProp = o.hasOwnProperty('$$CLONE');
 						// var hasProtoProp = o.prototype && o.prototype.hasOwnProperty('$$CLONE');
@@ -462,6 +544,8 @@ var AbCommon = {
 						dest[p] = o.slice(0);
 					}else if (AbCommon.isString(o) || AbCommon.isNumber(o) || AbCommon.isBool(o)){
 						dest[p] = o;
+					}else if (AbCommon.isFunction(o)){
+						dest[p] = o.bind(dest);
 					}else{
 						var cloning = true;
 						if (AbCommon.hasClass(o)) cloning = o['$$CLONE'] === true;
@@ -495,6 +579,8 @@ var AbCommon = {
 						dest[p] = o.slice(0);
 					}else if (AbCommon.isString(o) || AbCommon.isNumber(o) || AbCommon.isBool(o)){
 						dest[p] = o;
+					}else if (AbCommon.isFunction(o)){
+						dest[p] = o.bind(dest);
 					}else{
 						dest[p] = AbCommon.createObject(o);
 						copyProp(dest[p], o);

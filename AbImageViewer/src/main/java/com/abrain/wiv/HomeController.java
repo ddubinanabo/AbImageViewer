@@ -99,6 +99,7 @@ public class HomeController {
 			
 	        response.setHeader("Content-Disposition", "attachment;filename=\""+seq+"\";");
 			response.setHeader("Content-Transfer-Encoding", "binary");
+			response.setHeader("Content-Length", "" + r.length);
 			
 			FileUtil.write(in, out);
 		}

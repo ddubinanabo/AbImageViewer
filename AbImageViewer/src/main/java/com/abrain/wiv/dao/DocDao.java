@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.abrain.wiv.abstracts.AbstractDao;
 import com.abrain.wiv.data.AbBinaryData;
 import com.abrain.wiv.data.AbImageDbData;
-import com.abrain.wiv.data.AbImagePackCollection;
+import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbImageType;
 
 @SuppressWarnings("unchecked")
@@ -16,38 +16,69 @@ import com.abrain.wiv.data.AbImageType;
 public class DocDao extends AbstractDao {
 
 	//-----------------------------------------------------------
-
-	public void record(AbImagePackCollection.AbImagePack pack, String id, int seq, String ip){
-
-		//-----------------------------------------------------------
 	
-		byte[] imageSource = pack.image.sourceBinary();
-		byte[] imageResult = pack.image.resultBinary();
-		
-		byte[] thumbnailSource = pack.thumbnail.sourceBinary();
-
-		//-----------------------------------------------------------
-	
+	public void recordImage(String id, int seq, String ip, AbImagePack.AbImageInfo info){
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);
 		param.put("SEQ", seq);
 		param.put("IP", ip);
-		param.put("IMG_WID", pack.image.width);
-		param.put("IMG_HGT", pack.image.height);
-		param.put("IMG_SRC", imageSource);
-		param.put("IMG_SRC_SIZ", imageSource.length);
-		param.put("IMG_RSLT", imageResult);
-		param.put("IMG_RSLT_SIZ", imageResult != null ? imageResult.length : 0);
-		param.put("SHAPES", pack.image.shapes);
+		param.put("WID", info.width);
+		param.put("HGT", info.height);
+		param.put("SHAPES", info.shapes);
 		
-		param.put("THUMB_WID", pack.thumbnail.width);
-		param.put("THUMB_HGT", pack.thumbnail.height);
-		param.put("THUMB_SRC", thumbnailSource);
-		param.put("THUMB_SRC_SIZ", thumbnailSource.length);
+		//-----------------------------------------------------------
+		
+		sqlSession.insert("doc-record-image", param);		
+	}
+	
+	public void recordImageSource(String id, int seq, byte[] bytes){
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
+		param.put("SEQ", seq);
+		param.put("SRC", bytes);
+		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
+		
+		//-----------------------------------------------------------
+		
+		sqlSession.insert("doc-update-image-source", param);		
+	}
+	
+	public void recordImageResult(String id, int seq, byte[] bytes){
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
+		param.put("SEQ", seq);
+		param.put("SRC", bytes);
+		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
+		
+		//-----------------------------------------------------------
+		
+		sqlSession.insert("doc-update-image-result", param);		
+	}
+	
+	public void recordThumbnail(String id, int seq, byte[] bytes, AbImagePack.AbThumbnailInfo info){
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
+		param.put("SEQ", seq);
+		param.put("WID", info.width);
+		param.put("HGT", info.height);
+		param.put("SRC", bytes);
+		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
+		
+		//-----------------------------------------------------------
+		
+		sqlSession.insert("doc-update-thumb", param);		
+	}
+
+	//-----------------------------------------------------------
+
+	public void remove(String id){
+
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
 
 		//-----------------------------------------------------------
 		
-		sqlSession.insert("doc-record", param);
+		sqlSession.delete("doc-delete", param);
 	}
 	
 	public List<AbImageDbData> select (String id){
