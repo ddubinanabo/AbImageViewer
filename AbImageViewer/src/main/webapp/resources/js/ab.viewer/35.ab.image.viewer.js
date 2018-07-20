@@ -527,7 +527,7 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	engineNotify: function(sender, topic, value){
-		console.log('[VIEWER][Engine]['+ topic + '] ' + value);
+		//console.log('[VIEWER][Engine]['+ topic + '] ' + value);
 
 		// 페이지 선택 요청
 		if (topic == 'request.select'){

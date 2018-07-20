@@ -621,7 +621,7 @@ AbColorPicker.prototype = {
 	updatePreviewColor: function() {
 		//this.previewColor.css('background-color', this.color.color());
 		var c = this.color.color();
-		console.log('[PREVIEW] ' + c);
+		//console.log('[PREVIEW] ' + c);
 
 		this.previewColor.css('background-color', c);
 	},

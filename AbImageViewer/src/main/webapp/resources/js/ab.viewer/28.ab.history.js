@@ -140,7 +140,7 @@ AbHistory.prototype = {
 
 	//-----------------------------------------------------------
 
-	ENABLE_LOG: true,
+	ENABLE_LOG: false,
 
 	logAllTree: function(){
 		if (!this.ENABLE_LOG) return;

@@ -407,7 +407,7 @@ AbViewerEngine.prototype = {
 		ellipse: new AbShapeEllipse(),
 		arrow: new AbShapeArrow(),
 		line: new AbShapeLine(),
-		checker: new AbShapeImage({ source: AbIcons.CHECKER }),
+		checker: new AbShapeImage({ name: 'checker', source: AbIcons.CHECKER }),
 	},
 	
 	//-----------------------------------------------------------
@@ -1261,7 +1261,7 @@ AbViewerEngine.prototype = {
 				}
 	
 				if (mod){
-					console.log('[ADD][MOD] x1: ' + x1 + ', y1: ' + y1 + ', x2: ' + x2 + ', y2: ' + y2);
+					//console.log('[ADD][MOD] x1: ' + x1 + ', y1: ' + y1 + ', x2: ' + x2 + ', y2: ' + y2);
 
 					targetShape.rect(x1, y1, x2, y2);
 				}
@@ -1289,10 +1289,10 @@ AbViewerEngine.prototype = {
 			targetShape.notify('measured');
 			
 			// log
-			var tbox = targetShape.box();
-			console.log('[ADD] x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height);
-			var trect = targetShape.rect();
-			console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
+			//var tbox = targetShape.box();
+			//console.log('[ADD] x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height);
+			//var trect = targetShape.rect();
+			//console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
 
 			//-----------------------------------------------------------
 			// end record history
@@ -1388,10 +1388,10 @@ AbViewerEngine.prototype = {
 			// 	break;
 			// }
 
-			var tbox = this.focusedShape.box();
-			console.log('[MOVE] x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height);
-			var trect = this.focusedShape.rect();
-			console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
+			//var tbox = this.focusedShape.box();
+			//console.log('[MOVE] x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height);
+			//var trect = this.focusedShape.rect();
+			//console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
 		default:
 			if (e.target && !this.selection.mode && this.selection.target){
 				var target = $(e.target);

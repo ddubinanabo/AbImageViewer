@@ -370,7 +370,7 @@ AbImageListView.prototype = {
 	},
 
 	notifyAbsolute: function(sender, topic, value){
-		console.log('[LISTVIEW::'+this.name+'][Viewer]['+ topic + '] ' + value);
+		//console.log('[LISTVIEW::'+this.name+'][Viewer]['+ topic + '] ' + value);
 	
 		var index = 0, item = null, uid = null;
 		switch (topic){

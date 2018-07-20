@@ -10,9 +10,9 @@ function AbShapeImage(options){
 		if (!source.width || !source.height)
 		throw new Error('[VECTOR-IMAGE] size(width, height) is not setted');
 
-	this.name = 'image';		// name of shape
+	this.name = options.name || 'image';		// name of shape
 	this.type = 'annotation';	// annotation, masking
-	this.shapeType = 'shape';	// shape, polygon, image
+	this.shapeType = 'image';	// shape, polygon, image
 	this.shapeStyle = 'box';	// box, line
 	this.token = null;			// for customize
 
@@ -45,6 +45,29 @@ function AbShapeImage(options){
 
 	this.style = {
 	};
+	
+	if (this.source.data){
+		var img = new Image();
+		img.onerror = function(e){
+			this.$image = 'error';
+			console.log(e);
+		}
+		img.src = this.source.data;
+		
+		this.$image = img;
+		
+//		AbCommon.loadImage(this.source.data)
+//			.then(function (e){
+//				this.$image = e;
+//				if (this.engine)
+//					this.engine.render();
+//			}.bind(this))
+//			.catch(function (e){
+//				this.$image = 'error';
+//	
+//				console.log(e);
+//			}.bind(this));
+	}
 };
 	
 //-----------------------------------------------------------
