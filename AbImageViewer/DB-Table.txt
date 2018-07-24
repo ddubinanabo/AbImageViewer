@@ -1,20 +1,20 @@
 CREATE TABLE AB_DOC
 (
-	ID VARCHAR(32),
-	SEQ NUMBER,
-    IP VARCHAR(15),
-    IMG_DEC VARCHAR(5),
-    IMG_WID NUMBER,
-    IMG_HGT NUMBER,
-    IMG_SRC BLOB,
-    IMG_SRC_SIZ NUMBER,
-    IMG_RSLT BLOB,
-    IMG_RSLT_SIZ NUMBER,
-    SHAPES CLOB,
-    THUMB_WID NUMBER,
-    THUMB_HGT NUMBER,
-    THUMB_SRC BLOB,
-    THUMB_SRC_SIZ NUMBER,
-    REG_DT VARCHAR(14)
+	ID VARCHAR(32),			-- 이미지 목록 ID
+	SEQ NUMBER,				-- 이미지 목록의 인덱스
+    IP VARCHAR(15),			-- 최초 등록자 아이피
+    IMG_DEC VARCHAR(5),		-- 이미지 렌더링 힌트
+    IMG_WID NUMBER,			-- 이미지 폭
+    IMG_HGT NUMBER,			-- 이미지 높이
+    IMG_SRC BLOB,			-- 이미지
+    IMG_SRC_SIZ NUMBER,		-- 이미지의 용량
+    IMG_RSLT BLOB,			-- 렌더링(워터마크, 주석/마스킹 등등)된 이미지
+    IMG_RSLT_SIZ NUMBER,	-- 렌더링된 이미지의 용량
+    SHAPES CLOB,			-- 주석/마스킹 정보
+    THUMB_WID NUMBER,		-- 섬네일 이미지 폭
+    THUMB_HGT NUMBER,		-- 섬네일 이미지 높이
+    THUMB_SRC BLOB,			-- 섬네일 이미지
+    THUMB_SRC_SIZ NUMBER,	-- 섬네일 이미지의 용량
+    REG_DT VARCHAR(14)		-- 등록 일시 
 );
 
