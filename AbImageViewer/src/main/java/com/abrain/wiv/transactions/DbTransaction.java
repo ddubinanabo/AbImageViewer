@@ -5,6 +5,8 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import com.abrain.wiv.utils.DebugUtil;
+
 public class DbTransaction {
 	private DbTransaction(){}
 	
@@ -28,6 +30,8 @@ public class DbTransaction {
 		}
 		catch (Exception e)
 		{
+			DebugUtil.print(e);
+			
 			System.out.println("[DB-TRANSACTION] Rollback failure!!!");
 		}
 	}

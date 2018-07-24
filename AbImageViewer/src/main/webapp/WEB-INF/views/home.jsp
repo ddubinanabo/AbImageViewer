@@ -17,7 +17,9 @@
 	<%/*
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.js"></script>
 	*/%>
+	<%/*
 	<script type="text/javascript" src="resources/js/vendor/canvas-toBlob.js"></script>
+	*/%>
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
 
 	<%/*
@@ -68,6 +70,9 @@
 		<!-- 이미지 전송 양식 시작 -->
 		<div id="save-forms"></div>
 		<!-- 이미지 전송 양식 끝 -->
+		<!-- 인쇄 이미지 전송 양식 시작 -->
+		<div id="print-support-forms"></div>
+		<!-- 인쇄 이미지 전송 양식 끝 -->
 	</div>
 	<header class="abv-header">
 		<!--<div>뷰어헤더</div>-->
@@ -140,6 +145,11 @@
 			<ul class="vert">
 				<li tb-topic="pages" title="목록" tb-type="radio" tb-status="checked" tb-group="left"><img class="tb-btn" src="resources/icon/tbl_01.png"/></li>
 				<li tb-topic="bookmarks" title="북마크 목록" tb-type="radio" tb-group="left"><img class="tb-btn" src="resources/icon/tbl_02.png"/></li>
+			</ul>
+			<div>&nbsp;</div>
+			<!--툴바-->
+			<ul class="vert">
+				<li tb-topic="thumb-popup.open" title="모아보기" tb-type="click"><img class="tb-btn" src="resources/icon/tbl_03.png"></li>
 			</ul>
 		</aside>
 		<aside class="abv-thumbnails noselection">
@@ -234,6 +244,88 @@
 				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_10.png"/></li>
 			</ul>
 		</aside>
+		<!-- 섬네일 모아보기 시작 -->
+		<div class="abv-thumb-popup abv-hide-thumbnails-popup-layer noselection" id="thumbnails-popup-layer">
+			<section>
+				<aside class="abv-left-side tb-toolbar noselection" id="tb-thumb-popup-left">
+					<!--툴바-->
+					<ul class="vert">
+						<li tb-topic="thumb-popup.pages" title="목록" tb-type="radio" tb-status="checked" tb-group="thumb-popup.left"><img class="tb-btn" src="resources/icon/tbl_03.png"></li>
+						<li tb-topic="thumb-popup.bookmarks" title="북마크 목록" tb-type="radio" tb-group="thumb-popup.left"><img class="tb-btn" src="resources/icon/tbl_02.png"></li>
+					</ul>
+					<div>&nbsp;</div>
+					<!--툴바-->
+					<ul class="vert">
+						<li tb-topic="thumb-popup.close" title="기본보기" tb-type="click"><img class="tb-btn" src="resources/icon/tbl_01.png"></li>
+					</ul>
+				</aside>
+				<!-- 섬네일 이미지 목록 시작 -->
+				<section class="abv-thumbnails">
+					<section class="adv-thumb-popup-list" id="thumbnails-popup">
+						<nav class="head">
+							<label class="checkbox" title="전체 선택">
+								<input type="checkbox" lt-topic="all"/>
+								<span class="checkmark"></span>
+							</label>
+							
+							<div class="custom-select">
+							<select lt-topic="viewsize" title="목록 스타일">
+								<option value="10">10개</option>
+								<option value="30">30개</option>
+								<option value="40">40개</option>
+								<option value="50">50개</option>
+								<option value="100">100개</option>
+								<option value="all">전체</option>
+							</select>
+							</div>			
+						</nav>
+						<div class="adv-list">
+							<ul>
+								<li lt-topic="container">
+									<!-- 섬네일 목록 시작 -->
+									<!-- 섬네일 목록 끝 -->
+								</li>
+							</ul>
+						</div>
+						<nav class="foot">
+							<div class="paginate"><!-- 페이지 네비게이션 --></div>
+						</nav>
+					</section>
+					<section class="adv-thumb-popup-list hide" id="bookmarks-popup">
+						<nav class="head">
+							<label class="checkbox" title="전체 선택">
+								<input type="checkbox" lt-topic="all"/>
+								<span class="checkmark"></span>
+							</label>
+							
+							<div class="custom-select">
+							<select lt-topic="viewsize" title="목록 스타일">
+								<option value="10">10개</option>
+								<option value="30">30개</option>
+								<option value="40">40개</option>
+								<option value="50">50개</option>
+								<option value="100">100개</option>
+								<option value="all">전체</option>
+							</select>
+							</div>			
+						</nav>
+						<div class="adv-list">
+							<ul>
+								<li lt-topic="container">
+									<!-- 섬네일 목록 시작 -->
+									<!-- 섬네일 목록 끝 -->
+								</li>
+							</ul>
+						</div>
+						<nav class="foot">
+							<div class="paginate"><!-- 페이지 네비게이션 --></div>
+						</nav>
+					</section>
+				</section>
+				<!-- 섬네일 이미지 목록 끝 -->
+			</section>
+		</div>
+		<!-- 섬네일 모아보기 끝 -->
 	</section>
 	<footer class="abv-footer">
 		<div>카피라이터</div>
@@ -278,10 +370,16 @@
 						<li><div class="loader"></div></li>
 						<li class="text">인쇄할 이미지들을 계산 중입니다...</li>
 					</ul>
-					<ul class="pl-loading fvert fcenter pad10">
+					<ul class="pl-proc fvert fcenter pad10">
+						<li><div class="loader"></div></li>
+						<li>&nbsp;</li>
 						<li class="fullwide"><div class="progress"><div class="bar"></div></div></li>
-						<li class="text">인쇄할 이미지들을 로드 중입니다...</li>
+						<li class="text">인쇄할 이미지들을 준비 중입니다...</li>
 					</ul>					
+					<ul class="pl-build fhoriz fcenter">
+						<li><div class="loader"></div></li>
+						<li class="text">인쇄 자료를 생성 중입니다...</li>
+					</ul>
 				</div>
 			</li>
 		</ul>
@@ -315,12 +413,10 @@
 						<li><div class="loader"></div></li>
 						<li class="text">전송할 이미지들을 계산 중입니다...</li>
 					</ul>
-					<ul class="pl-loading fvert fcenter pad10">
-						<li class="fullwide"><div class="progress"><div class="bar"></div></div></li>
-						<li class="text">전송할 이미지들을 렌더링 중입니다...</li>
-					</ul>					
-					<ul class="pl-send fhoriz fcenter">
+					<ul class="pl-proc fvert fcenter pad10">
 						<li><div class="loader"></div></li>
+						<li>&nbsp;</li>
+						<li class="fullwide"><div class="progress"><div class="bar"></div></div></li>
 						<li class="text">이미지들을 전송중입니다...</li>
 					</ul>
 				</div>

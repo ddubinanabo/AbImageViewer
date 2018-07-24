@@ -12,6 +12,7 @@ import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbImageType;
 import com.abrain.wiv.transactions.DbTransaction;
+import com.abrain.wiv.utils.DebugUtil;
 
 @Service
 public class DocService {
@@ -31,52 +32,34 @@ public class DocService {
 	}
 	
 	//-----------------------------------------------------------
+	
+	public void removeImagePost(String id, int seq){
+		dao.removeImagePost(id, seq);
+	}
+	
+	//-----------------------------------------------------------
 
-	public Object recordImage(String id, int seq, String ip, AbImagePack.AbImageInfo info){
+	public Object record(
+			boolean modify,
+			String id,
+			int seq,
+			String ip,
+			AbImagePack.AbImageInfo imageInfo,
+			byte[] imageSource,
+			byte[] imageResult,
+			AbImagePack.AbThumbnailInfo thumbInfo,
+			byte[] thumbSource){
+		
 		try
 		{
-			dao.recordImage(id, seq, ip, info);
+			dao.record(modify, id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource);
 			return null;
 		}
 		catch (Exception e)
 		{
+			DebugUtil.print(e);
+			
 			return procImageRegError(id, "image", e);
-		}
-	}
-	
-	public Object recordImageSource(String id, int seq, byte[] bytes){
-		try
-		{
-			dao.recordImageSource(id, seq, bytes);
-			return null;
-		}
-		catch (Exception e)
-		{
-			return procImageRegError(id, "image-source", e);
-		}		
-	}
-	
-	public Object recordImageResult(String id, int seq, byte[] bytes){
-		try
-		{
-			dao.recordImageResult(id, seq, bytes);
-			return null;
-		}
-		catch (Exception e)
-		{
-			return procImageRegError(id, "image-result", e);
-		}
-	}
-	
-	public Object recordThumbnail(String id, int seq, byte[] bytes, AbImagePack.AbThumbnailInfo info){
-		try
-		{
-			dao.recordThumbnail(id, seq, bytes, info);
-			return null;
-		}
-		catch (Exception e)
-		{
-			return procImageRegError(id, "thumb", e);
 		}
 	}
 	
@@ -93,9 +76,9 @@ public class DocService {
 		}
 		catch (Exception de)
 		{
-			System.out.println("[DOC-REMOVE]["+type+"] 이미지 삭제 실패!!!");
+			DebugUtil.print(de);
 			
-			de.printStackTrace();				
+			System.out.println("[DOC-REMOVE]["+type+"] 이미지 삭제 실패!!!");
 		}
 		return e;
 	}

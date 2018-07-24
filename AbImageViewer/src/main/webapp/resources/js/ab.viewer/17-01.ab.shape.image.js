@@ -48,6 +48,8 @@ function AbShapeImage(options){
 	
 	if (this.source.data){
 		var img = new Image();
+		img.crossOrigin = 'Anonymous';
+		
 		img.onerror = function(e){
 			this.$image = 'error';
 			console.log(e);

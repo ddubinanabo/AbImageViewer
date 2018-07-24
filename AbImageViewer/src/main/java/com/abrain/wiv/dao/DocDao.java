@@ -17,56 +17,62 @@ public class DocDao extends AbstractDao {
 
 	//-----------------------------------------------------------
 	
-	public void recordImage(String id, int seq, String ip, AbImagePack.AbImageInfo info){
+	public void record(
+			boolean modify,
+			String id,
+			int seq,
+			String ip,
+			AbImagePack.AbImageInfo imageInfo,
+			byte[] imageSource,
+			byte[] imageResult,
+			AbImagePack.AbThumbnailInfo thumbInfo,
+			byte[] thumbSource){
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);
 		param.put("SEQ", seq);
-		param.put("IP", ip);
-		param.put("WID", info.width);
-		param.put("HGT", info.height);
-		param.put("SHAPES", info.shapes);
+		param.put("WID", imageInfo.width);
+		param.put("HGT", imageInfo.height);
+		param.put("IMG_SRC", imageSource);
+		param.put("IMG_SRC_SIZ", imageSource.length);		
+		param.put("IMG_RSLT", imageResult);
+		param.put("IMG_RSLT_SIZ", imageResult != null ? imageResult.length : 0);
+		param.put("SHAPES", imageInfo.shapes);
+		param.put("IMG_DEC", imageInfo.decoder);
+		
+		param.put("THUMB_WID", thumbInfo.width);
+		param.put("THUMB_HGT", thumbInfo.height);
+		param.put("THUMB_SRC", thumbSource);
+		param.put("THUMB_SRC_SIZ", thumbSource.length);
 		
 		//-----------------------------------------------------------
 		
-		sqlSession.insert("doc-record-image", param);		
+		if (modify){
+			sqlSession.update("doc-update", param);
+		}else{
+			param.put("IP", ip);
+			
+			sqlSession.insert("doc-regist", param);
+		}
 	}
-	
-	public void recordImageSource(String id, int seq, byte[] bytes){
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 수정 작업을 위해 새 목록 개수 이상을 삭제하기 위한 메서드입니다.
+	 * <p>뷰어의 이미지 전송 작업은 이미지를 호출하고, 렌더링하고, 전송하는 작업을 이미지 개수만큼 반복합니다.
+	 * <p>때문에, 수정 작업 시에 기존 이미지들을 다 지우고 시작 한다면 이미지를 찾을 수 없다는 오류를 보게 됩니다.
+	 * @param id
+	 * @param seq
+	 */
+	public void removeImagePost(String id, int seq){
+
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);
 		param.put("SEQ", seq);
-		param.put("SRC", bytes);
-		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
-		
+
 		//-----------------------------------------------------------
 		
-		sqlSession.insert("doc-update-image-source", param);		
-	}
-	
-	public void recordImageResult(String id, int seq, byte[] bytes){
-		HashMap<String, Object> param = new HashMap<String, Object>();
-		param.put("ID", id);
-		param.put("SEQ", seq);
-		param.put("SRC", bytes);
-		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
-		
-		//-----------------------------------------------------------
-		
-		sqlSession.insert("doc-update-image-result", param);		
-	}
-	
-	public void recordThumbnail(String id, int seq, byte[] bytes, AbImagePack.AbThumbnailInfo info){
-		HashMap<String, Object> param = new HashMap<String, Object>();
-		param.put("ID", id);
-		param.put("SEQ", seq);
-		param.put("WID", info.width);
-		param.put("HGT", info.height);
-		param.put("SRC", bytes);
-		param.put("SRC_SIZ", bytes != null ? bytes.length : 0);
-		
-		//-----------------------------------------------------------
-		
-		sqlSession.insert("doc-update-thumb", param);		
+		sqlSession.delete("doc-delete-image-post", param);
 	}
 
 	//-----------------------------------------------------------

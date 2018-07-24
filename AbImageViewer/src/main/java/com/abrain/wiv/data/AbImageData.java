@@ -19,10 +19,19 @@ public class AbImageData {
 		this.height = height;
 		this.shapes = shapes;
 	}
+	public AbImageData(String image, String thumbnail, int width, int height, String shapes, String decoder){
+		this.image = image;
+		this.thumbnail = thumbnail;
+		this.decoder = decoder;
+		this.width = width;
+		this.height = height;
+		this.shapes = shapes;
+	}
 	
 	//-----------------------------------------------------------
 	
 	private int width, height;
+	private String decoder;
 	private String image;
 	private String thumbnail;
 	private String shapes;
@@ -34,6 +43,11 @@ public class AbImageData {
 	
 	public int getHeight() { return height; }
 	public void setHeight(int value) { height = value; }
+	
+	//-----------------------------------------------------------
+	
+	public String getDecoder() { return decoder; }
+	public void setDecoder(String value) { decoder = value; }
 	
 	//-----------------------------------------------------------
 	

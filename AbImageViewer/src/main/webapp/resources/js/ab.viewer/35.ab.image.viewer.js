@@ -18,12 +18,32 @@ function AbImageViewer$$doPrint(){
 	}, 100);
 }
 
+function AbImageViewer$$endPrint(id){
+	var func = function (){
+		var id = arguments.callee.id;
+		var removeUrl = AbImageViewer.prototype.URLS.PRINT.REMOVE;
+		
+		if (id){
+			AbCommon.ajax({
+				url: removeUrl,
+				data: {
+					id: id
+				},
+			});
+		}
+	};
+	func.id = id;
+	
+	setTimeout(func, 500);
+}
+
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
 function AbImageViewer(options){
 	if (!options) options = {};
+	var styleOptions = options.style || {};
 
 	//-----------------------------------------------------------
 
@@ -48,7 +68,21 @@ function AbImageViewer(options){
 
 	//-----------------------------------------------------------
 
-	this.listType = 'pages';
+	this.listType = 'pages'; // 현재 이미지 목록 타입 (pages/bookmarks)
+	this.$showListViewPopup = false; // 모아보기 여부
+
+	//-----------------------------------------------------------
+	// 요청 인자
+	//-----------------------------------------------------------
+	// openImages() 메서드에 의해 세팅됨.
+	
+	this._requestParam = null;
+
+	//-----------------------------------------------------------
+
+	this.listPopupStyle = styleOptions.listPopup || 'default'; // default (기본보기와 동일), readonly (읽기 전용)
+
+	//-----------------------------------------------------------
 
 	this.thumbnailGenerator = new AbThumbnailGenerator();
 
@@ -83,11 +117,35 @@ AbImageViewer.prototype = {
 	constructor: AbImageViewer,
 
 	//-----------------------------------------------------------
-
-	allocUrl: 'http://localhost:8084/wiv/api/alloc',
-	saveUrl: 'http://localhost:8084/wiv/api/save-image',
-	removeUrl: 'http://localhost:8084/wiv/api/remove',
-	openImageUrl: 'http://localhost:8084/wiv/api/images',
+	
+	SPLIT_DATA_SIZE: 30720, // 30KB
+	
+	PARALLELS: 3, // 이미지 전송 시 병렬 개수
+	
+	URLS: {
+		OPEN: 'http://localhost:8084/wiv/api/images',
+		
+		SAVE: {
+			ALLOC: 'http://localhost:8084/wiv/api/alloc',
+			MODIFY: 'http://localhost:8084/wiv/api/modify-prepare',
+			
+			IMAGE: 'http://localhost:8084/wiv/api/save-image',
+			REMOVE: 'http://localhost:8084/wiv/api/remove',
+			
+			COMPLETED: 'http://localhost:8084/wiv/api/save-completed',
+		},
+		
+		PRINT: {
+			ALLOC: 'http://localhost:8084/wiv/api/print-support/alloc',
+			IMAGE: 'http://localhost:8084/wiv/api/print-support/save',
+			REMOVE: 'http://localhost:8084/wiv/api/print-support/remove',
+			
+			DOWNLOAD: 'http://localhost:8084/wiv/print-support/img',
+		},
+	},
+	
+	// 이미지 저장 작업 목록
+	IMAGE_TYPES: [ 'image', 'image-source', 'image-result', 'thumb' ],
 
 	//-----------------------------------------------------------
 
@@ -102,7 +160,10 @@ AbImageViewer.prototype = {
 		this.toolbar.groupObserve(this);
 
 		//-----------------------------------------------------------
+		// 기본보기
+		//-----------------------------------------------------------
 
+		// 이미지 목록
 		this.imageListView = new AbImageListView({
 			name: 'pages',
 			pages: this.images,
@@ -112,6 +173,7 @@ AbImageViewer.prototype = {
 		this.imageListView.observe(this);
 		this.observe(this.imageListView);
 	
+		// 북마크 목록
 		this.bookmarkListView = new AbImageListView({
 			name: 'bookmarks',
 			pages: this.bookmarks,
@@ -122,6 +184,49 @@ AbImageViewer.prototype = {
 		});
 		this.bookmarkListView.observe(this);
 		this.observe(this.bookmarkListView);
+
+		//-----------------------------------------------------------
+		// 모아보기
+		//-----------------------------------------------------------
+
+		// 이미지 목록
+		this.popupImageListView = new AbImageListView({
+			name: 'pages',
+			pages: this.images,
+
+			selector: '#thumbnails-popup',
+
+			selecting: {
+				method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
+				auto: this.listPopupStyle === 'readonly' ? false : true,
+			},
+			token: 'popup',
+
+			pageCount: 10,
+		});
+		this.popupImageListView.observe(this);
+		this.observe(this.popupImageListView);
+	
+		// 북마크 목록
+		this.popupBookmarkListView = new AbImageListView({
+			name: 'bookmarks',
+			pages: this.bookmarks,
+
+			bookmark: true,
+
+			selector: '#bookmarks-popup',
+			selecting: {
+				method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
+				auto: this.listPopupStyle === 'readonly' ? false : true,
+			},
+			token: 'popup',
+
+			pageCount: 10,
+		});
+		this.popupBookmarkListView.observe(this);
+		this.observe(this.popupBookmarkListView);
+
+		//-----------------------------------------------------------
 
 		this.updateListType();
 
@@ -144,16 +249,22 @@ AbImageViewer.prototype = {
 	},
 
 	updateListType: function(){
+		var imageView = this.imageListView, bookmarkView = this.bookmarkListView;
+
+		if (this.$showListViewPopup){
+			imageView = this.popupImageListView;
+			bookmarkView = this.popupBookmarkListView;
+		}
+
 		switch (this.listType){
 		case 'pages':
-			this.listView = this.imageListView;
+			this.listView = imageView;
 			break;
 
 		case 'bookmarks':
-			this.listView = this.bookmarkListView;
+			this.listView = bookmarkView;
 			break;
 		}
-
 	},
 
 	//-----------------------------------------------------------
@@ -389,6 +500,19 @@ AbImageViewer.prototype = {
 			}
 			this.engine.addShape(topic);
 			break;
+		case 'thumb-popup.open':
+			this.showListViewPopup(true);
+			break;
+		case 'thumb-popup.pages':
+		case 'thumb-popup.bookmarks':
+			if (this.listPopupStyle === 'readonly')
+				this.toggleListView(topic, false);
+			else
+				this.toggleListView(topic);
+			break;
+		case 'thumb-popup.close':
+			this.showListViewPopup(false);
+			break;
 		}
 	},
 
@@ -416,35 +540,36 @@ AbImageViewer.prototype = {
 
 			var type = page.infoType();
 			var info = page.info();
+			var data = info;
 			var title = '이미지 정보';
 
 			switch (type){
 			case 'file':
 				html = '<table>';
-				html += '<tr><th>이름</th><td>' + AbCommon.escape(info.name) + '</td></tr>';
-				html += '<tr><th>크기</th><td>' + AbCommon.byteScope(info.size) + '</td></tr>';
-				if (info.type)
-					html += '<tr><th>타입</th><td>' + AbCommon.escape(info.type) + '</td></tr>';
-				if (AbCommon.isSetted(info.pages))
-					html += '<tr><th>이미지 수</th><td>' + info.pages + '</td></tr>';
-				if (AbCommon.isSetted(info.index))
-					html += '<tr><th>인덱스</th><td>' + info.index + '</td></tr>';
+				html += '<tr><th>이름</th><td>' + AbCommon.escape(data.name) + '</td></tr>';
+				html += '<tr><th>크기</th><td>' + AbCommon.byteScope(data.size) + '</td></tr>';
+				if (data.type)
+					html += '<tr><th>타입</th><td>' + AbCommon.escape(data.type) + '</td></tr>';
+				if (AbCommon.isSetted(data.pages))
+					html += '<tr><th>이미지 수</th><td>' + data.pages + '</td></tr>';
+				if (AbCommon.isSetted(data.index))
+					html += '<tr><th>인덱스</th><td>' + data.index + '</td></tr>';
 				html += '</table>';
 				break;
 			case 'doc':
 				title = '문서 정보';
 				
 				html = '<table>';
-				if (info.name)
-					html += '<tr><th>이름</th><td>' + AbCommon.escape(info.name) + '</td></tr>';
-				if (info.size)
-					html += '<tr><th>크기</th><td>' + AbCommon.byteScope(info.size) + '</td></tr>';
-				if (info.type)
-					html += '<tr><th>타입</th><td>' + AbCommon.escape(info.type) + '</td></tr>';
-				if (AbCommon.isSetted(info.pages))
-					html += '<tr><th>페이지 수</th><td>' + info.pages + '</td></tr>';
-				if (AbCommon.isSetted(info.index))
-					html += '<tr><th>인덱스</th><td>' + info.index + '</td></tr>';
+				if (data.name)
+					html += '<tr><th>이름</th><td>' + AbCommon.escape(data.name) + '</td></tr>';
+				if (data.size)
+					html += '<tr><th>크기</th><td>' + AbCommon.byteScope(data.size) + '</td></tr>';
+				if (data.type)
+					html += '<tr><th>타입</th><td>' + AbCommon.escape(data.type) + '</td></tr>';
+				if (AbCommon.isSetted(data.pages))
+					html += '<tr><th>페이지 수</th><td>' + data.pages + '</td></tr>';
+				if (AbCommon.isSetted(data.index))
+					html += '<tr><th>인덱스</th><td>' + data.index + '</td></tr>';
 				html += '</table>';
 				break;
 			}
@@ -460,11 +585,26 @@ AbImageViewer.prototype = {
 			this.loadPage(value);
 			break;
 		case 'select':
-			//if (this.engine.currentPage && this.engine.currentPage.uid == value) return;
-
 			page = this.images.getById(value);
 			index = this.images.indexOf(page);
 			this.engine.selectPage(index);
+			break;
+		case 'dblclick':
+			if (sender.token === 'popup'){
+				if (this.listPopupStyle === 'readonly'){
+					this.showListViewPopup(false);
+					var collection = this.images;
+
+					page = collection.getById(value);
+					index = collection.indexOf(page);
+
+					this.exec(function (){
+						this.engine.selectPage(index);
+					});
+				}else{
+					this.showListViewPopup(false);
+				}
+			}
 			break;
 		case 'selected':
 			this.toolbar.set('page.no', value + 1, false);
@@ -531,7 +671,7 @@ AbImageViewer.prototype = {
 
 		// 페이지 선택 요청
 		if (topic == 'request.select'){
-			this.listView.goto(value);
+			this.listView.go(value);
 			return;
 		}
 
@@ -646,7 +786,9 @@ AbImageViewer.prototype = {
 
 				this.engine.renderThumbnail(this.thumbnailGenerator, page);
 
-				var imgData = this.thumbnailGenerator.toImage();
+				var decoder = page.decoder();
+
+				var imgData = this.thumbnailGenerator.toImage(decoder);
 				page.source.setThumbnailData(imgData);
 
 				this.notifyObservers('modified', { uid: page.uid, data: imgData });
@@ -695,40 +837,60 @@ AbImageViewer.prototype = {
 
 		if (!AbCommon.isBool(selectingPage)) selectingPage = true;
 
+		var originCallType = type;
+		var showListPopup = false;
+		if (type.indexOf('thumb-popup.') == 0){
+			showListPopup = true;
+			type = type.replace('thumb-popup.', '');
+		}
+
 		var index = -1;
 		switch(type){
 		case 'pages':
-			$('#thumbnails').removeClass('hide');
-			$('#bookmarks').addClass('hide');
+			$(this.imageListView.selector).removeClass('hide');
+			$(this.popupImageListView.selector).removeClass('hide');
+
+			$(this.bookmarkListView.selector).addClass('hide');
+			$(this.popupBookmarkListView.selector).addClass('hide');
 
 			this.listType = type;
 			this.updateListType();
 
 			this.notifyObservers('collection.changed', selectingPage);
 			
-			this.toolbar.set('pages', true, false);
+			this.toolbar.set(originCallType, true, false);
 			this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
 			this.toolbar.set('page.total', this.listView.pages.length(), false);
 
+			if (showListPopup) this.toolbar.set('pages', true, false);
+			else this.toolbar.set('thumb-popup.pages', true, false);
+
 			break;
 		case 'bookmarks':
-			$('#thumbnails').addClass('hide');
-			$('#bookmarks').removeClass('hide');
+			$(this.imageListView.selector).addClass('hide');
+			$(this.popupImageListView.selector).addClass('hide');
+
+			$(this.bookmarkListView.selector).removeClass('hide');
+			$(this.popupBookmarkListView.selector).removeClass('hide');
 
 			this.listType = type;
 			this.updateListType();
 
 			this.notifyObservers('collection.changed', selectingPage);
 
-			this.toolbar.set('bookmarks', true, false);
+			this.toolbar.set(originCallType, true, false);
 			this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
 			this.toolbar.set('page.total', this.listView.pages.length(), false);
+
+			if (showListPopup) this.toolbar.set('bookmarks', true, false);
+			else this.toolbar.set('thumb-popup.bookmarks', true, false);
+
 			break;
 		}
 	},
 
 	showimageListView: function(show){
-		var thumbnailLayer = $('.abv-thumbnails');
+		var thumbnailLayer = $('.abv-thumbnails-closable');
 
 		if (show){
 			thumbnailLayer.removeClass('abv-hide-thumbnails');
@@ -746,6 +908,19 @@ AbImageViewer.prototype = {
 			viewLayer.removeClass('abv_show_view_tools');
 		}
 		this.resize();
+	},
+
+	showListViewPopup: function (show){
+		this.$showListViewPopup = show;
+		this.updateListType();
+
+		var thumbnailLayer = $('#thumbnails-popup-layer');
+
+		if (show){
+			thumbnailLayer.removeClass('abv-hide-thumbnails-popup-layer');
+		}else{
+			thumbnailLayer.addClass('abv-hide-thumbnails-popup-layer');
+		}
 	},
 
 	//-----------------------------------------------------------
@@ -801,6 +976,9 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	loadPage: function (pageData, sync){
+		if (pageData.page.isLoading())
+			return false;
+
 		pageData.page.status = AbPage.prototype.LOADING;
 		this.notifyObservers('page.loading', pageData.page.uid);
 		
@@ -808,6 +986,9 @@ AbImageViewer.prototype = {
 
 		return pageData.page.loader()
 			.then(function (e){
+				console.log('[PAGE LOADER]');
+				console.log(e);
+
 				if (e.shapes){
 					var cpage = engine.currentPage;
 					
@@ -831,10 +1012,7 @@ AbImageViewer.prototype = {
 				}
 				
 				if (sync){
-					return this.setImage(pageData, e.image, {
-						type: e.type,
-						data: e.data
-					})
+					return this.setImage(pageData, e.image, e.data, e.type, e.decoder)
 						.then(function (r){
 							return e;
 						});
@@ -843,10 +1021,7 @@ AbImageViewer.prototype = {
 		
 					// });				
 				}
-				this.setImage(pageData, e.image, {
-					type: e.type,
-					data: e.data
-				});
+				this.setImage(pageData, e.image, e.data, e.type, e.decoder);
 				return e;
 			}.bind(this))
 			.catch(function (e){
@@ -858,7 +1033,19 @@ AbImageViewer.prototype = {
 			}.bind(this));
 	},
 
-	setImage: function(pageData, image, info){
+	setImage: function(pageData, image, data, type, decoder){
+		// 렌더링 디코더
+		var renderDecoder = 'jpeg';
+		if (decoder){
+			if (decoder.hasOwnProperty('render') && AbCommon.isString(decoder.render)){
+				renderDecoder = decoder.render;
+			}else if (!AbCommon.isString(decoder)){
+				renderDecoder = 'png';
+			}
+		}
+
+		var info = { type: type, data: data, decoder: renderDecoder };
+
 		var options = { info: info };
 		var isThumbnail = false;
 
@@ -910,7 +1097,7 @@ AbImageViewer.prototype = {
 				if (page.shapes.length){
 					engine.renderThumbnail(thumbnailGenerator, page);
 
-					var imgData = thumbnailGenerator.toImage();
+					var imgData = thumbnailGenerator.toImage(renderDecoder);
 					page.source.setThumbnailData(imgData);
 				}
 				
@@ -979,7 +1166,9 @@ AbImageViewer.prototype = {
 								dat['pages'] = siz;
 							}
 
-							var r = { type: dataPreset.type, image: img, data: dat };
+							var decoder = src.hasOwnProperty('decoder') ? src.decoder : dataPreset.decoder;
+
+							var r = { type: dataPreset.type, decoder: decoder, image: img, data: dat };
 							if (src.shapes)
 								r['shapes'] = src.shapes;
 
@@ -1278,210 +1467,140 @@ AbImageViewer.prototype = {
 
 		if (!collect.pages.length)
 			return;
+		
+		msg = msg + '<br/><br/>※ 오류 이미지는 전송되지 않습니다.';
 
-		AbMsgBox.confirmHtml(msg + '<br/><br/>※ 오류 이미지는 전송되지 않습니다.')
-			.then(function (r){
-				if (r == 'ok'){
-					this.exec(function (){
-						this.submitImages(collect.pages);
-					}, 300);
-				}
-			}.bind(this));
+		if (this._requestParam){
+			AbMsgBox.showHtml(msg, null, {
+				regist: '신규등록',
+				modify: '수    정',
+			})
+				.then(function (r){
+					if (r === 'regist' || r === 'modify'){
+						this.exec(function (){
+							this.submitImages(collect.pages, r);
+						}, 300);
+					}
+				}.bind(this));
+		}else{
+			AbMsgBox.confirmHtml(msg)
+				.then(function (r){
+					if (r == 'ok'){
+						this.exec(function (){
+							this.submitImages(collect.pages);
+						}, 300);
+					}
+				}.bind(this));
+		}
 	},
 
 	//-----------------------------------------------------------
+	// 수정 작업을 원하면 두번째 인자를 modify로 입력한다
 	
-	submitImages: function(pages){
-		var removeUrl = this.removeUrl;
+	submitImages: function(pages, work){
+		if (!AbCommon.isSetted(work)) work = 'auto';
 		
-		this.prepareSI(pages)
-			.then(function(e){
-				return this.renderSI(e.id, e.cp);
-			}.bind(this))
-			.then(function(e){
-				var id = e.id;
-				return this.submitSI(e.id, e.cp)
-					.then(function (e){
-						e.formContoller.form.remove();
-						e.cp.end();
-						
-						AbMsgBox.success('이미지들을 전송했습니다');					
-					})
-					.catch(function(e){
-						AbMsgBox.error('이미지 전송 중 오류가 발생했습니다');
-						
-						// 기록 중인 이미지 정보 삭제
-						AbCommon.ajax({
-							url: removeUrl,
-							data: {
-								id: id,
-							},
-							
-							logFail: true,
-							nomsg: true,
-						});
-						
-					});
-			}.bind(this))
-			.catch(function(e){
-				console.log(e);
-			});
-	},
-	
-	prepareSI: function(pages){
-		var length = pages.length;
-		if (!length)
-			return;
-
-		var cp = this.collectPages(pages, {
+		// 이 값이 세팅되면 ID 할당 과정을 생략한다. 즉, 수정 작업 처리
+		var requestID = null;
+		
+		if (work === 'modify' || work === 'auto')
+			requestID = this._requestParam;
+		
+		var it = new AbImageTransferProcessHelper({
+			viewer: this,
+			
 			selector: '#server-saving',
-			printShapes: true,
-			inProc: 'saving',
-
-			getTotal: function (numPages, numUrls, numSource){
-				return numPages;
+			parallels: this.PARALLELS,
+			
+			id: requestID,
+			
+			urls: {
+				alloc: this.URLS.SAVE.ALLOC,
+				modify: this.URLS.SAVE.MODIFY,
+				remove: this.URLS.SAVE.REMOVE,
+				completed: this.URLS.SAVE.COMPLETED,
 			},
-		});
-
-		if (!cp) return;
-
-		if (!cp.urls.length){
-			AbMsgBox.success('전송할 이미지가 없습니다');
-			cp.end();
-			return;
-		}
-		
-		var length = cp.source.length;
-		var allocUrl = this.allocUrl;
-		
-		return new Promise(function(resolve, reject){
-
-			//-----------------------------------------------------------
-			// 아아디 할당
 			
-			AbCommon.ajax({
-				title: '아이디 할당',
-				url: allocUrl,
-				data: {
-					pages: length
-				},
-				success: function(r){
-					resolve({
-						id: r.text,
-						cp: cp
-					});
-				},
-				error: function (e){
-					cp.end();
-					AbMsgBox.error('이미지 전송 준비 중 오류가 발생했습니다');
-					
-					reject(e);
-				},
-			});
-			
+			submit: function (sendor, current, data){
+				return this.submitProcess(sendor, current, data);
+			}.bind(this),
 		});
-	},
-	
-	renderSI: function(id, cp){
 		
 		//-----------------------------------------------------------
-		// 렌더링
 		
-		this.promiseRenderCollectPages(cp);
-
-		var saveUrl = this.saveUrl;
-		var images = this.images;
-		return AbCommon.promiseAll(cp.ps, cp.progress, { term: { progress: 10, promise: 10 } })
-			.then(function(){
-				return new Promise(function (resolve, reject){
-					cp.status('send');
-					
-					setTimeout(function(){
-						resolve({
-							id: id,
-							cp: cp
-						});
-					}, 50);
-				});
+		it.send(pages)
+			.then(function(d){
+				it.hide();
+				it.dispose();
+				
+				AbMsgBox.success('이미지들을 전송했습니다');
 			})
-			.catch(function(e){
-				cp.end();
-				AbMsgBox.error('이미지 렌더링 중 오류가 발생했습니다');
+			.catch(function (e){
+				it.hide();
+				it.remove();
+				it.dispose();
+				
+				console.log(e);
+				
+				AbMsgBox.error(e);
+			})
+			.then(function(){
+				// 혹시 몰라 넣은 쓰레기 제거 코드 
+				$('#save-forms').empty();
 			});
 	},
-	
-	IMAGE_TYPES: [ 'image', 'image-source', 'image-result', 'thumb' ],
 
-	submitSI: function(id, cp){
-		var forms = $('#save-forms');
-		var html = '<form enctype="multipart/form-data">';
-		html += '<input type="hidden" name="id"/>';
-		html += '<input type="hidden" name="index"/>';
-		html += '<input type="hidden" name="type"/>';
-		html += '<input type="hidden" name="info"/>';
-		html += '<input type="hidden" name="partials"/>';
-		html += '<input type="hidden" name="partial"/>';
-		html += '<input type="hidden" name="content"/>';
-		html += '</form>';
-		var eform = $(html);
+	//-----------------------------------------------------------
 
-		forms.append(eform);
-		
-		//-----------------------------------------------------------
-		
-		eform.find('[name="id"]').val(id);
-		
-		//-----------------------------------------------------------
-
-		var inpIndex = eform.find('[name="index"]');
-		var inpType = eform.find('[name="type"]');
-		var inpInfo = eform.find('[name="info"]');
-		var inpContent = eform.find('[name="content"]');
-		
-		//-----------------------------------------------------------
-		
-		var formContoller = {
-			forms: forms,
-			form: eform,
-			
-			index: eform.find('[name="index"]'),
-			type: eform.find('[name="type"]'),
-			info: eform.find('[name="info"]'),
-			partials: eform.find('[name="partials"]'),
-			partial: eform.find('[name="partial"]'),
-			content: eform.find('[name="content"]'),
-		};
-		
+	submitProcess: function(sendor, current, data){
 		//-----------------------------------------------------------
 
 		var types = this.IMAGE_TYPES;
 		var numTypes = types.length;
 		
 		//-----------------------------------------------------------
+
+		var fc = AbCommon.formController('#save-forms', 'modify,id,index,type,info');
+		var modify = sendor.work === 'modify';
+		var id = sendor.transferID;
+		
+		//-----------------------------------------------------------
+		// 수정 작업 여부
+		fc.modify.val(modify);
+	
+		//-----------------------------------------------------------
+
+		var index = current.index;
+		var pageInfo = current.pageInfo;
+		var imgInfo = current.imgInfo;
+		
+		//-----------------------------------------------------------
 		// 전송 데이터 수집
 
 		var datas = [];
-		var length = cp.source.length;
-		for (var ipage=0; ipage < length; ipage++){
-			var pageData = cp.source[ipage];
-
-			var page = pageData.page;
-			var abimg = page.source;
+		for (var itype=0; itype < numTypes; itype++){
+			var type = types[itype];
 			
-			for (var itype=0; itype < numTypes; itype++){
-				var type = types[itype];
+			datas.push({
+				index: index,
+				type: type,
 				
-				datas.push({
-					length: length,
-					index: ipage,
-					type: type,
-					
-					page: page,
-					abimg: abimg,
-				});
-			}
+				info: pageInfo,
+				page: pageInfo.page,
+				abimg: pageInfo.page.source,
+			});
 		}
-		
+
+		// 완료 작업
+		datas.push({
+			index: index,
+			type: 'end',
+			
+			info: pageInfo,
+			page: pageInfo.page,
+			abimg: pageInfo.page.source,
+		});
+
 		//-----------------------------------------------------------
 		// 전송
 		
@@ -1499,6 +1618,9 @@ AbImageViewer.prototype = {
 				{
 					d = datas[dindex];
 					var output = [];
+					
+					var decoder = d.page.decoder();
+					if (!decoder) decoder = null;
 					
 					switch (d.type){
 					case 'image':
@@ -1521,177 +1643,112 @@ AbImageViewer.prototype = {
 						info = JSON.stringify({
 							width: imgElement.width,
 							height: imgElement.height,
-							shapes: output.length ? output.join('') : null
+							shapes: output.length ? output.join('') : null,
+							decoder: decoder,
 						});
 						break;
+						
 					case 'image-source':
 						imgElement = d.abimg.imageElement();
-						img = AbGraphics.canvas.renderImage(imgElement);
+						img = AbGraphics.canvas.renderImage(imgElement, decoder);
 						
-						content = img.substr(img.indexOf(",") + 1);
+						console.log('[IMAGE-SOURCE][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
+						
+						content = img.substr(img.indexOf(',') + 1);
 						break;
+						
 					case 'image-result':
-						r = cp.urls[cp.map[d.page.uid]];
+						r = imgInfo.url;
 						
-						content = r.substr(r.indexOf(",") + 1);
+						console.log('[IMAGE-RESULT][' + d.index + '] ' + r.substr(0, r.indexOf(',')));
+						
+						content = r.substr(r.indexOf(',') + 1);
 						break;
+						
 					case 'thumb':
 						imgElement = d.abimg.originThumbnailElement();
-						img = AbGraphics.canvas.renderImage(imgElement);
+						img = AbGraphics.canvas.renderImage(imgElement, decoder);
+						
+						console.log('[THUMBNAIL][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
 						
 						info = JSON.stringify({
 							width: imgElement.width,
 							height: imgElement.height,
 						});					
 						
-						content = img.substr(img.indexOf(",") + 1);
+						content = img.substr(img.indexOf(',') + 1);
+						break;
+						
+					case 'end':
 						break;
 					}
+				
+					//-----------------------------------------------------------
+					
+					self.submitContent(fc, id, d.index, d.type, info, content, function (){
+						try
+						{
+							if (dindex + 1 >= dlength){
+								fc.dispose();
+								resolve(true);
+							}else{
+								dindex++;
+								setTimeout(exec, delay);
+							}
+						}
+						catch (e){
+							fc.dispose();
+							reject(e);				
+						}
+					}, function (e){
+						fc.dispose();
+						reject(e);
+					});					
 				}
 				catch (e)
 				{
-					formContoller.form.remove();
-					cp.end();
-					reject(e);
-					return;
-				}
-				
-				//-----------------------------------------------------------
-				
-				self.submitContent(formContoller, id, d.index, d.type, info, content, function (){
-					try
-					{
-						if (dindex + 1 >= dlength){
-							resolve({
-								id: id,
-								cp: cp,
-								formContoller: formContoller
-							});
-						}else{
-							dindex++;
-							setTimeout(exec, delay);
-						}
-					}
-					catch (e){
-						formContoller.form.remove();
-						cp.end();
-						reject(e);						
-					}
-				}, function (e){
-					formContoller.form.remove();
+					fc.dispose();
 					
-					cp.end();
 					reject(e);
-				});
+				}
 			};
 			
-			exec();
-		});
+			setTimeout(exec, 0);
+		});		
 	},
-
+	
 	//-----------------------------------------------------------
-	
-	SPLIT_DATA_SIZE: 30720, // 30KB
-	
-	submitContent: function (formContoller, id, index, type, info, content, success, error, delay){
-		if (!delay) delay = 10;
-		
-		var saveUrl = this.saveUrl;
+
+	submitContent: function (formController, id, index, type, info, content, success, error, delay){
+		var saveUrl = this.URLS.SAVE.IMAGE;
 		var splitDataSiz = this.SPLIT_DATA_SIZE;
+	
+		formController.id.val(id);
+		formController.index.val(index);
+		formController.type.val(type);
+		formController.info.val(info);
 		
-		if (content){
-			var ca = [], ci = 0, clen = content.length;
-			
-			while (ci < clen){
-				var s = null;
-				if (ci + splitDataSiz < clen){
-					s = { index: ci, length: splitDataSiz };
-				}else{
-					s = { index: ci, length: clen - ci };
+		if (content){		
+			AbCommon.submitPartialContent({
+				url: saveUrl,
+				content: content,
+				
+				splitSize: splitDataSiz,
+				
+				formController: formController,
+				
+				success: function (){
+					if (AbCommon.isFunction(success))
+						success();
+				},
+				
+				error: function(e){
+					if (AbCommon.isFunction(error))
+						error(e);
 				}
-				
-				ca.push(s);
-				ci += splitDataSiz;
-			}
-			
-			if (ca.length){
-				var caIndex = 0, caLength = ca.length;
-				
-				var exec = function(){
-					var caitem = ca[caIndex];
-					
-					formContoller.index.val(index);
-					formContoller.type.val(type);
-					formContoller.info.val(info);
-					formContoller.partials.val(caLength);
-					formContoller.partial.val(caIndex);
-					formContoller.content.val(content.substr(caitem.index, caitem.length));
-					
-					AbCommon.ajaxSubmit(formContoller.form, {
-						url: saveUrl,
-						
-						logFail: true,
-						nomsg: true,
-						
-						success: function(r, status, xhr, $form){
-							if (caIndex + 1 >= caLength){
-								if (AbCommon.isFunction(success))
-									success();
-							}else{
-								caIndex++;
-								setTimeout(exec, delay);
-							}							
-						},
-						
-						error: function(e, $form){
-							if (AbCommon.isFunction(error))
-								error(e);
-						}
-					});
-					
-//					AbCommon.ajax({
-//						url: saveUrl,
-//						data: {
-//							id: id,
-//							index: index,
-//							type: type,
-//							info: info,
-//							partials: caLength,
-//							partial: caIndex,
-//							content: content.substr(caitem.index, caitem.length),
-//						},
-//						
-//						logFail: true,
-//						nomsg: true,
-//						
-//						success: function (r){
-//							if (caIndex + 1 >= caLength){
-//								if (AbCommon.isFunction(success))
-//									success();
-//							}else{
-//								caIndex++;
-//								setTimeout(exec, delay);
-//							}
-//						},
-//						
-//						error: function (e){
-//							if (AbCommon.isFunction(error))
-//								error(e);
-//						}
-//					});
-				};
-				
-				exec();
-			}
+			});
 		}else{
-			formContoller.index.val(index);
-			formContoller.type.val(type);
-			formContoller.info.val(info);
-			formContoller.partials.val('');
-			formContoller.partial.val('');
-			formContoller.content.val('');
-			
-			AbCommon.ajaxSubmit(formContoller.form, {
+			AbCommon.ajaxSubmit(formController.form, {
 				url: saveUrl,
 				
 				logFail: true,
@@ -1707,29 +1764,6 @@ AbImageViewer.prototype = {
 						error(e);
 				}
 			});
-			
-//			AbCommon.ajax({
-//				url: saveUrl,
-//				data: {
-//					id: id,
-//					index: index,
-//					type: type,
-//					info: info
-//				},
-//				
-//				logFail: true,
-//				nomsg: true,
-//				
-//				success: function (r){
-//					if (AbCommon.isFunction(success))
-//						success();
-//				},
-//				
-//				error: function (e){
-//					if (AbCommon.isFunction(error))
-//						error(e);
-//				}
-//			});
 		}
 	},
 
@@ -1747,7 +1781,7 @@ AbImageViewer.prototype = {
 		if (arguments.length){
 			if (!AbCommon.isNumber(value)) value = parseInt(value);
 
-			if (!this.listView.goto(value - 1)){
+			if (!this.listView.go(value - 1)){
 				this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
 			}
 		}
@@ -1820,143 +1854,6 @@ AbImageViewer.prototype = {
 
 	//-----------------------------------------------------------
 
-	collectPages: function (pages, options){
-		if (!options) options = {};
-
-		var eloading = $(options.selector);
-		eloading.attr('pl-topic', 'ready');
-		eloading.show();
-
-		var printShapes = options.printShapes === true;
-		var images = this.images;
-
-		var src = null, pageLength = pages.length;
-		var source = [], pageInfos = [], urls = [], map = {};
-		for (var i=0; i < pageLength; i++){
-			var page = pages[i];
-
-			if (page.isError()){
-				if (options.exitError === true){
-					if (AbCommon.isFunction(options.error)){
-						options.error(i);
-					}
-					pageInfos.splice(0, pageInfos.length);
-
-					eloading.hide();
-					return null;
-				}
-				continue;
-			}
-
-			var type = 0;
-			if (!page.editable()){
-				type |= 1;
-			}
-			if (page.angle || this.drawableWaterMark() || (page.hasShapes() && printShapes) ){
-				type |= 2;
-			}
-
-			map[page.uid] = urls.length;
-			urls.push(type ? null : page.source.imgInfo.url);
-
-			var dat = { type: type, index: i, page: page };
-
-			if (type)
-				pageInfos.push(dat);
-
-			source.push(dat);
-		}
-
-		var bar = eloading.find('.bar');
-		bar.css('width', '0%');
-
-		var total = AbCommon.isFunction(options.getTotal) ? options.getTotal(pageInfos.length, urls.length, source.length) : pageInfos.length + urls.length;
-		var index = 0;
-
-		return {
-			printShapes: printShapes,
-			inProc: options.inProc,
-
-			loader: eloading,
-			source: source,
-			pages: pageInfos,
-			urls: urls,
-			map: map,
-			ps: [],
-
-			end: function (){
-				eloading.hide();
-			},
-
-			status: function (text){
-				eloading.attr('pl-topic', text);
-			},
-
-			total: pageInfos.length + urls.length,
-			bar: bar,
-
-			progress: function (){
-				index++;
-				var per = index / total * 100;
-	
-				//console.log('[PROGRESS] ' + per + '%');
-	
-				bar.css('width', per.toFixed(1) + '%');	
-			}
-		};
-	},
-
-	promiseRenderCollectPages: function(cp){
-		if (AbCommon.isString(cp.inProc))
-			cp.status(cp.inProc);
-
-		var printShapes = cp.printShapes;
-		var siz = cp.pages.length, engine = this.engine;
-		for (var i=0; i < siz; i++){
-			var d = cp.pages[i]
-
-			var func = function(resolve, reject){
-				var self = arguments.callee.self;
-				var d = arguments.callee.d;
-
-				var promise = null;
-				if (AbCommon.flag(d.type, 1)){
-					promise = self.loadPage(d, true);
-				}else{
-					promise = new Promise(function(resolve, reject){
-						resolve();
-					});
-				}
-
-				promise
-					.then(function(e){
-						if (d.page.isReadyImage()){
-							return d.page.source.image();
-						}
-					})
-					.then(function(e){
-						if (AbCommon.flag(d.type, 2)){
-							var ctx = AbGraphics.canvas.createContext();
-							engine.renderImage(ctx, d.page, printShapes);
-							var src = AbGraphics.canvas.toImage(ctx);
-				
-							cp.urls[cp.map[d.page.uid]] = src;
-						}
-						resolve(d.page.uid);
-					})
-					.catch(function (e){
-						reject(e);
-					});
-			};
-			func.d = d;
-			func.self = this;
-
-			cp.ps.push(new Promise(func));
-		}
-	},
-
-	//-----------------------------------------------------------
-
 	printPage: function(){
 		if (!this.engine.currentPage)
 			return;
@@ -1996,109 +1893,282 @@ AbImageViewer.prototype = {
 			}, 200);
 		}
 	},
-
-	print: function (pages){
+	
+	getPrintFrameDoc: function (){
 		var eframe = $('#print-frame');
 		var frameDoc = AbCommon.contentDocument(eframe);
 
 		if (!frameDoc){
 			AbMsgBox.error('인쇄 프레임에 접근할 수 없습니다');
-			return;
+			return null;
 		}
-
-		var cp = this.collectPages(pages, {
-			selector: '#print-loading',
-			printShapes: this.engine.showShapes(),
-			inProc: 'loading',
-
-			exitError: true,
-			error: function (index){
-				AbMsgBox.error((index + 1) + '번 이미지는 인쇄할 수 없습니다');
-			},
-		});
-
-		if (!cp) return;
-
-		if (!cp.urls.length){
-			AbMsgBox.success('인쇄할 이미지가 없습니다');
-			cp.end();
-			return;
-		}
-
-		this.promiseRenderCollectPages(cp);
-
-		return AbCommon.sequencePromiseAll(cp.ps, cp.progress, { term: { progress: 10, promise: 10 } })
-			.then(function (){
-				//-----------------------------------------------------------
-				// IFRAME
-
-				console.log('인쇄 이미지 준비 완료');
-
-				var eprint = $('<div id="print"/>');
-				AbPrint.generate(eprint, cp.urls, { orientation: 'auto', progress: cp.progress, term: { progress: 10, promise: 10 } })
-					.then(function (){
-						console.log('인쇄 준비 완료');
-
-						var le = $('#loading');
-						le.remove();
-
-						setTimeout(function (){
-							frameDoc.open();
-
-							var html = '<!doctype html>';
-							html += '<html lang="en">';
-							html += '<head>';
-							html += '<meta charset="UTF-8">';
-							html += '<title>이미지 뷰어 인쇄 지원</title>';
-							html += '<style type="text/css" media="print">';
-							html += 'body,html{width:100%;height:100%; margin: 0;}';
-							html += '#print,.print,.print>div{width:100%;height:100%}';
-							html += '@page{size:A4 portrait!important;orientation:portrait}';
-							html += '#loading{display:none}';
-							html += '.print{position:relative;margin:0;padding:0;text-align:center;';
-							html += 'page-break-after:always;';
-							html += '}';
-							html += 'img{position:absolute;top:0;bottom:0;left:0;right:0;margin:auto;max-width:100%!important;max-height:100%!important}';
-							html += '</style>';
-							html += '</head>';
-							html += '<body onload="parent.AbImageViewer$$doPrint()" onafterprint="setTimeout(function(){ console.log(\'[PRINT] clear printed data...\'); document.body.innerHTML=\'\'; }, 100);">';
-							//html += '<body onload="parent.AbImageViewer$$doPrint()">';
-
-							html += '</body>';
-							html += '</html>';
-
-							frameDoc.write(html);
-							frameDoc.close();
-
-							$(frameDoc.body).append(eprint);
-
-							console.log('[PRINT] WRITE OK!!');
-
-							//setTimeout(AbImageViewer$$doPrint, 100);
-
-							//frameDoc.close();
-							
-						}, 100);
-					});
-
-			});
 		
-		//-----------------------------------------------------------
-		// 새창
-
-		// var earg = $('#print-args');
-		// if (!earg.length){
-		// 	earg = $('<input type="hidden" id="print-args"/>');
-		// 	$(document.body).append(earg);
-		// }
-		// earg.val(JSON.stringify(pages));
-		
-		// if (this.windowPrint)
-		// 	this.windowPrint.focus();
-
-		// this.windowPrint = window.open('viewer.print.html', '_print', 'toolbar=no,menubar=no,status=no');
+		return {
+			frame: eframe,
+			document: frameDoc
+		};
 	},
 
+	print: function (pages){
+		var pf = this.getPrintFrameDoc();
+		if (!pf) return;
+		
+		var it = new AbImageTransferProcessHelper({
+			viewer: this,
+			
+			selector: '#print-loading',
+			parallels: this.PARALLELS,
+			
+			printShapes: this.engine.showShapes(),
+			
+			errorImageExit: true, // 오류난 이미지 있을 시 프로세스 중단
+		
+			urls: {
+				alloc: this.URLS.PRINT.ALLOC,
+				modify: this.URLS.PRINT.MODIFY,
+				remove: this.URLS.PRINT.REMOVE,
+			},
+			
+			msgs: {
+				empty: '인쇄할 이미지가 없습니다',
+				errorImage: '#{IDX}번 이미지는 인쇄할 수 없습니다',
+				readyException: '인쇄 이미지 전송 준비 중 오류가 발생했습니다',
+			},
+			
+			prepare: function (sendor){
+				for (var i=0; i < sendor.length; i++)
+					sendor.outputImageUrls.push(null);
+			},
+			
+			chain: function (sendor, current, data){
+				var promise = null;
+				
+				if (AbPrint.isLandscapeImage(current.imgInfo)){
+					promise = AbCommon.loadImage(current.imgInfo.url)
+									.then(function (eimg){
+										var src = AbPrint.landscape(eimg);
+										
+										var tmp = current.imgInfo.width;
+										current.imgInfo.width = current.imgInfo.height;
+										current.imgInfo.height = tmp;
+										
+										current.imgInfo.url = src;
+										return src;
+									});
+				}else{
+					promise = Promise.resolve(current.imgInfo.url);
+				}
+				
+				return promise;
+			}.bind(this),
+			
+			submit: function (sendor, current, data){
+				return this.submitPrintSupport(sendor, current, data);
+			}.bind(this),
+		});
+		
+		//-----------------------------------------------------------
+		// 커스텀 데이터
+		
+		it.outputImageUrls = [];
+		
+		//-----------------------------------------------------------
+		
+		it.send(pages)
+			.then(function(d){
+				// 혹시 몰라 넣은 쓰레기 제거 코드 
+				$('#print-support-forms').empty();
+			})
+			.then(function(){
+				it.status('build');
+				
+				try
+				{
+					if (it.outputImageUrls.length){
+						// 인쇄 데이터 작성 
+						this.buildPrintSupport(it);
+					}
+				}
+				catch (e)
+				{
+					throw e;
+				}
+			}.bind(this))
+			.catch(function (e){
+				it.hide();
+				
+				console.log(e);
+				
+				AbMsgBox.error(e);
+			})
+			.then(function(){
+				it.dispose();
+			});
+	},
+	
+	//-----------------------------------------------------------
+	
+	submitPrintSupport: function (sendor, current, data){
+
+		//-----------------------------------------------------------
+
+		var fc = AbCommon.formController('#print-support-forms', 'id,index');
+
+		//-----------------------------------------------------------
+		
+		var saveUrl = this.URLS.PRINT.IMAGE;
+		var imgUrl = this.URLS.PRINT.DOWNLOAD;
+		
+		var splitDataSiz = this.SPLIT_DATA_SIZE;
+
+		//-----------------------------------------------------------
+
+		var id = sendor.transferID;
+		
+		var src = current.imgInfo.url;
+		src = src.substr(src.indexOf(",") + 1);
+		
+		//-----------------------------------------------------------
+		
+		fc.id.val(id);
+		fc.index.val(current.index);
+		
+		return new Promise(function(resolve, reject){
+			AbCommon.submitPartialContent({
+				url: saveUrl,
+				content: src,
+				
+				splitSize: splitDataSiz,
+				
+				formController: fc,
+				
+				success: function (r){
+					fc.dispose();
+					
+					sendor.outputImageUrls[current.index] = imgUrl + r.text;
+					
+					resolve(true);
+				},
+				
+				error: function(e){
+					fc.dispose();
+					reject(e);
+				}
+			});			
+		});
+	},
+	
+	//-----------------------------------------------------------
+	
+	buildPrintSupport: function (sendor){
+		var pf = this.getPrintFrameDoc();
+		if (!pf) return;
+		
+		var id = sendor.transferID;
+		var imageUrls = sendor.outputImageUrls;
+		
+		var heads = [];
+		
+		heads.push('<!doctype html>');
+		heads.push('<html lang="en">');
+		heads.push('<head>');
+		heads.push('<meta charset="UTF-8">');
+		heads.push('<title>이미지 뷰어 인쇄 지원</title>');
+		heads.push('<style type="text/css" media="print">');
+		heads.push('body,html{width:100%;height:100%; margin: 0;}');
+		heads.push('#print,.print,.print>div{width:100%;height:100%}');
+		heads.push('@page{size:A4 portrait!important;orientation:portrait}');
+		heads.push('#loading{display:none}');
+		heads.push('.print{position:relative;margin:0;padding:0;text-align:center;');
+		heads.push('page-break-after:always;');
+		heads.push('}');
+		heads.push('img{position:absolute;top:0;bottom:0;left:0;right:0;margin:auto;max-width:100%!important;max-height:100%!important}');
+		heads.push('</style>');
+		heads.push('<script>');
+		heads.push('function loadedPage(){');
+		heads.push('loadImages(function(){');
+		heads.push('parent.AbImageViewer$$doPrint();');
+		heads.push('setTimeout(endPrint, 500);');
+		heads.push('});');
+		heads.push('}');
+		
+		heads.push('function loadImage(index, url, callback){');
+		heads.push('var img = new Image();');
+		heads.push('img.crossOrigin = \'Anonymous\';');
+		heads.push('img.onload = function(e){');
+		heads.push('setTimeout(callback.bind(null, true, index, this), 0);');
+		heads.push('};');
+		heads.push('img.onerror = function(e){');
+		heads.push('setTimeout(callback.bind(null, false, index, new Error(\'[PRINT-IMAGE][\'+index+\'] It is not an image file\')), 0);');
+		heads.push('};');
+		heads.push('img.src = url;');
+		heads.push('}');
+		
+		heads.push('function endPrint(){');
+		heads.push('setTimeout(function(){');
+		heads.push('console.log(\'[PRINT] clear printed data...\');');
+		heads.push('document.body.innerHTML=\'\';');
+		heads.push('parent.AbImageViewer$$endPrint(\''+id+'\');');
+		heads.push(' }, 500);');
+		heads.push('}');
+		
+		heads.push('function loadImages(callback){');
+		heads.push('var called = 0, total = ' + imageUrls.length + ';');
+		heads.push('');
+		heads.push('var func = function(success, index, r){');
+		heads.push('called++;');
+		heads.push('if (success === true){');
+		heads.push('var cover = document.getElementById("PIMG_" + index)');
+		//heads.push('console.log("[VPRINT] APPEND " + index);');
+		heads.push('cover.appendChild(r);');
+		heads.push('}else{');
+		heads.push('console.log(r);');
+		heads.push('}');
+		heads.push('if (called >= total)');
+		heads.push('callback();');
+		heads.push('}');
+		heads.push('');
+		
+		for (var i=0; i < imageUrls.length; i++){
+			var url = imageUrls[i];
+			
+			heads.push('loadImage('+i+', "' + url + '", func);');
+		}
+		
+		heads.push('}');
+		heads.push('</script>');
+		heads.push('</head>');
+		
+		heads.push('<body onload="loadedPage();" ');
+		
+		//heads.push('<body onload="parent.AbImageViewer$$doPrint()" ');
+		
+//		heads.push(' onafterprint="setTimeout(function(){ ');
+//		heads.push('console.log(\'[PRINT] clear printed data...\');');
+//		heads.push('document.body.innerHTML=\'\';');
+//		heads.push('parent.AbImageViewer$$endPrint(\''+id+'\');');
+//		heads.push(' }, 100);"');
+		
+		heads.push('>');
+		
+		var htmls = [];
+		
+		htmls.push(heads.join('\n'));
+		//htmls.push(AbPrint.generateHtml(imageUrls, '<div id="print">', '</div>'));
+		htmls.push(AbPrint.generateCoverHtml(imageUrls, 'PIMG_', '<div id="print">', '</div>'));
+		htmls.push('</body>');
+		htmls.push('</html>');
+		
+		//-----------------------------------------------------------
+	
+		pf.document.open();
+		pf.document.write(htmls.join(''));
+		pf.document.close();
+		
+		console.log('[PRINT] OK!!');
+		//console.log(htmls.join('\n'));		
+	},
+	
 	//-----------------------------------------------------------
 
 	clearShapes: function(){
@@ -2191,19 +2261,22 @@ AbImageViewer.prototype = {
 		AbCommon.ajax({
 			caller: this,
 			title: '이미지 열기',
-			url: this.openImageUrl,
+			url: this.URLS.OPEN,
 			data: {
 				id: id,
 			},
 			
 			success: function (r){
-				this.addImages(r);
+				if (r && $.isArray(r) && r.length)
+					this.addImages(r);
 				loader.hide();
-			},
+				
+				this._requestParam = id;
+			}.bind(this),
 
 			error: function (r){
 				loader.hide();
-			},
+			}.bind(this),
 		});
 	},
 	

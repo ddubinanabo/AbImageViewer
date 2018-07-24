@@ -12,6 +12,10 @@ var AbPrint = {
 		e.css('-o-transform-origin: top left;');
 		e.css('transform-origin: top left;');
 	},
+	
+	isLandscapeImage: function (img){
+		return img.width > img.height;
+	},
 
 	landscape: function (img){
 		var ctx = AbGraphics.canvas.createContext(img.height, img.width);
@@ -84,5 +88,46 @@ var AbPrint = {
 		}
 
 		return AbCommon.promiseAll(ps, options.progress, options);
-	}
+	},
+	
+	generateHtml: function (imageUrls, openHtml, closeHtml){
+		var htmls = [];
+		
+		if (openHtml) htmls.push(openHtml);
+		
+		var siz = imageUrls.length;
+		for (var i=0; i < siz; i++){
+			var url = imageUrls[i];
+
+			htmls.push('<div class="print portrait">');
+			htmls.push('<div>');
+			htmls.push('<img src="'+url+'"/>');
+			htmls.push('</div>');
+			htmls.push('</div>');
+		}
+
+		if (closeHtml) htmls.push(closeHtml);
+		
+		return htmls.join('');
+	},
+	
+	generateCoverHtml: function (imageUrls, prefix, openHtml, closeHtml){
+		var htmls = [];
+		
+		if (openHtml) htmls.push(openHtml);
+		
+		var siz = imageUrls.length;
+		for (var i=0; i < siz; i++){
+			var url = imageUrls[i];
+
+			htmls.push('<div class="print portrait">');
+			htmls.push('<div id="'+(prefix ? prefix + i : '' + i)+'">');
+			htmls.push('</div>');
+			htmls.push('</div>');
+		}
+
+		if (closeHtml) htmls.push(closeHtml);
+		
+		return htmls.join('');
+	},
 };

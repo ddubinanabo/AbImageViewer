@@ -25,6 +25,7 @@ import org.apache.commons.io.FilenameUtils;
 import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.DocConverterException;
+import com.abrain.wiv.utils.DebugUtil;
 import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.GraphicsUtil;
 
@@ -176,6 +177,8 @@ public class PolarisConverter {
 		
 		try
 		{
+			long length = file.length();
+			
 			in = new FileInputStream(file);
 			
 			response.reset();
@@ -187,17 +190,23 @@ public class PolarisConverter {
 	        response.setHeader("Content-Disposition", "attachment;filename=\""+encFileName+"\";");
 			response.setHeader("Content-Transfer-Encoding", "binary");
 			
+			if (length > 0)
+				response.setHeader("Content-Length", "" + length);
+			
 			out = response.getOutputStream();
 			
 			FileUtil.write(in, out);
 		}
 		catch (IOException ioe)
 		{
+			DebugUtil.print(ioe);
+			
 			System.out.println("[download] IOException");
 			ex = ioe;
 		}
 		catch (Exception e)
 		{
+			DebugUtil.print(e);
 			System.out.println("[download] Exception");
 			ex = e;
 		}
@@ -309,6 +318,8 @@ public class PolarisConverter {
 		}
 		catch (Exception e)
 		{
+			DebugUtil.print(e);
+			
 			System.out.println("[Exception] 실행 중 오류");
 			return e;
 		}

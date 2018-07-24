@@ -11,6 +11,7 @@
 
 function AbImageListView(options){
 	if (!options) options = {};
+	var selectingOptions = options.selecting || {};
 
 	this.name = options.name || 'list';
 
@@ -25,6 +26,14 @@ function AbImageListView(options){
 	//-----------------------------------------------------------
 
 	this.bookmark = options.hasOwnProperty('bookmark') ? options.bookmark : false;		// 북마크 모드
+	this.selecting = {
+		method: AbCommon.isString(selectingOptions.method) ?
+			selectingOptions.method.split(/\|/g)
+			: AbCommon.isSetted(selectingOptions.method) && $.isArray(selectingOptions.method) ?
+				selectingOptions.method : ['click'], // 선택 하는 방법, click, dblclick
+		auto: AbCommon.isBool(selectingOptions.auto) ? selectingOptions.auto : true, // 자동 선택 여부(목록 변경 시/페이지 이동 시 등등), true, false
+	};
+	this.token = options.token; // 사용자 정의 데이터
 	
 	//-----------------------------------------------------------
 
@@ -36,7 +45,7 @@ function AbImageListView(options){
 	this.renderedChildren = [];
 
 	this.pager = this.createPager();
-	this.pager.pageCount(4); // page navigation의 개수
+	this.pager.pageCount(!options.pageCount || options.pageCount < 1 ? 4 : options.pageCount); // page navigation의 개수
 	
 	//-----------------------------------------------------------
 
@@ -62,6 +71,8 @@ function AbImageListView(options){
 		var e = $(event.currentTarget);
 		var target = $(event.target);
 
+		var selectable = $.inArray('click', this.selecting.method) >= 0;
+
 		var status = e.attr('lt-status');
 
 		if (e.hasClass('selected') || target.hasClass('checkmark') || target.hasClass('info') || (event.target && event.target.tagName.toLowerCase() == 'input')){
@@ -77,7 +88,37 @@ function AbImageListView(options){
 		var uid = e.attr('lt-uid');
 		
 		if (status == 'loaded'){
-			this.notifyObservers('select', uid);
+			if (selectable) this.notifyObservers('select', uid);
+		}else if (status == 'error'){
+			if (target.hasClass('content')){
+				var index = e.index() + this.startIndex();
+
+				e.attr('lt-status', 'loading');
+				if (selectable)
+					this.notifyObservers('request.load', { index: index, page: this.pages.get(index) });
+				else
+					this.notifyObservers('request.load');
+			}else{
+				if (selectable) this.notifyObservers('select', uid);
+			}
+		}
+	}.bind(this);
+
+	this.dblClickHandler = function(event){
+		var e = $(event.currentTarget);
+		var target = $(event.target);
+
+		var selectable = $.inArray('dblclick', this.selecting.method) >= 0;
+
+		if (!selectable)
+			return;
+
+		var status = e.attr('lt-status');
+
+		var uid = e.attr('lt-uid');
+		
+		if (status == 'loaded'){
+			this.notifyObservers('dblclick', uid);
 		}else if (status == 'error'){
 			if (target.hasClass('content')){
 				var index = e.index() + this.startIndex();
@@ -85,7 +126,7 @@ function AbImageListView(options){
 				e.attr('lt-status', 'loading');
 				this.notifyObservers('request.load', { index: index, page: this.pages.get(index) });
 			}else{
-				this.notifyObservers('select', uid);
+				this.notifyObservers('dblclick', uid);
 			}
 		}
 	}.bind(this);
@@ -193,17 +234,22 @@ AbImageListView.prototype = {
 			break;
 		case 'collection.changed':
 			if (this.enabled()){
-				if (!AbCommon.isBool(value)) value = true;
+				if (!AbCommon.isSetted(value)) value = true;
+
+				var selectingPage = AbCommon.isBool(value) ? value : false;
 				var nums = this.length();
 				if (nums){
 					var index = this.selectedIndex;
+					//var selectedIndex = index;
 					if (index < 0 || index >= nums)
 						this.selectedIndex = index = 0;
 
 					var e = this.children[index];
-					if (value) this.notifyObservers('select', e.attr('lt-uid'));
+					if (e && selectingPage && this.selecting.auto){
+						this.notifyObservers('select', e.attr('lt-uid'));
+					}
 				}else{
-					if (value) this.notifyObservers('unselect');
+					if (selectingPage && this.selecting.auto) this.notifyObservers('unselect');
 				}
 			}
 			break;
@@ -396,7 +442,7 @@ AbImageListView.prototype = {
 			item = this.map[uid];
 			item.attr('lt-status', 'loaded');
 
-			if (value.hasOwnProperty('select') && value.select)
+			if (value.hasOwnProperty('select') && value.select && this.selecting.auto)
 				this.notifyObservers('select', item.attr('lt-uid'));
 			break;
 		case 'page.error':
@@ -688,7 +734,7 @@ AbImageListView.prototype = {
 			}
 			delete this.renderedMap[uid];
 		}else
-			index = this.bookmark.indexOf(uid);
+			index = this.pages.indexOf(uid);
 		
 		this.children.splice(index, 1);
 		delete this.map[uid];
@@ -736,7 +782,7 @@ AbImageListView.prototype = {
 
 	canPrev: function (){ var index = this.selectedIndex; if (index <= 0) return false; return true; },
 	canNext: function(){ var index = this.selectedIndex; if (index < 0 || index+1 >= this.length()) return false; return true; },
-	canGoto: function(index){ return index >= 0 && index < this.length(); },
+	canGo: function(index){ return index >= 0 && index < this.length(); },
 
 	prev: function (){
 		if (!this.canPrev())
@@ -751,9 +797,9 @@ AbImageListView.prototype = {
 		//var loaded = e.attr('lt-status') === 'loaded';
 		var loaded = true;
 
-		if (loaded)
-			this.notifyObservers('select', uid);
-		else
+		if (loaded){
+			if (this.selecting.auto) this.notifyObservers('select', uid);
+		}else
 			this.paging(this.pager.page() - 1, 'last');
 	},
 
@@ -769,14 +815,14 @@ AbImageListView.prototype = {
 		//var loaded = e.attr('lt-status') === 'loaded';
 		var loaded = true;
 
-		if (loaded)
-			this.notifyObservers('select', uid);
-		else
+		if (loaded){
+			if (this.selecting.auto) this.notifyObservers('select', uid);
+		}else
 			this.paging(this.pager.page() + 1, 'first');
 	},
 
-	goto: function (index){
-		if (!this.canGoto(index))
+	go: function (index){
+		if (!this.canGo(index))
 			return false;
 
 		var item = this.children[index];
@@ -788,9 +834,9 @@ AbImageListView.prototype = {
 				//var loaded = e.attr('lt-status') === 'loaded';
 				var loaded = true;
 		
-				if (loaded)
-					this.notifyObservers('select', uid);
-				else
+				if (loaded){
+					if (this.selecting.auto) this.notifyObservers('select', uid);
+				}else
 					this.reload(index);
 			}
 		}else{
@@ -811,6 +857,9 @@ AbImageListView.prototype = {
 	},
 
 	select: function (value){
+		if (!this.selecting.auto)
+			return;
+
 		var index = -1;
 		if (AbCommon.isString(value)){
 			index = this.pages.indexOf(value);
@@ -981,6 +1030,8 @@ AbImageListView.prototype = {
 			var e = this.children[i];
 			var page = this.pages.getById(e.attr('lt-uid'));
 
+			if (!page) return;
+
 			var selecting = false;
 			if (autoSelecting && cindex < 0 && enabled){
 				if ((criterion === 'first' && r == 0) || (criterion === 'last' && i + 1 == end) || (relative && criterion === r) || (!relative && criterion == i) )
@@ -989,10 +1040,10 @@ AbImageListView.prototype = {
 
 			if (this.loadable(page)){
 				var data = { index: i, page: page };
-				if (selecting) data.select = true;
+				if (selecting && this.selecting.auto) data.select = true;
 
 				this.notifyObservers('request.load', data);
-			}else if (selecting){
+			}else if (selecting && this.selecting.auto){
 				this.notifyObservers('select', page.uid);
 			}
 
@@ -1030,6 +1081,7 @@ AbImageListView.prototype = {
 		this.topic(e, 'bookmark').bind('click', this.checkBookmarkHandler);
 
 		e.bind('click', this.clickHandler);
+		e.bind('dblclick', this.dblClickHandler);
 
 		if (AbCommon.isNumber(insertIndex)){
 			index = insertIndex;

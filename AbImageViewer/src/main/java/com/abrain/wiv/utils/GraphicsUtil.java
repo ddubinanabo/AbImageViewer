@@ -77,12 +77,16 @@ public class GraphicsUtil {
 		}
 		catch (IOException ioe)
 		{
+			DebugUtil.print(ioe);
+			
 			System.out.println("[thumbnail] IOException");
 			
 			r.e = ioe;
 		}
 		catch (Exception e)
 		{
+			DebugUtil.print(e);
+			
 			System.out.println("[thumbnail] Exception");
 			
 			r.e = e;

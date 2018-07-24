@@ -36,7 +36,7 @@ AbPage.prototype = {
 
 	//-----------------------------------------------------------
 
-	STATUS_TABLE: ['ready', 'loading', 'loaded','error'],
+	STATUS_TABLE: ['ready', 'loading', 'loaded', 'error'],
 
 	READY: 0,
 	LOADING: 1,
@@ -62,6 +62,7 @@ AbPage.prototype = {
 
 	//-----------------------------------------------------------
 
+	isLoading: function () { return this.status == AbPage.prototype.LOADING; },
 	isError: function() { return this.status == AbPage.prototype.ERROR; },
 
 	editable: function() { return this.status == AbPage.prototype.LOADED; },
@@ -80,6 +81,7 @@ AbPage.prototype = {
 
 	infoType: function() { return this.source && this.source.info ? this.source.info.type : null; },
 	info: function() { return this.hasImageInfo() ? this.source.info.data : null; },
+	decoder: function() { return this.source && this.source.info ? this.source.info.decoder : null; },
 
 	//-----------------------------------------------------------
 

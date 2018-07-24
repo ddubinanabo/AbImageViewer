@@ -461,3 +461,104 @@ body {
 .abv-thumbnails>section.hide {
 	display: none;
 }
+
+/* ------------------------------------------------------------------------------- */
+/* thumbnail popup */
+/* ------------------------------------------------------------------------------- */
+
+.abv-thumb-popup {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	top: 0;
+	z-index: 100;
+}
+
+.abv-thumb-popup > section {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+	
+	width: 100%;
+	height: 100%;
+
+	padding: 0;
+	margin: 0;
+}
+
+.abv-thumb-popup > section > section {
+    -webkit-transform: translate3d(0, 0, 0);
+    -moz-transform: translate3d(0, 0, 0);
+    -ms-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
+		
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	-webkit-flex: 1 1 auto;
+	-moz-flex: 1 1 auto;
+	-ms-flex: 1 1 auto;
+	flex: 1 1 auto;
+
+	background-color: #F8F8F9;
+	
+	position: relative;
+	left: 0;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+.abv-thumb-popup .abv-thumbnails>section>.adv-list>ul>li {
+	text-align: left;
+}
+
+/*
+모아보기에서 y위치가 이미지 크기에 따라 변경되는 문제가 있어
+float: left로 설정함
+*/
+.abv-thumb-popup .abv-thumbnails>section>.adv-list>ul>li ol {	
+	display: block;
+	float: left;
+	margin: 5px 5px 15px 25px;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* thumbnail popup action */
+/* ------------------------------------------------------------------------------- */
+
+.abv-thumb-popup {
+	-webkit-transition2: opacity 2s, z-index 2s, visibility 2s;
+	-moz-transition2: opacity 2s, z-index 2s, visibility 2s;
+	transition2: opacity 2s, z-index 2s, visibility 2s;
+
+	-webkit-transition-property: opacity, z-index, visibility;
+	-moz-transition-property: opacity, z-index, visibility;
+	transition-property: opacity, z-index, visibility;
+
+	-webkit-transition-duration: 500ms;
+	-moz-transition-duration: 500ms;
+	transition-duration: 500ms;
+
+	-webkit-transition-timing-function: cubic-bezier(0.45, 0, 0, 1);
+	-moz-transition-timing-function: cubic-bezier(0.45, 0, 0, 1);
+	transition-timing-function: cubic-bezier(0.45, 0, 0, 1);
+
+	visibility: visible;
+}
+
+.abv-hide-thumbnails-popup-layer {
+	visibility: hidden;
+	z-index: -10;
+	opacity: 0;
+}
+

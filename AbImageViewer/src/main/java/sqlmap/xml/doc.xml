@@ -3,48 +3,42 @@
 
 <mapper namespace="DocDao">
 
-	<insert id="doc-record-image" parameterType="map">
+	<insert id="doc-regist" parameterType="map">
 	<![CDATA[
 		INSERT INTO AB_DOC
 			(
 				ID, SEQ, IP,
 				IMG_WID, IMG_HGT,
-				SHAPES,
+				IMG_SRC, IMG_SRC_SIZ,
+				IMG_RSLT, IMG_RSLT_SIZ,				
+				SHAPES, IMG_DEC,
+				THUMB_WID, THUMB_HGT,
+				THUMB_SRC, THUMB_SRC_SIZ,
 				REG_DT
 			)
 		VALUES
 			(
 				#{ID, jdbcType=VARCHAR}, #{SEQ}, #{IP, jdbcType=VARCHAR},
 				#{WID}, #{HGT},
-				#{SHAPES, jdbcType=VARCHAR},
+				#{IMG_SRC, jdbcType=VARCHAR}, #{IMG_SRC_SIZ},
+				#{IMG_RSLT, jdbcType=VARCHAR}, #{IMG_RSLT_SIZ},
+				#{SHAPES, jdbcType=VARCHAR}, #{IMG_DEC, jdbcType=VARCHAR},
+				#{THUMB_WID}, #{THUMB_HGT},
+				#{THUMB_SRC, jdbcType=VARCHAR}, #{THUMB_SRC_SIZ},
 				TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
 			)
 	]]>
 	</insert>
-	
-	<update id="doc-update-image-source" parameterType="map">
+
+	<update id="doc-update" parameterType="map">
 	<![CDATA[
 		UPDATE AB_DOC SET
-			IMG_SRC=#{SRC, jdbcType=VARCHAR}, IMG_SRC_SIZ=#{SRC_SIZ}
-		WHERE
-			ID=#{ID} AND SEQ=#{SEQ}
-	]]>
-	</update>
-	
-	<update id="doc-update-image-result" parameterType="map">
-	<![CDATA[
-		UPDATE AB_DOC SET
-			IMG_RSLT=#{SRC, jdbcType=VARCHAR}, IMG_RSLT_SIZ=#{SRC_SIZ}
-		WHERE
-			ID=#{ID} AND SEQ=#{SEQ}
-	]]>
-	</update>
-	
-	<update id="doc-update-thumb" parameterType="map">
-	<![CDATA[
-		UPDATE AB_DOC SET
-			THUMB_WID=#{WID}, THUMB_HGT=#{HGT},
-			THUMB_SRC=#{SRC, jdbcType=VARCHAR}, THUMB_SRC_SIZ=#{SRC_SIZ}
+			IMG_WID=#{WID}, IMG_HGT=#{HGT},
+			IMG_SRC=#{IMG_SRC, jdbcType=VARCHAR}, IMG_SRC_SIZ=#{IMG_SRC_SIZ},
+			IMG_RSLT=#{IMG_RSLT, jdbcType=VARCHAR}, IMG_RSLT_SIZ=#{IMG_RSLT_SIZ},
+			SHAPES=#{SHAPES, jdbcType=VARCHAR}, IMG_DEC=#{IMG_DEC, jdbcType=VARCHAR},
+			THUMB_WID=#{THUMB_WID}, THUMB_HGT=#{THUMB_HGT},
+			THUMB_SRC=#{THUMB_SRC, jdbcType=VARCHAR}, THUMB_SRC_SIZ=#{THUMB_SRC_SIZ}
 		WHERE
 			ID=#{ID} AND SEQ=#{SEQ}
 	]]>
@@ -56,6 +50,7 @@
 			ID,
 		    SEQ,
 		    IP,
+		    IMG_DEC,
 		    IMG_WID,
 		    IMG_HGT,
 		    IMG_SRC_SIZ,
@@ -94,6 +89,13 @@
 		WHERE ID=#{ID} AND SEQ=#{SEQ}
 	]]>
 	</select>
+
+	<delete id="doc-delete-image-post" parameterType="map">
+	<![CDATA[
+		DELETE FROM AB_DOC
+		WHERE ID=#{ID} AND SEQ>=#{SEQ}
+	]]>
+	</delete>
 
 	<delete id="doc-delete" parameterType="map">
 	<![CDATA[

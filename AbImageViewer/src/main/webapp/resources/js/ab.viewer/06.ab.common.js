@@ -1,5 +1,9 @@
 var AbCommon = {
 
+	//-----------------------------------------------------------
+	// 마우스 훨 처리
+	//-----------------------------------------------------------
+
 	wheel: {
 		PIXEL_STEP: 100,
 		LINE_HEIGHT: 40,
@@ -51,6 +55,8 @@ var AbCommon = {
 	},
 
 	//-----------------------------------------------------------
+	// IE 버전 확인
+	//-----------------------------------------------------------
 
 	ieVersion: function(){
 		var agent = navigator.userAgent.toLowerCase();
@@ -81,6 +87,7 @@ var AbCommon = {
 		return window.cancelAnimationFrame || window.mozCancelAnimationFrame;
 	},
 	
+	// Esing 애니메이션 처리
 	tween: function (options){
 		if (!options) options = {};
 		if (typeof options.proc != 'function') return;
@@ -157,6 +164,7 @@ var AbCommon = {
 	},
 
 	//-----------------------------------------------------------
+	// UUID 생성
 	
 	uuid: function (){
 		// http://www.ietf.org/rfc/rfc4122.txt
@@ -184,12 +192,21 @@ var AbCommon = {
 
 	escape: function (value){ return value ? value.replace ( /&/gi, '&amp;' ).replace ( /&/gi, '&nbsp;' ).replace ( /</gi, '&lt;' ).replace ( />/gi, '&gt;' ).replace ( /'/g, '&#039;' ).replace ( /"/g, '&quot;' ) : value; },
 
+	//-----------------------------------------------------------
+	// Web Worker
+	//-----------------------------------------------------------
+
+	// 조건에 따라 Web Worker를 비활성화 하기 위한 옵션
 	ENABLE_WEB_WORKER : true,
 
+	// Web Worker 사용 가능 여부 확인
 	supportWebWorker: function(){
 		return window.Worker != null && window.Worker != undefined && AbCommon.ENABLE_WEB_WORKER;
 	},
 
+	//-----------------------------------------------------------
+	// IFRAME 제어 관련
+	
 	contentWindow: function(e){
 		return e.length ? e.get(0).contentWindow : null;
 	},
@@ -778,10 +795,11 @@ var AbCommon = {
 	},
 		
 	//-----------------------------------------------------------
-
+	
 	loadImage: function (url){
 		return new Promise(function(resolve, reject){
 			var img = new Image();
+			img.crossOrigin = 'Anonymous';
 			img.onload = function(e){
 				setTimeout(resolve.bind(null, this), 0);
 			};
@@ -1281,4 +1299,168 @@ var AbCommon = {
 	xhrArrayBufferResponse: function (xhr){
 		return xhr.mozResponseArrayBuffer || xhr.mozResponse || xhr.responseArrayBuffer || xhr.response;
 	},
+	
+	//-------------------------------------------------------------------------------------------------------
+	// 분할 전송용 양식 컨트럴러
+	//-------------------------------------------------------------------------------------------------------
+
+	formController: function(selector, fields){
+		if (AbCommon.isString(fields)) fields = fields.split(/,/g);
+		
+		var pa = ['partials', 'partial', 'content'];
+		
+		for (var i = 0; i < pa.length; i++){
+			if ($.inArray(pa[i], fields) < 0)
+				fields.push(pa[i]);
+		}
+		
+		var html = '<form enctype="multipart/form-data">';
+		
+		var len = fields.length, nums = 0;
+		var ra = [];
+		for (var i=0; i < len; i++){
+			var field = fields[i];
+			
+			if (!field) continue;
+			
+			field = $.trim(field);
+			ra.push(field);
+			
+			html += '<input type="hidden" name="'+field+'"/>';
+			nums++;
+		}
+		html += '</form>';
+		
+		var forms = $(selector);
+		var eform = $(html);
+		
+		forms.append(eform);
+		
+		var formController = {
+			forms: forms,
+			form: eform,
+			
+			_fields: ra,
+			
+			reset: function (){
+				this.partial.val('');
+				this.partials.val('');
+				this.content.val('');				
+			},
+			
+			record: function(index, total, content){
+				this.partial.val(index);
+				this.partials.val(total);
+				this.content.val(content);
+			},
+			
+			dispose: function(){
+				this.form.remove();
+			},
+			
+			toString: function (token, exclude){
+				if (!$.isArray(exclude)) exclude = exclude.split(/,/g);
+				if (!token) token = '';
+				var len = this._fields.length;
+				var out = [];
+				for (var i=0; i < len; i++){
+					var field = this._fields[i];
+					
+					if ($.isArray(exclude) && $.inArray(field, exclude) >= 0)
+						continue;
+					
+					out.push('[' + field + ']=' + this[field].val());
+				}
+				return out.join(token);
+			},
+		};
+		
+		len = ra.length;
+		for (var i=0; i < len; i++){
+			var field = ra[i];
+			
+			formController[field] = eform.find('[name="'+field+'"]');
+		}
+		
+		return formController;
+	},
+	
+	//-------------------------------------------------------------------------------------------------------
+	// 분할 SUBMIT 관련 함수
+	//-------------------------------------------------------------------------------------------------------
+	
+	submitPartialContent: function (options){
+		if (!options) options = {};
+		if (!AbCommon.isNumber(options.delay)) options.delay = 10;
+		if (!AbCommon.isNumber(options.splitSize)) options.splitSize = 30720; // 30KB
+		
+		if (!options.url)
+			throw new Error('[PARTIAL-SUBMIT] URL is null or empty!!!');
+		
+		if (!options.content)
+			throw new Error('[PARTIAL-SUBMIT] CONTENT is null or empty!!!');
+		
+		if (!options.formController)
+			throw new Error('[PARTIAL-SUBMIT] FORM Controller is null or empty!!!');
+		
+		var splitDataSiz = options.splitSize;
+		var formController = options.formController;
+		
+		if (options.content){
+			var ca = [], ci = 0, clen = options.content.length;
+			
+			while (ci < clen){
+				var s = null;
+				if (ci + options.splitSize < clen){
+					s = { index: ci, length: options.splitSize };
+				}else{
+					s = { index: ci, length: clen - ci };
+				}
+				
+				ca.push(s);
+				ci += options.splitSize;
+			}
+			
+			if (ca.length){
+				var caIndex = 0, caLength = ca.length;
+				
+				var exec = function(){
+					var caitem = ca[caIndex];
+					
+					formController.record(
+						caIndex,
+						caLength,
+						options.content.substr(caitem.index, caitem.length)
+					);
+
+					//console.log('[PARTIAL-SEND]['+caIndex+'/'+caLength+'] ' + formController.toString(', ', 'content'));
+					
+					AbCommon.ajaxSubmit(formController.form, {
+						url: options.url,
+						
+						logFail: true,
+						nomsg: true,
+						
+						success: function(r, status, xhr, $form){
+							if (caIndex + 1 >= caLength){
+								if (AbCommon.isFunction(options.success))
+									options.success(r, status, xhr, $form);
+							}else{
+								caIndex++;
+								setTimeout(exec, options.delay);
+							}							
+						},
+						
+						error: function(e, $form){
+							if (AbCommon.isFunction(options.error))
+								options.error(e, $form);
+						}
+					});
+				};
+				
+				setTimeout(exec, 0);
+			}
+		}
+	},
+
 };

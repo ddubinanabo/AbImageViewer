@@ -258,6 +258,9 @@ AbColorPicker.prototype = {
 	has: function (e) { return this.e.has(e).length > 0; },
 
 	opened: function(){ return this.e.css('visibility') == 'visible'; },
+	
+	boundBox: function(){ return AbCommon.getBounds(this.e.get(0)); },
+	size: function() { return { width: this.e.width(), height: this.e.height() }; },
 
 	open: function (x, y, zIndex){
 		if (this.viewStyle === 'window'){

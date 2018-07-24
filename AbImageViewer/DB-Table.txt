@@ -1,7 +1,9 @@
 CREATE TABLE AB_DOC
 (
 	ID VARCHAR(32),
+	SEQ NUMBER,
     IP VARCHAR(15),
+    IMG_DEC VARCHAR(5),
     IMG_WID NUMBER,
     IMG_HGT NUMBER,
     IMG_SRC BLOB,
@@ -19,6 +21,15 @@ CREATE TABLE AB_DOC
 --
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 --
+
+SELECT *
+FROM (
+    SELECT
+        ROW_NUMBER() OVER(PARTITION BY ID ORDER BY REG_DT, SEQ) RNK,
+        A.*
+    FROM AB_DOC A
+) A
+;
 
 SELECT *
 FROM AB_DOC

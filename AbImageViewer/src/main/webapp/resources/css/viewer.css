@@ -630,11 +630,13 @@ img.thumb {
 }
 
 #print-loading .fvert .text {
+	min-width: 300px;
 	margin-top: 20px;
 }
 
-#print-loading[pl-topic="ready"] .pl-loading { display: none; }
-#print-loading[pl-topic="loading"] .pl-ready { display: none; }
+#print-loading[pl-topic="ready"] .pl-proc, #print-loading[pl-topic="ready"] .pl-build { display: none; }
+#print-loading[pl-topic="proc"] .pl-ready, #print-loading[pl-topic="proc"] .pl-build { display: none; }
+#print-loading[pl-topic="build"] .pl-ready, #print-loading[pl-topic="build"] .pl-proc { display: none; }
 
 /* ------------------------------------------------------------------------------- */
 /* File loading window */
@@ -676,12 +678,12 @@ img.thumb {
 }
 
 #server-saving .fvert .text {
+	min-width: 300px;
 	margin-top: 20px;
 }
 
-#server-saving[pl-topic="ready"] .pl-loading, #server-saving[pl-topic="ready"] .pl-send { display: none; }
-#server-saving[pl-topic="saving"] .pl-ready, #server-saving[pl-topic="saving"] .pl-send { display: none; }
-#server-saving[pl-topic="send"] .pl-ready, #server-saving[pl-topic="send"] .pl-loading { display: none; }
+#server-saving[pl-topic="ready"] .pl-proc { display: none; }
+#server-saving[pl-topic="proc"] .pl-ready { display: none; }
 
 /* ------------------------------------------------------------------------------- */
 /* Server loading window */

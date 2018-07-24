@@ -4,7 +4,8 @@ public class AbImageDbData {
 	public String id;
 	public int seq;
 	public String ip;
-	
+		
+	public String imgDec;
 	public long imgWid, imgHgt;
 	public byte[] imgSrc;
 	public long imgSrcSiz;

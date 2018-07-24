@@ -80,6 +80,7 @@ AbImage.prototype = {
 
 				if (recordOrigin){
 					var imgsrc = new Image();
+					imgsrc.crossOrigin = 'Anonymous';
 					imgsrc.src = imgdat.url;
 
 					imgdat.originElement = imgsrc;
@@ -148,13 +149,16 @@ AbImage.prototype = {
 				else if (w || h) gen.resizeLimit(w, h);
 
 				gen.resize(this.width, this.height);
+
+				var decoder = this.info ? this.info.decoder : null;
 				
-				var data = gen.generate(e);
+				var data = gen.generate(e, decoder);
 
 				return this.setThumbnailData(data);
 				
 				/*
 				var img = new Image();
+				img.crossOrigin = 'Anonymous';
 				img.src = data;
 
 				this.thumbInfo.loaded = true;
@@ -179,9 +183,11 @@ AbImage.prototype = {
 			});
 		}else{
 			var img = new Image();
+			img.crossOrigin = 'Anonymous';
 			img.src = imageData;
 
 			var imgsrc = new Image();
+			imgsrc.crossOrigin = 'Anonymous';
 			imgsrc.src = imageData;
 
 			this.thumbInfo.loaded = true;

@@ -1,7 +1,7 @@
 function AbToolbar(options){
 	if (!options) options = {};
 
-	this.selector = options.selector || '#tb-main, #tb-left, #rb-right';
+	this.selector = options.selector || '#tb-main, #tb-left, #rb-right, #tb-thumb-popup-left';
 	
 	this.e = $(this.selector);
 	

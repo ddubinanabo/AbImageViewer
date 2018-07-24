@@ -148,9 +148,26 @@ AbShapeStyler.prototype = {
 			var color = e.attr('abs-color');
 			if (color)
 				this.colorPicker.setColor(color);
+			
+			var ebody = $(document.body);
+			
+			var targetSiz = { width: e.width(), height: e.height() };
+			var winSiz = this.colorPicker.size();
+			var viewSiz = { width: ebody.width(), height: ebody.height() };
+
+			winSiz.width += 40;
+			winSiz.height += 40;
+			
+			var x = p.x, y = p.y + targetSiz.height;
+			
+			if (x + winSiz.width > viewSiz.width)
+				x = viewSiz.width - winSiz.width;
+			
+			if (y + winSiz.height > viewSiz.height)
+				y = viewSiz.height - winSiz.height;
 
 			this.colorPicker.token = element;
-			this.colorPicker.open(p.x, p.y + e.height());
+			this.colorPicker.open(x, y);
 		}.bind(this));
 		
 		this.e.find('input[type="checkbox"]').change(function(event){

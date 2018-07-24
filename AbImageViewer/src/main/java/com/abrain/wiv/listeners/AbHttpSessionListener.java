@@ -15,6 +15,8 @@ import org.apache.commons.io.FileUtils;
 
 import org.apache.log4j.Logger;
 
+import com.abrain.wiv.utils.DebugUtil;
+
 public class AbHttpSessionListener implements HttpSessionListener, ServletContextListener {
 	
 	private static ServletContext context;
@@ -63,6 +65,9 @@ public class AbHttpSessionListener implements HttpSessionListener, ServletContex
 		System.out.println("[HTTP Session] Destoryed, ID: " + sessionId);
 		
 		if (context != null && session != null){
+			//-----------------------------------------------------------------------------------
+			// 폴라리스 컨버터 임시 폴더 삭제
+			
 			String docDirPath = context.getRealPath("/WEB-INF/docs/" + sessionId);
 			File docDir = new File(docDirPath);
 			
@@ -71,19 +76,53 @@ public class AbHttpSessionListener implements HttpSessionListener, ServletContex
 				{
 					FileUtils.deleteDirectory(docDir);
 					
-					System.out.println("[HTTP Session][remove-template] remove directory!!!");
+					System.out.println("[HTTP Session][remove-template][doc] remove directory!!!");
 				}
 				catch (IOException ioe)
 				{
-					System.out.println("[HTTP Session][remove-template] IOException");
+					DebugUtil.print(ioe);
+					
+					System.out.println("[HTTP Session][remove-template][doc] IOException");
 				}
 				catch (Exception e)
 				{
-					System.out.println("[HTTP Session][remove-template] Exception");
+					DebugUtil.print(e);
+					
+					System.out.println("[HTTP Session][remove-template][doc] Exception");
 				}
 			}else{
-				System.out.println("[HTTP Session][remove-template] not found directory!!!");
+				System.out.println("[HTTP Session][remove-template][doc] not found directory!!!");
 			}
+			
+			//-----------------------------------------------------------------------------------
+			// 인쇄 및 분할 저장 지원 임시 폴더 삭제
+	
+			String tmpDirPath = context.getRealPath("/WEB-INF/files/tmp/" + sessionId);
+			File tmpDir = new File(tmpDirPath);
+			
+			if (tmpDir.exists()){
+				try
+				{
+					FileUtils.deleteDirectory(tmpDir);
+					
+					System.out.println("[HTTP Session][remove-template][tmp] remove directory!!!");
+				}
+				catch (IOException ioe)
+				{
+					DebugUtil.print(ioe);
+					
+					System.out.println("[HTTP Session][remove-template][tmp] IOException");
+				}
+				catch (Exception e)
+				{
+					DebugUtil.print(e);
+					
+					System.out.println("[HTTP Session][remove-template][tmp] Exception");
+				}
+			}else{
+				System.out.println("[HTTP Session][remove-template][tmp] not found directory!!!");
+			}
+			
 		}
 	}
 }

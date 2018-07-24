@@ -643,6 +643,8 @@ var AbGraphics = {
 	},
 
 	canvas: {
+		IMAGE_QUALITY: undefined,
+		
 		imageSmoothing: function(ctx, value){
 			ctx.imageSmoothingEnabled = value;
 			ctx.mozImageSmoothingEnabled = value;
@@ -669,7 +671,10 @@ var AbGraphics = {
 			case 'jpg': case 'jpeg': type = 'image/jpeg'; break;
 			default: type = 'image/png'; break;
 			}
-			return ctx.canvas.toDataURL(type, 1);	
+			if (AbCommon.isSetted(this.IMAGE_QUALITY))
+				return ctx.canvas.toDataURL(type, this.IMAGE_QUALITY);
+			else
+				return ctx.canvas.toDataURL(type);
 		},
 
 		toBlob: function (ctx, type){
@@ -697,7 +702,7 @@ var AbGraphics = {
 
 		renderImage: function (imgElement, type){
 			var ctx = this.createContext(imgElement.width, imgElement.height);
-			ctx.drawImage(imgElement, 0, 0);
+			ctx.drawImage(imgElement, 0, 0, imgElement.width, imgElement.height, 0, 0, imgElement.width, imgElement.height);
 			return this.toImage(ctx, type);
 		},
 

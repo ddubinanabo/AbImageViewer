@@ -4,8 +4,10 @@ var AbImageLoader = {
 
 	executePath : 'js/works/',
 	executeMin : false,
-	
-	urlConverter: 'http://localhost:8084/wiv/api/doc',
+
+	URLS: {
+		CONVERTER: 'http://localhost:8084/wiv/api/doc',
+	},
 
 	//-----------------------------------------------------------
 
@@ -16,25 +18,27 @@ var AbImageLoader = {
 	//-----------------------------------------------------------
 
 	load: function(data){
-		var engine = null;
+		var decoder = null;
 		if (AbCommon.isFileData(data)){
-			engine = this.test(data.name, data.type);
+			decoder = this.test(data.name, data.type);
 		}else if (AbCommon.isString(data)){
 			data = {
 				name: data,
 				type: '',
 				size: 0,
 			};
-			engine = this.test(data.name, data.type);
+			decoder = this.test(data.name, data.type);
 		}
 
+		var kind = decoder ? decoder.kind : null;
 		var loader = null;
-		switch (engine){
+		switch (kind){
 		case 'doc':
-			this.docs.push({ engine: engine, data: data});
+			this.docs.push({ decoder: decoder, data: data});
 			return null;
 
 		case 'tif':
+			//this.multiImages.push({ decoder: decoder, data: data});
 			return null;
 
 		case 'j2k':
@@ -44,7 +48,8 @@ var AbImageLoader = {
 			if (AbCommon.supportWebWorker()){
 				var workerPath = this.workerPath('work.def');
 				loader = function(){
-					var data =  arguments.callee.data;
+					var data = arguments.callee.data;
+					var decoder = arguments.callee.decoder;
 
 					return new Promise(function (resolve, reject){
 						var worker = new Worker(workerPath);
@@ -55,7 +60,7 @@ var AbImageLoader = {
 						};
 
 						worker.onmessage = function (e){
-							setTimeout(resolve.bind(null, { type: 'file', image: e.data.image, data: e.data.data }), 0);
+							setTimeout(resolve.bind(null, { type: 'file', decoder: decoder, image: e.data.image, data: e.data.data }), 0);
 							worker.terminate();
 						};
 
@@ -63,14 +68,16 @@ var AbImageLoader = {
 					});
 				};
 				loader.data = data;
+				loader.decoder = decoder;
 			}else{
 				loader = function(){
-					var data =  arguments.callee.data;
+					var data = arguments.callee.data;
+					var decoder = arguments.callee.decoder;
 
 					return new Promise(function (resolve, reject){
 						var reader = new FileReader();
 						reader.onload = function(event){
-							setTimeout(resolve.bind(null, { type: 'file', image: event.target.result, data: data }), 0);
+							setTimeout(resolve.bind(null, { type: 'file', decoder: decoder, image: event.target.result, data: data }), 0);
 						};
 						reader.onerror = function (e){
 							reader.abort();
@@ -81,6 +88,7 @@ var AbImageLoader = {
 					});
 				};
 				loader.data = data;
+				loader.decoder = decoder;
 			}
 
 			return loader;
@@ -104,20 +112,22 @@ var AbImageLoader = {
 		name = name.toLowerCase();
 
 		if (name.match('\.jp2$|\.j2x$|\.j2k$|\.j2c$')){
-			return 'j2k';
+			return { kind: 'j2k', render: 'jpeg' };
 		}
 		if (name.match('\.doc$|\.docx$|\.xls$|\.xlsx$|\.ppt$|\.pptx$|\.hwp$|\.pdf$')){
-			return 'doc';
+			return { kind: 'doc', render: 'jpeg' };
 		}
 		if (type === 'image/tiff'){
-			return 'tif';
+			return { kind: 'tif', render: 'jpeg' };
 		}
 		if (type === 'image/svg+xml'){
-			return 'svg';
+			return { kind: 'svg', render: 'png' };
 		}
 		switch(type){
-		case 'image/jpeg': case 'image/png': case 'image/apng': case 'image/bmp': case 'image/gif':
-			return 'def';
+		case 'image/jpeg': case 'image/bmp':
+			return { kind: 'def', render: 'jpeg' };
+		case 'image/png': case 'image/apng': case 'image/gif':
+			return { kind: 'def', render: 'png' };
 		}
 
 		// if (!type.match('image.*')){
@@ -133,26 +143,6 @@ var AbImageLoader = {
 		// - bmp (image/bmp)
 		// - bmp ico (image/vnd.microsoft.icon, image/x-icon, image/ico, image/icon, text/ico, application/ico)
 
-		// image viewer 지원 이미지 포맷
-		// - image
-		// 		- jpeg
-		// 		- gif
-		// 		- png
-		// 		- apng
-		// 		- svg
-		// 		- bmp
-		// 		- jpeg2000 (준비중)
-		// 		- tiff (준비중)
-		// - document (준비중)
-		// 		- doc
-		// 		- docx
-		// 		- xls
-		// 		- xlsx
-		// 		- ppt
-		// 		- pptx
-		// 		- hwp
-		// 		- pdf
-
 		return null;
 	},
 
@@ -162,7 +152,8 @@ var AbImageLoader = {
 		for (var i=0; i < siz; i++){
 			var file = files[i];
 
-			var r = this.test(file.name, file.type);
+			var decoder = this.test(file.name, file.type);
+			var r = decoder ? decoder.kind : null;
 			switch(r){
 			case 'doc':
 				d.doc++;
@@ -202,7 +193,12 @@ var AbImageLoader = {
 			}
 		};
 
+		this.$doMultiImageProcess(total, options, callback);
 		this.$doRemoteProcess(total, options, callback);
+	},
+
+	$doMultiImageProcess: function(total, options, callback){
+		this.multiImages.splice(0, this.multiImages.length);
 	},
 
 	$doRemoteProcess: function (total, options, callback){
@@ -220,14 +216,15 @@ var AbImageLoader = {
 		};
 		clear.siz = this.docs.length;
 
-		var url = this.urlConverter;
+		var url = this.URLS.CONVERTER;
 		var siz = this.docs.length;
 		for (var i=0; i < siz; i++){
 			var d = this.docs[i];
 
-			if (d.engine === 'doc'){
+			if (d.decoder.kind === 'doc'){
 				var loaded = function(event){
 					var data = arguments.callee.data;
+					var decoder = arguments.callee.decoder;
 
 					var baData =  event.target.result;
 					var b64 = baData.substr(baData.indexOf(",") + 1);
@@ -244,6 +241,7 @@ var AbImageLoader = {
 					{
 						var success = function(r, status, xhr, $form){
 							var data = arguments.callee.data;
+							var decoder = arguments.callee.decoder;
 
 							$form.remove();
 							clear();
@@ -251,12 +249,13 @@ var AbImageLoader = {
 							console.log('OK!!');
 							
 							if (AbCommon.isFunction(options.getList))
-								options.getList(r,  { type: 'doc', data: data });
+								options.getList(r,  { type: 'doc', data: data, decoder: decoder });
 
 							if (AbCommon.isFunction(callback))
 								callback();
 						};
 						success.data = data;
+						success.decoder = decoder;
 
 						AbCommon.ajaxSubmit(e, {
 							title: '문서 변환',
@@ -280,6 +279,7 @@ var AbImageLoader = {
 					}
 				};
 				loaded.data = d.data;
+				loaded.decoder = d.decoder;
 
 				var error = function (e){
 					reader.abort();

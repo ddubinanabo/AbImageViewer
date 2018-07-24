@@ -6,6 +6,7 @@ public class AbImagePack {
 	public static class AbImageInfo {
 		public int width, height;
 		public String shapes;
+		public String decoder;
 		
 		public static AbImageInfo fromJSON (String jsonData) throws Exception {
 			ObjectMapper om = new ObjectMapper();
