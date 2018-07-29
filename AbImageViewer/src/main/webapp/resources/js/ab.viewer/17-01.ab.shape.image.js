@@ -1,6 +1,7 @@
 function AbShapeImage(options){
 	if (!options) options = {};
 	var source = options.source || {};
+	var sourceRender = source.render || {};
 	var style = options.style || {};
 	var strokeStyle = style.stroke || {};
 
@@ -27,14 +28,12 @@ function AbShapeImage(options){
 		data: source.data || '',
 		width: source.width,
 		height: source.height,
+		
+		render: {
+			width: sourceRender.width || source.width,
+			height: sourceRender.height || source.height
+		},
 	};
-	
-	if (source.render){
-		this.source['render'] = {
-			width: source.render.width,
-			height: source.render.height
-		};
-	}
 
 	if (AbCommon.allNumbers(options.x, options.y, options.width, options.height)){
 		this.x = options.x;
@@ -170,6 +169,10 @@ AbShapeImage.prototype = {
 		serializer.add(source, 'data', this.source.data);
 		serializer.add(source, 'width', this.source.width);
 		serializer.add(source, 'height', this.source.height);
+
+		var render = serializer.addGroup(source, 'render');
+		serializer.add(render, 'width', this.source.render.width);
+		serializer.add(render, 'height', this.source.render.height);
 
 		return serializer.serialize();
 	},
