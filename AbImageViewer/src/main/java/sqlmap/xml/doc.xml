@@ -14,6 +14,7 @@
 				SHAPES, IMG_DEC,
 				THUMB_WID, THUMB_HGT,
 				THUMB_SRC, THUMB_SRC_SIZ,
+				REG_STS,
 				REG_DT
 			)
 		VALUES
@@ -25,24 +26,11 @@
 				#{SHAPES, jdbcType=VARCHAR}, #{IMG_DEC, jdbcType=VARCHAR},
 				#{THUMB_WID}, #{THUMB_HGT},
 				#{THUMB_SRC, jdbcType=VARCHAR}, #{THUMB_SRC_SIZ},
+				'R',
 				TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
 			)
 	]]>
 	</insert>
-
-	<update id="doc-update" parameterType="map">
-	<![CDATA[
-		UPDATE AB_DOC SET
-			IMG_WID=#{WID}, IMG_HGT=#{HGT},
-			IMG_SRC=#{IMG_SRC, jdbcType=VARCHAR}, IMG_SRC_SIZ=#{IMG_SRC_SIZ},
-			IMG_RSLT=#{IMG_RSLT, jdbcType=VARCHAR}, IMG_RSLT_SIZ=#{IMG_RSLT_SIZ},
-			SHAPES=#{SHAPES, jdbcType=VARCHAR}, IMG_DEC=#{IMG_DEC, jdbcType=VARCHAR},
-			THUMB_WID=#{THUMB_WID}, THUMB_HGT=#{THUMB_HGT},
-			THUMB_SRC=#{THUMB_SRC, jdbcType=VARCHAR}, THUMB_SRC_SIZ=#{THUMB_SRC_SIZ}
-		WHERE
-			ID=#{ID} AND SEQ=#{SEQ}
-	]]>
-	</update>
 	
 	<select id="doc-select" parameterType="map" resultType="com.abrain.wiv.data.AbImageDbData">
 	<![CDATA[
@@ -61,7 +49,7 @@
 		    THUMB_SRC_SIZ,
 		    REG_DT
 		FROM AB_DOC
-		WHERE ID=#{ID}
+		WHERE ID=#{ID} AND REG_STS='C'
 		ORDER BY SEQ
 	]]>
 	</select>
@@ -70,7 +58,7 @@
 	<![CDATA[
 		SELECT IMG_SRC_SIZ LENGTH, IMG_SRC BYTES
 		FROM AB_DOC
-		WHERE ID=#{ID} AND SEQ=#{SEQ}
+		WHERE ID=#{ID} AND SEQ=#{SEQ} AND REG_STS='C'
 	]]>
 	</select>
 	
@@ -78,7 +66,7 @@
 	<![CDATA[
 		SELECT IMG_RSLT_SRC LENGTH, IMG_RSLT BYTES
 		FROM AB_DOC
-		WHERE ID=#{ID} AND SEQ=#{SEQ}
+		WHERE ID=#{ID} AND SEQ=#{SEQ} AND REG_STS='C'
 	]]>
 	</select>
 	
@@ -86,22 +74,29 @@
 	<![CDATA[
 		SELECT THUMB_SRC_SIZ LENGTH, THUMB_SRC BYTES
 		FROM AB_DOC
-		WHERE ID=#{ID} AND SEQ=#{SEQ}
+		WHERE ID=#{ID} AND SEQ=#{SEQ} AND REG_STS='C'
 	]]>
 	</select>
-
-	<delete id="doc-delete-image-post" parameterType="map">
-	<![CDATA[
-		DELETE FROM AB_DOC
-		WHERE ID=#{ID} AND SEQ>=#{SEQ}
-	]]>
-	</delete>
 
 	<delete id="doc-delete" parameterType="map">
 	<![CDATA[
 		DELETE FROM AB_DOC
-		WHERE ID=#{ID, jdbcType=VARCHAR}
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='R'
 	]]>
 	</delete>
+
+	<delete id="doc-delete-previous" parameterType="map">
+	<![CDATA[
+		DELETE FROM AB_DOC
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='C'
+	]]>
+	</delete>
+
+	<update id="doc-approval" parameterType="map">
+	<![CDATA[
+		UPDATE AB_DOC SET REG_STS='C'
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='R'
+	]]>
+	</update>
 
 </mapper>

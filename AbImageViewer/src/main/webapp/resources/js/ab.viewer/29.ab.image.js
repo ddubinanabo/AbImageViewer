@@ -77,18 +77,33 @@ AbImage.prototype = {
 			.then(function (e){
 				imgdat.loaded = true;
 				imgdat.element = e;
-
-				if (recordOrigin){
-					var imgsrc = new Image();
-					imgsrc.crossOrigin = 'Anonymous';
-					imgsrc.src = imgdat.url;
-
-					imgdat.originElement = imgsrc;
-				}
-
+				
 				return new Promise(function (resolve, reject){
-					resolve({ image: imgdat.element, loaded: true});
+					if (recordOrigin){
+						AbCommon.loadImage(imgdat.url)
+							.then(function(eorigin){
+								imgdat.originElement = eorigin;
+								
+								resolve({ image: imgdat.element, loaded: true});
+							})
+							.catch(function(e){
+								reject(e);
+							});
+					}else{
+						resolve({ image: imgdat.element, loaded: true});
+					}
 				});
+//
+//				if (recordOrigin){
+//					var imgsrc = AbCommon.createImage();
+//					imgsrc.src = imgdat.url;
+//
+//					imgdat.originElement = imgsrc;
+//				}
+//
+//				return new Promise(function (resolve, reject){
+//					resolve({ image: imgdat.element, loaded: true});
+//				});
 			});
 	},
 
@@ -157,8 +172,7 @@ AbImage.prototype = {
 				return this.setThumbnailData(data);
 				
 				/*
-				var img = new Image();
-				img.crossOrigin = 'Anonymous';
+				var img = AbCommon.createImage();
 				img.src = data;
 
 				this.thumbInfo.loaded = true;
@@ -182,12 +196,10 @@ AbImage.prototype = {
 				setTimeout(resolve.bind(null, { element: img, data: img.src }), 0);
 			});
 		}else{
-			var img = new Image();
-			img.crossOrigin = 'Anonymous';
+			var img = AbCommon.createImage();
 			img.src = imageData;
 
-			var imgsrc = new Image();
-			imgsrc.crossOrigin = 'Anonymous';
+			var imgsrc = AbCommon.createImage();
 			imgsrc.src = imageData;
 
 			this.thumbInfo.loaded = true;

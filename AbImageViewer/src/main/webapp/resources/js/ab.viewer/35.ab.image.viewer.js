@@ -72,6 +72,10 @@ function AbImageViewer(options){
 	this.$showListViewPopup = false; // 모아보기 여부
 
 	//-----------------------------------------------------------
+	
+	this.animatingEngine = AbCommon.isBool(options.animate) ? options.animate: true;
+
+	//-----------------------------------------------------------
 	// 요청 인자
 	//-----------------------------------------------------------
 	// openImages() 메서드에 의해 세팅됨.
@@ -150,103 +154,146 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	install: function(){
-		this.styler = new AbShapeStyler();
-		this.styler.observe(this);
+		var promiseFunc = function (resolve, reject){
+			
+			try
+			{
+				this.styler = new AbShapeStyler();
+				this.styler.observe(this);
 
-		//-----------------------------------------------------------
+				//-----------------------------------------------------------
 
-		this.toolbar = new AbToolbar();
-		this.toolbar.observe(this);
-		this.toolbar.groupObserve(this);
+				this.toolbar = new AbToolbar();
+				this.toolbar.observe(this);
+				this.toolbar.groupObserve(this);
 
-		//-----------------------------------------------------------
-		// 기본보기
-		//-----------------------------------------------------------
+				//-----------------------------------------------------------
+				// 기본보기
+				//-----------------------------------------------------------
 
-		// 이미지 목록
-		this.imageListView = new AbImageListView({
-			name: 'pages',
-			pages: this.images,
+				// 이미지 목록
+				this.imageListView = new AbImageListView({
+					name: 'pages',
+					pages: this.images,
 
-			selector: '#thumbnails',
-		});
-		this.imageListView.observe(this);
-		this.observe(this.imageListView);
-	
-		// 북마크 목록
-		this.bookmarkListView = new AbImageListView({
-			name: 'bookmarks',
-			pages: this.bookmarks,
+					selector: '#thumbnails',
+				});
+				this.imageListView.observe(this);
+				this.observe(this.imageListView);
+			
+				// 북마크 목록
+				this.bookmarkListView = new AbImageListView({
+					name: 'bookmarks',
+					pages: this.bookmarks,
 
-			bookmark: true,
+					bookmark: true,
 
-			selector: '#bookmarks',
-		});
-		this.bookmarkListView.observe(this);
-		this.observe(this.bookmarkListView);
+					selector: '#bookmarks',
+				});
+				this.bookmarkListView.observe(this);
+				this.observe(this.bookmarkListView);
 
-		//-----------------------------------------------------------
-		// 모아보기
-		//-----------------------------------------------------------
+				//-----------------------------------------------------------
+				// 모아보기
+				//-----------------------------------------------------------
 
-		// 이미지 목록
-		this.popupImageListView = new AbImageListView({
-			name: 'pages',
-			pages: this.images,
+				// 이미지 목록
+				this.popupImageListView = new AbImageListView({
+					name: 'pages',
+					pages: this.images,
 
-			selector: '#thumbnails-popup',
+					selector: '#thumbnails-popup',
 
-			selecting: {
-				method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
-				auto: this.listPopupStyle === 'readonly' ? false : true,
-			},
-			token: 'popup',
+					selecting: {
+						method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
+						auto: this.listPopupStyle === 'readonly' ? false : true,
+					},
+					token: 'popup',
 
-			pageCount: 10,
-		});
-		this.popupImageListView.observe(this);
-		this.observe(this.popupImageListView);
-	
-		// 북마크 목록
-		this.popupBookmarkListView = new AbImageListView({
-			name: 'bookmarks',
-			pages: this.bookmarks,
+					pageCount: 10,
+				});
+				this.popupImageListView.observe(this);
+				this.observe(this.popupImageListView);
+			
+				// 북마크 목록
+				this.popupBookmarkListView = new AbImageListView({
+					name: 'bookmarks',
+					pages: this.bookmarks,
 
-			bookmark: true,
+					bookmark: true,
 
-			selector: '#bookmarks-popup',
-			selecting: {
-				method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
-				auto: this.listPopupStyle === 'readonly' ? false : true,
-			},
-			token: 'popup',
+					selector: '#bookmarks-popup',
+					selecting: {
+						method: this.listPopupStyle === 'readonly' ? 'dblclick' : 'click|dblclick',
+						auto: this.listPopupStyle === 'readonly' ? false : true,
+					},
+					token: 'popup',
 
-			pageCount: 10,
-		});
-		this.popupBookmarkListView.observe(this);
-		this.observe(this.popupBookmarkListView);
+					pageCount: 10,
+				});
+				this.popupBookmarkListView.observe(this);
+				this.observe(this.popupBookmarkListView);
 
-		//-----------------------------------------------------------
+				//-----------------------------------------------------------
 
-		this.updateListType();
+				this.updateListType();
 
-		//-----------------------------------------------------------
-	
-		this.engine.install();
-		this.engine.observe('all', this);
+				//-----------------------------------------------------------
+			
+				this.engine.install(function(){
+					this.engine.observe('all', this);
 
-		//-----------------------------------------------------------
+					//-----------------------------------------------------------
 
-		this.sync();
+					this.sync();
 
-		//-----------------------------------------------------------
+					//-----------------------------------------------------------
 
-		this.engine.attachEvents();
-		this.engine.animate();
+					this.engine.attachEvents();
+					
+					if (this.animatingEngine)
+						this.engine.animate();
 
-		//-----------------------------------------------------------
-
+					//-----------------------------------------------------------
+					
+					resolve(true);
+					
+				}.bind(this));
+			}
+			catch (e)
+			{
+				reject(e);
+			}
+		}.bind(this);
+		
+		return new Promise(promiseFunc)
+			.then(function (){
+				return true;
+			}.bind(this));
 	},
+	
+//	prepareInsideIcons: function (){
+//		try
+//		{
+//			var promises = [];
+//			for (var p in AbIcons){
+//				if (AbIcons.hasOwnProperty(p) && AbIcons[p].data){
+//					var d = AbIcons[p];
+//					
+//					var promise = AbCommon.loadImage(d.data);
+//					promises.push(promise);
+//				}
+//			}
+//		}
+//		catch (e)
+//		{
+//			return Promise.reject(e);
+//		}
+//		
+//		if (promises.length)
+//			return Promise.all(promises);
+//		return Promise.resolve(true);
+//	},
 
 	updateListType: function(){
 		var imageView = this.imageListView, bookmarkView = this.bookmarkListView;
@@ -986,43 +1033,57 @@ AbImageViewer.prototype = {
 
 		return pageData.page.loader()
 			.then(function (e){
-				console.log('[PAGE LOADER]');
-				console.log(e);
-
+//				console.log('[PAGE LOADER]');
+//				console.log(e);
+				
+				var promise = null;
+				
 				if (e.shapes){
-					var cpage = engine.currentPage;
-					
-					var ps = AbCommon.deserializePageShapes(e.shapes);
-					var psLen = ps.length;
-					for (var i=0; i < psLen; i++){
-						var prop = ps[i];
+					promise = new Promise(function (resolve, reject){
+						var cpage = engine.currentPage;
 						
-						engine.currentPage = pageData.page;
-						
-						var s = engine.createShape(prop.name, prop);
-						s.prepare();
-						
-						pageData.page.shapes.push(s);
-						
-						s.engine = engine;
-						s.measure();
-					}
-					
-					engine.currentPage = cpage;
+						try
+						{
+							var ps = AbCommon.deserializePageShapes(e.shapes);
+							var psLen = ps.length, called = 0;
+							for (var i=0; i < psLen; i++){
+								var prop = ps[i];
+								
+								engine.currentPage = pageData.page;
+								
+								engine.createShape(prop.name, prop, function (s, error){
+									s.prepare();
+									
+									pageData.page.shapes.push(s);
+									
+									s.engine = engine;
+									s.measure();
+									
+									called++;
+									if (called >= psLen){
+										engine.currentPage = cpage;
+										
+										resolve(true);
+									}
+								});
+							}
+						}
+						catch (e)
+						{
+							engine.currentPage = cpage;
+							reject(e);
+						}
+					});
+				}else{
+					promise = Promise.resolve(true);
 				}
 				
-				if (sync){
-					return this.setImage(pageData, e.image, e.data, e.type, e.decoder)
-						.then(function (r){
-							return e;
-						});
-
-					// return new Promise(function(resolve, reject){
-		
-					// });				
-				}
-				this.setImage(pageData, e.image, e.data, e.type, e.decoder);
-				return e;
+				return promise.then(function (){
+					return e;
+				});
+			}.bind(this))
+			.then(function (e){
+				return this.setImage(pageData, e.image, e.data, e.type, e.decoder);	
 			}.bind(this))
 			.catch(function (e){
 				pageData.page.status = AbPage.prototype.ERROR;
@@ -2094,7 +2155,7 @@ AbImageViewer.prototype = {
 		
 		heads.push('function loadImage(index, url, callback){');
 		heads.push('var img = new Image();');
-		heads.push('img.crossOrigin = \'Anonymous\';');
+		//heads.push('img.crossOrigin = \'Anonymous\';');
 		heads.push('img.onload = function(e){');
 		heads.push('setTimeout(callback.bind(null, true, index, this), 0);');
 		heads.push('};');
@@ -2269,6 +2330,7 @@ AbImageViewer.prototype = {
 			success: function (r){
 				if (r && $.isArray(r) && r.length)
 					this.addImages(r);
+					
 				loader.hide();
 				
 				this._requestParam = id;

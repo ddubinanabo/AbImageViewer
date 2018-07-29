@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import com.abrain.wiv.data.AbBrowserKind;
+
 public class WebUtil {
 	public static String getRemoteIP(){
 		HttpServletRequest req = ((ServletRequestAttributes)RequestContextHolder.currentRequestAttributes()).getRequest();
@@ -26,6 +28,25 @@ public class WebUtil {
 			ip = req.getRemoteAddr();
 		
 		return ip;
+	}
+
+	//-----------------------------------------------------------
+	
+	public static AbBrowserKind getBrowser(HttpServletRequest request){
+		String userAgent = new String(request.getHeader("User-Agent")).toLowerCase();
+		
+		if (userAgent.indexOf("trident") > 0 || userAgent.indexOf("msie") > 0) {
+			return AbBrowserKind.ABBROWSER_IE;
+		} else if (userAgent.indexOf("opera") > 0) {
+			return AbBrowserKind.ABBROWSER_OPERA;
+		} else if (userAgent.indexOf("firefox") > 0) {
+			return AbBrowserKind.ABBROWSER_FIREFOX;
+		}else if (userAgent.indexOf("chrome") > 0) {
+			return AbBrowserKind.ABBROWSER_CHROME;
+		}else if (userAgent.indexOf("safari") > 0) {
+			return AbBrowserKind.ABBROWSER_SAFARI;
+		}
+		return AbBrowserKind.ABBROWSER_UNKNOWN;
 	}
 
 	//-----------------------------------------------------------

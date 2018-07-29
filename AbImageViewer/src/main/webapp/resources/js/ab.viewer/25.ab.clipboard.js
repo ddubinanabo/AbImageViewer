@@ -47,7 +47,27 @@ AbClipboard.prototype = {
 		engine.deleteShapes();
 	},
 
-	paste: function (engine, page){
+	paste: function (engine, page, callback){
+		if (!AbCommon.isFunction(callback)) callback = function(){};
+		
+		var totalCalled = 0, received = 0;
+		
+		var func = function (){
+			received++;
+			
+			if (received >= totalCalled){
+				engine.render();
+
+				// Notify modified
+				engine.modified();
+				
+				callback();
+			}
+		};
+
+		//-----------------------------------------------------------
+		
+		var pls = [];
 		var dlen = this.datas.length;
 		if (dlen){
 			engine.unselect(false);
@@ -58,35 +78,66 @@ AbClipboard.prototype = {
 			//-----------------------------------------------------------
 
 			var page = engine.currentPage;
+			
+			var numShapes = 0;
+			for (var i=0; i < dlen; i++){
+				var d = this.datas[i];
+				if (d.type == 'shape') numShapes++;
+			}
 
+			var called = 0;
 			for (var i=0; i < dlen; i++){
 				var d = this.datas[i];
 	
 				if (d.type == 'shape'){
 					var prop = AbCommon.deserializeShape(d.data);
-					var s = engine.createShape(prop.name, prop);
-					s.prepare();
+					var s = engine.createShape(prop.name, prop, function (s, error){
+						s.prepare();
 
-					this.move(engine, page, s);
-	
-					page.shapes.push(s);
+						this.move(engine, page, s);
+		
+						page.shapes.push(s);
 
-					s.engine = engine;
-					s.measure();
+						s.engine = engine;
+						s.measure();
 
-					engine.selectShape(s);
+						engine.selectShape(s);
+						
+						//-----------------------------------------------------------
+						
+						called++;
+						if (called >= numShapes){
+							//-----------------------------------------------------------
+							// end record history
+							engine.history.end(engine);
+							//-----------------------------------------------------------
+							
+							engine.render();
+
+							// Notify modified
+							engine.modified();
+
+							callback();
+						}
+					}.bind(this));
 				}
 			}
-	
-			//-----------------------------------------------------------
-			// end record history
-			engine.history.end(engine);
-			//-----------------------------------------------------------
 			
-			engine.render();
+			if (!numShapes){
+				//-----------------------------------------------------------
+				// end record history
+				engine.history.end(engine);
+				//-----------------------------------------------------------
+				
+				engine.render();
 
-			// Notify modified
-			engine.modified();
+				// Notify modified
+				engine.modified();
+
+				callback();
+			}
+		}else{
+			callback();
 		}
 	},
 

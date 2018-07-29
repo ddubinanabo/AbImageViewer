@@ -32,15 +32,8 @@ public class DocService {
 	}
 	
 	//-----------------------------------------------------------
-	
-	public void removeImagePost(String id, int seq){
-		dao.removeImagePost(id, seq);
-	}
-	
-	//-----------------------------------------------------------
 
 	public Object record(
-			boolean modify,
 			String id,
 			int seq,
 			String ip,
@@ -52,7 +45,7 @@ public class DocService {
 		
 		try
 		{
-			dao.record(modify, id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource);
+			dao.record(id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource);
 			return null;
 		}
 		catch (Exception e)
@@ -87,6 +80,10 @@ public class DocService {
 	
 	public void remove(String id){
 		dao.remove(id);
+	}
+	
+	public void approval(String id){
+		dao.approval(id);
 	}
 	
 	//-----------------------------------------------------------

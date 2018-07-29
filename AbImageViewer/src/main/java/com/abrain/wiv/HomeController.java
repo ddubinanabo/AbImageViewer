@@ -45,11 +45,6 @@ public class HomeController {
 	 */
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String home(HttpServletRequest request, HttpServletResponse response) throws Exception {
-		/**
-		 * IE P3P 정책 때문에 IFRAME에서 세션 유지가 안되는 문제가 발생하여 아래 HTTP HEADER를 추가함.
-		 */
-		response.setHeader("P3P", "CP='IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT'");
-		
 		return "home";
 	}
 
@@ -61,14 +56,9 @@ public class HomeController {
 	 * @throws Exception
 	 */
 	@RequestMapping(value = "/{id}", method = RequestMethod.GET)
-	public String homeWithId(@PathVariable(value="id") String id, HttpServletResponse response, Model model) throws Exception {
+	public String homeWithId(@PathVariable(value="id") String id, HttpServletRequest request, HttpServletResponse response, Model model) throws Exception {
 		if (id != null && !id.isEmpty())
 			model.addAttribute("id", id);
-		
-		/**
-		 * IE P3P 정책 때문에 IFRAME에서 세션 유지가 안되는 문제가 발생하여 아래 HTTP HEADER를 추가함.
-		 */
-		response.setHeader("P3P", "CP='IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT'");
 		
 		return "home";
 	}

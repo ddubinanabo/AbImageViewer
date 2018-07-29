@@ -164,13 +164,12 @@ public class ApiController extends AbstractApiController {
 		
 		System.out.println("[MODIFY-PREPARE] " + id);
 		
-		svc.removeImagePost(id, pages);
-		
 		return new AbPlainText("ok");
 	}
 
 	/**
 	 * 이미지 및 관련 정보 분할 등록 및 DB 저장 처리
+	 * <p>modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미한다.
 	 * @param modify
 	 * @param id
 	 * @param index
@@ -209,7 +208,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("image-source")){
@@ -220,7 +219,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("image-result")){
@@ -231,7 +230,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("thumb")){
@@ -253,7 +252,7 @@ public class ApiController extends AbstractApiController {
 					AbPartialFile.Result result = (AbPartialFile.Result)rf;
 					
 					if (result.completed){
-						System.out.println("[SAVE-IMAGE]["+type+"] " + id);
+						System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
 					}
 				}
 			}
@@ -302,12 +301,14 @@ public class ApiController extends AbstractApiController {
 			AbImagePack.AbThumbnailInfo thumbDec = AbImagePack.AbThumbnailInfo.fromJSON(thumbInfo);
 			
 			//-----------------------------------------------------------
+			// modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미일 뿐,
+			// DB 작업에 영향이 있는 것은 아니다.
 			
-			r = svc.record(modify, id, index, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource);
+			r = svc.record(id, index, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource);
 			
 			//-----------------------------------------------------------
 	
-			System.out.println("[SAVE-IMAGE][END] " + id);
+			System.out.println("[SAVE-IMAGE][END]["+index+"] " + id);
 		
 		}
 		
@@ -328,6 +329,8 @@ public class ApiController extends AbstractApiController {
 		AbPartialFile.remove(request, AbPartialFile.MID_PARTIALS, id);
 		
 		System.out.println("[SAVED-IMAGE] clear template!! (" + id + ")");
+		
+		svc.approval(id);
 		
 		return new AbPlainText("ok");
 	}

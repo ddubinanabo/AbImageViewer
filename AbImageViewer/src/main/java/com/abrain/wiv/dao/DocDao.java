@@ -17,8 +17,18 @@ public class DocDao extends AbstractDao {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 임시 등록
+	 * @param id
+	 * @param seq
+	 * @param ip
+	 * @param imageInfo
+	 * @param imageSource
+	 * @param imageResult
+	 * @param thumbInfo
+	 * @param thumbSource
+	 */
 	public void record(
-			boolean modify,
 			String id,
 			int seq,
 			String ip,
@@ -46,54 +56,68 @@ public class DocDao extends AbstractDao {
 		
 		//-----------------------------------------------------------
 		
-		if (modify){
-			sqlSession.update("doc-update", param);
-		}else{
-			param.put("IP", ip);
+		param.put("IP", ip);
 			
-			sqlSession.insert("doc-regist", param);
-		}
+		sqlSession.insert("doc-regist", param);
 	}
 
 	//-----------------------------------------------------------
 
 	/**
-	 * 수정 작업을 위해 새 목록 개수 이상을 삭제하기 위한 메서드입니다.
-	 * <p>뷰어의 이미지 전송 작업은 이미지를 호출하고, 렌더링하고, 전송하는 작업을 이미지 개수만큼 반복합니다.
-	 * <p>때문에, 수정 작업 시에 기존 이미지들을 다 지우고 시작 한다면 이미지를 찾을 수 없다는 오류를 보게 됩니다.
+	 * 임시 등록된 이미지 목록 삭제
 	 * @param id
-	 * @param seq
 	 */
-	public void removeImagePost(String id, int seq){
-
-		HashMap<String, Object> param = new HashMap<String, Object>();
-		param.put("ID", id);
-		param.put("SEQ", seq);
-
-		//-----------------------------------------------------------
-		
-		sqlSession.delete("doc-delete-image-post", param);
-	}
-
-	//-----------------------------------------------------------
-
 	public void remove(String id){
 
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);
-
+		
 		//-----------------------------------------------------------
 		
 		sqlSession.delete("doc-delete", param);
 	}
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 임시 등록된 이미지 목록을 등록 완료 처리
+	 * @param id
+	 */
+	public void approval(String id){
+
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
+		
+		//-----------------------------------------------------------
+		
+		// 기존 등록 완료 이미지 목록 삭제
+		sqlSession.delete("doc-delete-previous", param);
+		
+		// 임시 등록된 이미지 목록을 등록 완료 처리
+		sqlSession.insert("doc-approval", param);
+	}
 	
+	//-----------------------------------------------------------
+	
+	/**
+	 * 등록완료된 이미지 목록 조회
+	 * @param id
+	 * @return
+	 */
 	public List<AbImageDbData> select (String id){
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);
 		
 		return sqlSession.selectList("doc-select", param);
 	}
-		
+	
+	/**
+	 * 등록완료된 이미지 조회
+	 * @param id
+	 * @param seq
+	 * @param type
+	 * @return
+	 */
 	public AbBinaryData image (String id, int seq, AbImageType type){
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		param.put("ID", id);

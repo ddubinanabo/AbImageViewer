@@ -412,7 +412,9 @@ AbViewerEngine.prototype = {
 	
 	//-----------------------------------------------------------
 
-	install: function (){
+	install: function (callback){
+		if (!AbCommon.isFunction(callback)) callback = function() {};
+		
 		if (this.panel.length){
 			this.status = 'preparing';
 	
@@ -474,7 +476,34 @@ AbViewerEngine.prototype = {
 			
 			this.prepare();
 			this.status = 'prepared';
-		}	
+		}
+		
+		var preloads = [];
+		if (this.SHAPE_TABLE){
+			for (var p in this.SHAPE_TABLE){
+				var s = this.SHAPE_TABLE[p];
+				
+				if (AbCommon.needPreloading(s)){
+					preloads.push(s);
+				}
+			}
+		}
+		
+		if (preloads.length){
+			var called = 0, totalCalled = preloads.length;
+			
+			while(preloads.length){
+				var s = preloads.shift();
+				s.preload(function (){
+					called++;
+					if (called >= totalCalled){
+						callback();
+					}
+				});
+			}
+		}else{
+			callback();
+		}
 	},
 	
 	//-----------------------------------------------------------
@@ -556,19 +585,28 @@ AbViewerEngine.prototype = {
 
 	createShape: function (){
 		if (!arguments.length)
-			return null;
+			return;
 
+		var callback = function() {};
+		var argLen = arguments.length;
 		var name = arguments[0];
+		
+		if (argLen > 1 && AbCommon.isFunction(arguments[argLen - 1])){
+			callback = arguments[argLen - 1];
+			argLen--;
+		}
+		
 		var s = AbViewerEngine.prototype.SHAPE_TABLE[name];
-		if (!s)
-			return null;
+		if (!s){
+			callback(null);
+			return;
+		}
 
 		s = AbCommon.cloneShape(s);
-
-		if (arguments.length > 1){
-			var len = arguments.length;
-			for (var i=1; i < len; i++){
-				AbCommon.overWriteProp(arguments[i], s);
+		
+		if (argLen > 1){
+			for (var i=1; i < argLen; i++){
+				AbCommon.shapeProp(s, arguments[i]);
 			}
 
 			// var a = [true, s];
@@ -579,7 +617,25 @@ AbViewerEngine.prototype = {
 			// $.extend.apply($.extend, a);
 		}
 
-		return s;
+		if (AbCommon.needPreloading(s)){
+			s.preload(function(success, r){
+				// success
+				// - ok: 성공
+				// - error: error, r은 메시지
+				// - skip: 넘어감
+				
+				switch (success){
+				case 'error':
+					callback(s, new Error(r));
+					break;
+				default:
+					callback(s);
+					break;
+				}
+			});
+		}else{
+			callback(s);
+		}
 	},
 
 	//-----------------------------------------------------------
@@ -2259,12 +2315,15 @@ AbViewerEngine.prototype = {
 		this.notifyObservers('clipboard', 'cut');
 	},
 
-	paste: function (){
+	paste: function (callback){
 		if (!this.currentPage || !this.maniplatable()) return;
-		this.clipboard.paste(this, this.currentPage);
-
-		// Notify
-		this.notifyObservers('clipboard', 'paste');
+		this.clipboard.paste(this, this.currentPage, function(){
+			// Notify
+			this.notifyObservers('clipboard', 'paste');
+			
+			if (AbCommon.isFunction(callback))
+				callback();
+		}.bind(this));
 	},
 
 	//-----------------------------------------------------------

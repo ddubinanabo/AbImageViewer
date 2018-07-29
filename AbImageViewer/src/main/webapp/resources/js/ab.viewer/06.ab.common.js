@@ -55,21 +55,42 @@ var AbCommon = {
 	},
 
 	//-----------------------------------------------------------
+	// 브라우저 확인
+	//-----------------------------------------------------------
+
+	getBrowser: function(){
+		var userAgent = navigator.userAgent.toLowerCase();
+		
+		if (userAgent.indexOf('trident') > 0 || userAgent.indexOf('msie') > 0) {
+			return 'ie';
+		} else if (userAgent.indexOf("opera") > 0) {
+			return 'opera';
+		} else if (userAgent.indexOf("firefox") > 0) {
+			return 'firefox';
+		}else if (userAgent.indexOf("chrome") > 0) {
+			return 'chrome';
+		}else if (userAgent.indexOf("safari") > 0) {
+			return 'safari';
+		}
+		return 'unknown';
+	},
+	
+	//-----------------------------------------------------------
 	// IE 버전 확인
 	//-----------------------------------------------------------
 
 	ieVersion: function(){
-		var agent = navigator.userAgent.toLowerCase();
+		var userAgent = navigator.userAgent.toLowerCase();
 
 		var word = null;
 		
 		if (navigator.appName == 'Microsoft Internet Explorer') word = 'msie'; // IE old version (IE10 or Lower)
-		else if (agent.search('trident') > -1) word = 'trident/.*rv:'; // IE11
-		else if ( agent.search('edge/') > -1 ) word = 'edge/'; // Microsoft Edge
+		else if (userAgent.search('trident') > -1) word = 'trident/.*rv:'; // IE11
+		else if (userAgent.search('edge/') > -1 ) word = 'edge/'; // Microsoft Edge
 		else return -1;
 
 		var reg = new RegExp(word +'([0-9]{1,})(\\.{0,}[0-9]{0,1})');
-		if (reg.exec(agent) != null) return parseFloat( RegExp.$1 + RegExp.$2 );
+		if (reg.exec(userAgent) != null) return parseFloat( RegExp.$1 + RegExp.$2 );
 		return -1;
 	},
 
@@ -434,6 +455,12 @@ var AbCommon = {
 			&& typeof o.addPoint == 'function'
 			&& typeof o.endPoint == 'function';
 	},
+	
+	// 도형 객체가 비동기로 선행 작업을 요하는 지 체크
+	needPreloading: function (o){
+		return o
+		&& typeof o.preload == 'function';
+	},
 
 	wannaCollectPoints: function (o){
 		return this.isStrokeShape(o) && o.hasOwnProperty('collectPoints') && o.collectPoints === true;
@@ -499,10 +526,15 @@ var AbCommon = {
 					var o = src[p];
 
 					if (advice){
-						if ($.inArray(p, advice.moveProps) >= 0){
+						if (advice.moveProps && $.inArray(p, advice.moveProps) >= 0){
 							dest[p] = o;
 							delete src[p];
 
+							continue;
+						}
+						
+						if (advice.customProps && $.inArray(p, advice.customProps) >= 0){
+							dest[p] = advice.custom(p, o);
 							continue;
 						}
 					}
@@ -699,25 +731,39 @@ var AbCommon = {
 		return dest;
 	},
 
-	overWriteProp: function (src, dest, props){
-		for (var p in src){
-			if (src.hasOwnProperty(p) && (!props || $.inArray(p, props)>=0)){
-				var o = src[p];
+	shapeProp: function (shape, props){
+		function writeProp(shape, src, dest, path){
+			if (!path) path = '';
+			else path += '.';
+			
+			for (var p in src){
+				if (src.hasOwnProperty(p)){
+					var o = src[p];
+					
+					var isNotSet = !AbCommon.isSetted(o);
+					var isArray = $.isArray(o);
+					var isValue = AbCommon.isString(o) || AbCommon.isNumber(o) || AbCommon.isBool(o);
+					
+					if ( (isNotSet || isArray || isValue) && AbCommon.isFunction(shape.cloneProperty) )
+						shape.cloneProperty(path + p, o);
 
-				if (!AbCommon.isSetted(o)){
-					dest[p] = null;
-				}else if ($.isArray(o)){
-					dest[p] = o.slice(0);
-				}else if (AbCommon.isString(o) || AbCommon.isNumber(o) || AbCommon.isBool(o)){
-					dest[p] = o;
-				}else{
-					if (!AbCommon.isSetted(dest[p]))
-						dest[p] = this.createObject(o);
-					this.overWriteProp(o, dest[p]);
+					if (isNotSet){
+						dest[p] = null;
+					}else if (isArray){
+						dest[p] = o.slice(0);
+					}else if (isValue){
+						dest[p] = o;
+					}else{
+						if (!AbCommon.isSetted(dest[p]))
+							dest[p] = this.createObject(o);
+						writeProp(shape, o, dest[p], path + p);
+					}
 				}
 			}
 		}
-		return dest;
+		
+		writeProp(shape, props, shape);
+		return shape;
 	},
 		
 	//-----------------------------------------------------------
@@ -771,8 +817,27 @@ var AbCommon = {
 
 		return prop;
 	},
+	
+	//-----------------------------------------------------------
+	
+	xmlString: function (xmlDom){
+		return typeof XMLSerializer != 'undefined' ? (new XMLSerializer()).serializeToString(xmlDom) : xmlDom.xml;
+	},
 		
 	//-----------------------------------------------------------
+
+	parsePageShapes: function (pageXml){
+		if (!pageXml) return null;
+
+		var e = $($.parseXML(pageXml));
+		var r = [];
+
+		var eshape = e.find('shape');
+		return {
+			body: e,
+			shapes: eshape
+		};
+	},
 
 	deserializePageShapes: function (pageXml){
 		if (!pageXml) return null;
@@ -796,10 +861,25 @@ var AbCommon = {
 		
 	//-----------------------------------------------------------
 	
+	isDataUrl: function (s){
+		return s && AbCommon.isString(s) && s.indexOf('data:') == 0;
+	},
+
+	createImage: function(){
+		var img = new Image();
+		
+		// IE에서는 로컬 이미지를 로드하면 SecurityError가 발생한다.
+		// 하지만, 맥용 사파리에서는 crossOrigin을 세팅하면 CORS 오류가 발생한다.
+		// 따라서, IE인 경우만 crossOrigin을 세팅한다.
+		if (AbCommon.ieVersion() != -1)
+			img.crossOrigin = 'Anonymous';
+		
+		return img;
+	},
+	
 	loadImage: function (url){
 		return new Promise(function(resolve, reject){
-			var img = new Image();
-			img.crossOrigin = 'Anonymous';
+			var img = AbCommon.createImage();
 			img.onload = function(e){
 				setTimeout(resolve.bind(null, this), 0);
 			};
@@ -809,6 +889,152 @@ var AbCommon = {
 			img.src = url;
 		});
 	},
+	
+	loadImageExt: function(url, options){
+		if (!options) options = {};
+		
+		var browser = AbCommon.getBrowser();
+		//var isIE = AbCommon.ieVersion() != -1;
+		var isIE = browser === 'ie';
+		var isFIREFOX = browser === 'firefox';
+		var isNSB = isIE || isFIREFOX;
+		
+		var isDataUrl = AbCommon.isDataUrl(url);
+		
+		var isNotSupportSVG = isNSB && !isDataUrl && url.toLowerCase().lastIndexOf('.svg') == url.length - 4;
+		
+		if (isNotSupportSVG){
+			AbCommon.ajax({
+				type: 'GET',
+				url: url,
+				data: null,
+				dataType: 'text',
+				timeout: 1000000,
+				success: function (result) {
+					try
+					{
+						var xml = $($.parseXML(result));
+						var svg = xml.find('svg').get(0);
+						var esvg = $(svg);
+						
+						if (AbCommon.isNumber(options.width))
+							esvg.attr('width', options.width);
+						
+						if (AbCommon.isNumber(options.height))
+							esvg.attr('height', options.height);
+						
+						var width = esvg.attr('width');
+						var height = esvg.attr('height');
+						
+						try { width = parseInt(width); } catch (e) { width = null; }
+						try { height = parseInt(height); } catch (e) { height = null; }
+						
+						if (isNaN(width)) width = null;
+						if (isNaN(height)) height = null;
+						
+						var xmlDom = xml.get(0);
+						var xmlText = AbCommon.xmlString(xmlDom);
+						console.log(xmlText);
+						
+						AbVendor.renderSVG(xmlText, width, height, function (ctx, svgDom){
+							var src = AbGraphics.canvas.toImage(ctx, 'png');
+							
+							var img = AbCommon.createImage();
+							
+							img.onerror = function(e){
+								if (AbCommon.isFunction(options.error))
+									options.error(e);
+							}.bind(this);
+							img.onload = function (){
+								if (AbCommon.isFunction(options.success))
+									options.success(img);
+							}.bind(this);
+							img.src = src;
+						});
+					}
+					catch(e)
+					{
+						if (AbCommon.isFunction(options.error))
+							options.error(e);
+					}
+				}.bind(this),
+				
+				error: function (XMLHttpRequest, textStatus, errorThrown) {
+					if (AbCommon.isFunction(options.error))
+						options.error(new Error('SVG load error: ' + textStatus));
+				}.bind(this)
+			});
+		}else{
+			var img = AbCommon.createImage();
+			
+			img.onerror = function(e){
+				if (AbCommon.isFunction(options.error))
+					options.error(e);
+			}.bind(this);
+			img.onload = function (){
+				if (AbCommon.isFunction(options.success))
+					options.success(img);
+			}.bind(this);
+			img.src = url;
+		}
+	},
+	
+//	loadImageXHR: function (url){
+//		// IE SecurityError 해결을 위해 XHR 이용
+//		var isIE = AbCommon.ieVersion() != -1;
+//		var isDATAURL = AbCommon.isDataUrl(url);
+//		
+//		// IE이고, 서버 이미지 URL이면 XHR을 이용한다.
+//		if (isIE && !isDATAURL){
+//			return new Promise(function(resolve, reject){
+//				var xhr = AbCommon.xmlHttpRequest({
+//					path: url,
+//					responseType: 'blob',
+//					
+//					load: function(e, $xhr){
+//						// alloc
+//						var rurl = URL.createObjectURL(xhr.response);
+//						
+//						var img = AbCommon.createImage();
+//						img.onload = function(e){
+//							// release
+//							URL.revokeObjectURL(rurl);
+//							
+//							setTimeout(resolve.bind(null, this), 0);
+//						};
+//						img.onerror = function(e){
+//							console.log(e);
+//							
+//							// release
+//							URL.revokeObjectURL(rurl);
+//							
+//							setTimeout(reject.bind(null, new Error('It is not an image file')), 0);
+//						};
+//						img.src = rurl;
+//					},
+//					
+//					error: function (e, $xhr){
+//						console.log(e);
+//						
+//						setTimeout(reject.bind(null, new Error('It is not an image file')), 0);
+//					}
+//				});
+//				
+//				xhr.send();
+//			});
+//		}else{
+//			return new Promise(function(resolve, reject){
+//				var img = AbCommon.createImage();
+//				img.onload = function(e){
+//					setTimeout(resolve.bind(null, this), 0);
+//				};
+//				img.onerror = function(e){
+//					setTimeout(reject.bind(null, new Error('It is not an image file')), 0);
+//				};
+//				img.src = url;
+//			});
+//		}
+//	},
 	
 	//-------------------------------------------------------------------------------------------------------
 	// Ajax
@@ -1272,9 +1498,10 @@ var AbCommon = {
 	xmlHttpRequest: function(options){
 		if (!options) options = {};
 		var xhr = new XMLHttpRequest();
+		var asyncExec = typeof options.async == 'boolean' ? options.async : true;
 
 		if (options.path)
-			xhr.open(options.type || 'GET', options.path);
+			xhr.open(options.type || 'GET', options.path, asyncExec);
 
 		xhr.mozResponseType = xhr.responseType = options.responseType || 'arraybuffer';
 

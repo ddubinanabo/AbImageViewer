@@ -28,6 +28,13 @@ function AbShapeImage(options){
 		width: source.width,
 		height: source.height,
 	};
+	
+	if (source.render){
+		this.source['render'] = {
+			width: source.render.width,
+			height: source.render.height
+		};
+	}
 
 	if (AbCommon.allNumbers(options.x, options.y, options.width, options.height)){
 		this.x = options.x;
@@ -46,30 +53,8 @@ function AbShapeImage(options){
 	this.style = {
 	};
 	
-	if (this.source.data){
-		var img = new Image();
-		img.crossOrigin = 'Anonymous';
-		
-		img.onerror = function(e){
-			this.$image = 'error';
-			console.log(e);
-		}
-		img.src = this.source.data;
-		
-		this.$image = img;
-		
-//		AbCommon.loadImage(this.source.data)
-//			.then(function (e){
-//				this.$image = e;
-//				if (this.engine)
-//					this.engine.render();
-//			}.bind(this))
-//			.catch(function (e){
-//				this.$image = 'error';
-//	
-//				console.log(e);
-//			}.bind(this));
-	}
+	// 내부 이미지 객체
+	this.$image = null;
 };
 	
 //-----------------------------------------------------------
@@ -78,6 +63,76 @@ function AbShapeImage(options){
 
 AbShapeImage.prototype = {
 	constructor: AbShapeImage,
+
+	//-----------------------------------------------------------
+
+	// cloneShape 시 어드바이스
+	adviceClone: function(){
+		return {
+			//moveProps: ['$image'],
+			
+			customProps: ['$image'],
+			
+			custom: function(name, object){
+				return $(object).clone().get(0);
+			},
+		};
+	},
+
+	//-----------------------------------------------------------
+	// 객체를 사용하기 위해 선 로드가 필요한 경우,
+	// 엔진은 preload() 함수를 호출하고 대기한다.
+	//-----------------------------------------------------------
+	// prepare()는 객체 내부의 동기적 선행 작업을 해야 할때 사용되며,
+	// preload()는 객체 내부의 비동기적 선행 작업을 해야 할때 사용된다.
+	
+	preload: function(callback){
+		if (this.$image || !this.source.data){
+			callback('skip');
+			return;
+		}
+		
+		var renderWidth = this.source.width;
+		var renderHeight = this.source.height;
+		
+		if (this.source.render && AbCommon.isNumber(this.source.render.width) && AbCommon.isNumber(this.source.render.height)){
+			renderWidth = this.source.render.width;
+			renderHeight = this.source.render.height;
+		}
+		
+		AbCommon.loadImageExt(this.source.data, {
+			width: renderWidth,
+			height: renderHeight,
+			
+			success: function (img){
+				this.$image = img;
+				callback('ok');
+			}.bind(this),
+			
+			error: function (e){
+				console.log(e);
+				
+				this.$image = 'error';
+				callback('error', e);
+			}.bind(this),
+		});
+		
+		this.$image = 'loading';
+	},
+	
+	// 이 메서드는 AbViewerEngine.createShape()에서 호출되는
+	// AbCommon.shapeProp()에서 프로퍼티를 복사 전
+	// 호출된다.
+	cloneProperty: function(name, value){
+		// 이미지 변경이 있는 지 확인하고,
+		// 변경이 있다면, 내부 이미지 객체를 초기화한다.
+		// 그러면, createShape() 메서드에서 preload()를 호출하고,
+		// preload()에서 수정된 URL의 이미지 객체를 다시 생성할 수 있다.
+		if (name === 'source.data'){
+			if (value !== this.source.data)
+				this.$image = null;
+		}
+	},
 
 	//-----------------------------------------------------------
 
@@ -185,45 +240,21 @@ AbShapeImage.prototype = {
 
 	//-----------------------------------------------------------
 
-	// cloneShape 시 어드바이스
-	adviceClone: function(){
-		return {
-			moveProps: ['$image'],
-		};
-	},
-
-	//-----------------------------------------------------------
-
 	draw: function(ctx, page, direct){
 		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
 
 		AbShapeTool.beginRectDraw(this, ctx, page);
-
-		if (this.$image){
-			if (this.$image !== 'error' && this.$image !== 'loading'){
-				try
-				{
-					ctx.drawImage(this.$image, 0, 0, this.width * scaleX, this.height * scaleY);
-				}
-				catch (e)
-				{
-					console.log(e);
-				}
+		
+		if (this.$image && this.$image !== 'error' && this.$image !== 'loading'){
+			try
+			{
+				ctx.drawImage(this.$image, 0, 0, this.width * scaleX, this.height * scaleY);
 			}
-		}else{
-			this.$image = 'loading';
-
-			AbCommon.loadImage(this.source.data)
-				.then(function (e){
-					this.$image = e;
-					if (this.engine)
-						this.engine.render();
-				}.bind(this))
-				.catch(function (e){
-					this.$image = 'error';
-
-					console.log(e);
-				}.bind(this));
+			catch (e)
+			{
+				console.log('[SHAPE-IMAGE] Drawing Error');
+				console.log(e);
+			}
 		}
 		
 		AbShapeTool.endDraw(this, ctx);
