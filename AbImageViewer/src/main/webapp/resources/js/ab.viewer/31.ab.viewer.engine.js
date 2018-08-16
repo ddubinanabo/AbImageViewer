@@ -2906,7 +2906,9 @@ AbViewerEngine.prototype = {
 
 	//-----------------------------------------------------------
 
-	removeAllPageShapes: function (history){
+	removeAllPageShapes: function (options){
+		if (!options) options = {};
+		var history = options.history;
 		if (!AbCommon.isBool(history)) history = true;
 		
 		this.exec(function (){
@@ -2916,10 +2918,23 @@ AbViewerEngine.prototype = {
 			// begin record history
 			if (history) this.history.begin('shape', 'all', this);
 			//-----------------------------------------------------------
+			
+			var pageInfos = [];
 
 			for (var i = this.pages.length() - 1; i >= 0; i--){
-				var shapes = this.pages.get(i).shapes;
-				shapes.splice(0, shapes.length);
+				var page = this.pages.get(i);
+				var shapes = page.shapes;
+				
+				//console.log('[remove][all][' + i + '] shapes=' + shapes.length);
+				
+				if (shapes.length){
+					shapes.splice(0, shapes.length);
+					
+					pageInfos.unshift({
+						index: i,
+						page: page
+					});
+				}
 			}
 
 			//-----------------------------------------------------------
@@ -2934,12 +2949,18 @@ AbViewerEngine.prototype = {
 			
 			// Notify modified
 			this.modified();
+			
+			if (AbCommon.isFunction(options.end))
+				options.end(pageInfos);
 		});
 	},
 
 	//-----------------------------------------------------------
 
-	removeRangePageShapes: function (pages, history){
+	removeRangePageShapes: function (pages, options){
+		if (!options) options = {};
+		var history = options.history;
+		
 		if (!AbCommon.isBool(history)) history = true;
 		
 		this.exec(function (){
@@ -2950,9 +2971,20 @@ AbViewerEngine.prototype = {
 			if (history) this.history.begin('shape', 'range', this, pages);
 			//-----------------------------------------------------------
 
+			var pageInfos = [];
+
 			for (var i = pages.length - 1; i >= 0; i--){
-				var shapes = pages[i].shapes;
-				shapes.splice(0, shapes.length);
+				var page = pages[i];
+				var shapes = page.shapes;
+				
+				if (shapes.length){
+					shapes.splice(0, shapes.length);
+					
+					pageInfos.unshift({
+						index: i,
+						page: page
+					});
+				}
 			}
 
 			//-----------------------------------------------------------
@@ -2967,6 +2999,9 @@ AbViewerEngine.prototype = {
 			
 			// Notify modified
 			this.modified();
+			
+			if (AbCommon.isFunction(options.end))
+				options.end(pageInfos);
 		});
 	},
 

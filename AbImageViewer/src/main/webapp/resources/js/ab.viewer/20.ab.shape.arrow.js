@@ -30,10 +30,8 @@ function AbShapeArrow(options){
 	this.angle = 0;
 	//console.log('[INIT][ANGLE] ' + this.angle);
 
-	var lw = style.width || 1;
-
 	this.style = {
-		width: lw,
+		width: style.width || 1,
 		color: style.color || '#FF0000', //'#840200',
 		dots: AbGraphics.canvas.dashStyle(style.dots, 'solid'), // solid, dash, dot, dash-dot, dash-dot-dot
 		head: {
@@ -112,10 +110,10 @@ AbShapeArrow.prototype = {
 		serializer.add('token', this.token);
 
 		serializer.add('angle', this.angle);
-		serializer.add('x1', Math.round(this.x1));
-		serializer.add('y1', Math.round(this.y1));
-		serializer.add('x2', Math.round(this.x2));
-		serializer.add('y2', Math.round(this.y2));
+		serializer.add('x1', this.round(this.x1));
+		serializer.add('y1', this.round(this.y1));
+		serializer.add('x2', this.round(this.x2));
+		serializer.add('y2', this.round(this.y2));
 		
 		var style = serializer.addGroup('style');
 		serializer.add(style, 'color', this.style.color);
@@ -212,8 +210,8 @@ AbShapeArrow.prototype = {
 	//-----------------------------------------------------------
 
 	padding: function() {
-		var siz = this.controlSize();
-		return { left: 0, top: siz >> 1, right: 0, bottom: siz >> 1 };
+		var pad = this.controlSize() >> 1;
+		return { left: 0, top: pad, right: 0, bottom: pad };
 	},
 	contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	editable: function (x, y){ if (this.selected){ return this.indicator.editable(x, y); } return null; },
@@ -226,9 +224,111 @@ AbShapeArrow.prototype = {
 	headSize: function() { return this.style.head.type != 'none' ? this.style.head.size : 0; },
 	tailSize: function() { return this.style.tail.type != 'none' ? this.style.tail.size : 0; },
 	controlSize: function() {
+		var page = this.engine ? this.engine.currentPage : null;
+		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
+
+		var lineWidth = this.style.width;
 		var headSize = this.headSize();
+		if (headSize){
+			headSize += lineWidth;
+		}
+		// switch (this.style.head.type){
+		// case 'triangle': headSize += lineWidth;
+		// }
+
 		var tailSize = this.tailSize();
-		return headSize > tailSize ? headSize : tailSize;
+		if (tailSize){
+			tailSize += lineWidth;
+		}
+		return Math.max(headSize, tailSize) * scaleX;
+	},
+
+	//-----------------------------------------------------------
+
+	round: function (x){ return Math.round(x); },
+
+	//-----------------------------------------------------------
+
+	clipHeadArrow: function(ctx, d){
+		var style = d.style;
+		var halfSize = d.size ? d.size / 2 : 0;
+
+		var points = [];
+
+		if (style === 'triangle' || style === 'bracket'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y + halfSize);
+
+			var s1 = AbGraphics.intersects.lines(p1.x, p1.y, p2.x, p2.y, d.lineCorners.leftTop.x, d.lineCorners.leftTop.y, d.lineCorners.rightTop.x, d.lineCorners.rightTop.y);
+			var s2 = AbGraphics.intersects.lines(p2.x, p2.y, p3.x, p3.y, d.lineCorners.leftBottom.x, d.lineCorners.leftBottom.y, d.lineCorners.rightBottom.x, d.lineCorners.rightBottom.y);
+
+			// ctx.moveTo(this.round(p1.x), this.round(p1.y));
+			// ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			// //ctx.lineTo(this.round(s2.x), this.round(s2.y));
+
+			// ctx.moveTo(d.lineCorners.leftTop.x, d.lineCorners.leftTop.y);
+			// ctx.lineTo(d.lineCorners.rightTop.x, d.lineCorners.rightTop.y);
+
+			points.push(s1);
+			points.push(p2);
+			points.push(s2);
+		} else if (style === 'diamond' || style === 'circle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.lineCorners.rightTop.x, d.lineCorners.rightTop.y, d.lineCorners.rightTop.x - halfSize,  d.lineCorners.rightTop.y);
+			var p2 = AbGraphics.rotate.point(d.rad, d.lineCorners.rightBottom.x, d.lineCorners.rightBottom.y, d.lineCorners.rightBottom.x - halfSize,  d.lineCorners.rightBottom.y);
+
+			// ctx.moveTo(this.round(p1.x), this.round(p1.y));
+			// ctx.lineTo(this.round(p2.x), this.round(p2.y));
+
+			points.push(p1);
+			points.push(p2);
+		}else{
+			points.push(d.lineCorners.rightTop);
+			points.push(d.lineCorners.rightBottom);
+		}
+
+		return points;
+	},
+
+	//-----------------------------------------------------------
+
+	clipTailArrow: function(ctx, d){
+		var style = d.style;
+		var halfSize = d.size ? d.size / 2 : 0;
+		var clipAdjustSize = 0;
+
+		var points = [];
+
+		if (style === 'triangle' || style === 'bracket'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y - halfSize);
+			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
+			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y + halfSize);
+
+			var s1 = AbGraphics.intersects.lines(p1.x, p1.y, p2.x, p2.y, d.lineCorners.leftTop.x, d.lineCorners.leftTop.y, d.lineCorners.rightTop.x, d.lineCorners.rightTop.y);
+			var s2 = AbGraphics.intersects.lines(p2.x, p2.y, p3.x, p3.y, d.lineCorners.leftBottom.x, d.lineCorners.leftBottom.y, d.lineCorners.rightBottom.x, d.lineCorners.rightBottom.y);
+
+			// ctx.lineTo(this.round(s1.x), this.round(s1.y));
+			// ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			// ctx.lineTo(this.round(s2.x), this.round(s2.y));
+
+			points.push(s2);
+			points.push(p2);
+			points.push(s1);
+		} else if (style === 'diamond' || style === 'circle'){
+			var p1 = AbGraphics.rotate.point(d.rad, d.lineCorners.leftTop.x, d.lineCorners.leftTop.y, d.lineCorners.leftTop.x + halfSize,  d.lineCorners.leftTop.y);
+			var p2 = AbGraphics.rotate.point(d.rad, d.lineCorners.leftBottom.x, d.lineCorners.leftBottom.y, d.lineCorners.leftBottom.x + halfSize,  d.lineCorners.leftBottom.y);
+
+			// ctx.moveTo(this.round(p1.x), this.round(p1.y));
+			// ctx.lineTo(this.round(p2.x), this.round(p2.y));
+
+			points.push(p2);
+			points.push(p1);
+		}else{
+			points.push(d.lineCorners.leftBottom);
+			points.push(d.lineCorners.leftTop);
+		}
+
+		return points;
 	},
 
 	//-----------------------------------------------------------
@@ -242,56 +342,66 @@ AbShapeArrow.prototype = {
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y + halfSize);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(d.x), this.round(d.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
+			};
 		} else if (style === 'diamond'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y);
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize,  d.y - halfSize);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize,  d.y + halfSize);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p4.x), this.round(p4.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
+			};
 		} else if (style === 'circle'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - halfSize, d.y);
 
-			ctx.beginPath();
-			ctx.arc(Math.round(p1.x), Math.round(p1.y), halfSize, 0, 360);
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(p1.x + halfSize), this.round(p1.y));
+			ctx.arc(this.round(p1.x), this.round(p1.y), halfSize, 0, 360);
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
+			};
 		} else if (style === 'bracket'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y - halfSize);
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - d.size,  d.y + halfSize);
 			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x - (d.size * AbShapeArrow.prototype.BRACKET_SIZE),  d.y);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(d.x), this.round(d.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p4.x), this.round(p4.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE));
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE)),
+			};
 		}
 
-		return { x: 0, y: 0 };
+		return {
+			clip: { x: 0, y: 0 },
+			full: { x: 0, y: 0 },
+			half: { x: 0, y: 0 }
+		};
 	},
 
 	//-----------------------------------------------------------
@@ -305,55 +415,170 @@ AbShapeArrow.prototype = {
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y + halfSize);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(d.x), this.round(d.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: this.roundPos(AbGraphics.rotate.pointByDistance(d.rad, d.size)),
+				half: this.roundPos(AbGraphics.rotate.pointByDistance(d.rad, halfSize))
+			};
 		} else if (style === 'diamond'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y);
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize,  d.y - halfSize);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize,  d.y + halfSize);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p4.x), this.round(p4.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
+			};
 		} else if (style === 'circle'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + halfSize, d.y);
 
-			ctx.beginPath();
-			ctx.arc(Math.round(p1.x), Math.round(p1.y), halfSize, 0, 360);
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(p1.x + halfSize), this.round(p1.y));
+			ctx.arc(this.round(p1.x), this.round(p1.y), halfSize, 0, 360);
 
-			return AbGraphics.rotate.pointByDistance(d.rad, d.size);
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
+			};
 		} else if (style === 'bracket'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y - halfSize);
 			var p2 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x,  d.y);
 			var p3 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y + halfSize);
 			var p4 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + (d.size * AbShapeArrow.prototype.BRACKET_SIZE),  d.y);
 
-			ctx.beginPath();
-			ctx.lineTo(Math.round(p1.x), Math.round(p1.y));
-			ctx.lineTo(Math.round(p2.x), Math.round(p2.y));
-			ctx.lineTo(Math.round(p3.x), Math.round(p3.y));
-			ctx.lineTo(Math.round(p4.x), Math.round(p4.y));
-			ctx.fill();		
-			ctx.closePath();
+			ctx.moveTo(this.round(d.x), this.round(d.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
+			ctx.lineTo(this.round(p2.x), this.round(p2.y));
+			ctx.lineTo(this.round(p3.x), this.round(p3.y));
+			ctx.lineTo(this.round(p4.x), this.round(p4.y));
+			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
-			return AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE));
+			return {
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, (d.size * AbShapeArrow.prototype.BRACKET_SIZE)),
+			};
 		}
-		return { x: 0, y: 0 };
+		
+		return {
+			clip: { x: 0, y: 0 },
+			full: { x: 0, y: 0 },
+			half: { x: 0, y: 0 }
+		};
+	},
+
+	//-----------------------------------------------------------
+
+	corners: function (x1, y1, x2, y2, thickness){
+		var trect = { x1: x1, y1: y1, x2: x2, y2: y2 };
+
+		var rad = AbGraphics.angle.radian90(trect.x1, trect.y1, trect.x2, trect.y2);
+		var d = AbGraphics.distance(trect.x1, trect.y1, trect.x2, trect.y2);
+		var pend = AbGraphics.rotate.point(-rad, trect.x1, trect.y1, trect.x2, trect.y2);
+
+		var half = thickness / 2;
+		x1 = trect.x1;
+		y1 = trect.y1 - half;
+		x2 = pend.x;
+		y2 = pend.y + half;
+
+		var lt = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x1, y1);		
+		var rt = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x2, y1);
+		var rb = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x2, y2);
+		var lb = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x1, y2);
+
+		// this.roundPos(lt);
+		// this.roundPos(rt);
+		// this.roundPos(rb);
+		// this.roundPos(lb);
+
+		var radwide = AbGraphics.angle.radian90(lt.x, lt.y, lb.x, lb.y);
+
+		return {
+			thickness: thickness,
+
+			distance: d,
+
+			rad: rad,
+			radWide: radwide,
+
+			rect: trect,
+
+			leftTop: lt,
+			rightTop: rt,
+			rightBottom: rb,
+			leftBottom: lb,
+		};
+	},
+
+	drawLine: function(ctx, c, rdots){
+		if (c.thickness <= 1){
+			if (rdots && rdots.length)
+				ctx.setLineDash(rdots);
+			
+			ctx.beginPath();
+			ctx.moveTo(Math.round(c.rect.x1), Math.round(c.rect.y1));
+			ctx.lineTo(Math.round(c.rect.x2), Math.round(c.rect.y2));
+			ctx.stroke();
+			ctx.closePath();			
+		}else{
+			var dotLen = rdots && rdots.length > 1 ? rdots.length : 0;
+			//dotLen = 0;
+			if (dotLen){
+				dotLen = dotLen - (rdots.length % 2);
+
+				var x = c.leftTop.x, y = c.leftTop.y;
+				var patd = 0;
+
+				ctx.beginPath();
+
+				for (var d = 0; d < c.distance; d += patd){
+					patd = 0;
+					for (var i=0; i < dotLen; i+=2){
+						var pat = rdots[i];
+						var spc = rdots[i + 1];
+		
+						var p = AbGraphics.rotate.pointByDistance(c.rad, pat);
+						var pw = AbGraphics.rotate.pointByDistance(c.radWide, c.thickness);
+
+						ctx.moveTo(this.round(x), this.round(y));
+						ctx.lineTo(this.round(x + p.x), this.round(y + p.y));
+						ctx.lineTo(this.round(x + p.x + pw.x), this.round(y + p.y + pw.y));
+						ctx.lineTo(this.round(x + pw.x), this.round(y + pw.y));
+						ctx.lineTo(this.round(x), this.round(y));
+
+						p = AbGraphics.rotate.pointByDistance(c.rad, pat + spc);
+
+						x = x + p.x;
+						y = y + p.y;
+
+						patd += pat + spc;
+					}
+				}
+
+				ctx.fill();
+				ctx.closePath();
+			}else{
+				ctx.beginPath();
+				ctx.moveTo(this.round(c.leftTop.x), this.round(c.leftTop.y));
+				ctx.lineTo(this.round(c.rightTop.x), this.round(c.rightTop.y));
+				ctx.lineTo(this.round(c.rightBottom.x), this.round(c.rightBottom.y));
+				ctx.lineTo(this.round(c.leftBottom.x), this.round(c.leftBottom.y));
+				ctx.lineTo(this.round(c.leftTop.x), this.round(c.leftTop.y));
+				ctx.fill();
+				ctx.closePath();
+			}
+		}		
 	},
 
 	//-----------------------------------------------------------
@@ -365,91 +590,145 @@ AbShapeArrow.prototype = {
 
 		var x1 = this.x1 * scaleX, y1 = this.y1 * scaleY;
 		var x2 = this.x2 * scaleX, y2 = this.y2 * scaleY;
+		var lineWidth = this.style.width * scaleX;
+		var headSize = this.headSize() * scaleX;
+		var tailSize = this.tailSize() * scaleX;
+		
+		if (lineWidth < 1) lineWidth = 1;
 
 		var distance = AbGraphics.distance(x1, y1, x2, y2);
 		
 		var cx = ((x2 - x1) >> 1), cy = ((y2 - y1) >> 1);
 		ctx.translate(x1 + cx, y1 + cy);
-		//if (this.angle) ctx.rotate(AbGraphics.angle.deg2rad(this.angle));
+
+		//var cx = 0, cy = 0;
+		//ctx.translate(x1 + cx, y1 + cy);
 
 		var cx2 = x1 + cx, cy2 = y1 + cy;
 		var rad = AbGraphics.angle.radian90(x1, y1, x2, y2);
 		
 		//console.log('[RAD]' + rad + ', angle=' + AbGraphics.angle.rad2deg(rad) + ', distance=' + distance + ', angle2=' + AbGraphics.angle.get(x1, y1, x2, y2));
 
-		ctx.fillStyle = this.style.color;
-		ctx.strokeStyle = this.style.color;
-		ctx.lineWidth = this.style.width;
-		ctx.lineCap = 'butt';
-		
-		// head arrow
-		var r = this.drawHeadArrow(ctx, {
-			distance: distance,
-			style: this.style.head.style,
-			size: this.headSize(),
-			rad: rad,
-			x: x2 - cx2,
-			y: y2 - cy2,
-		});
-
-		x2 = x2 - r.x;
-		y2 = y2 - r.y;
-		
-		// tail arrow
-		r = this.drawTailArrow(ctx, {
-			distance: distance,
-			style: this.style.tail.style,
-			size: this.tailSize(),
-			rad: rad,
-			x: x1 - cx2,
-			y: y1 - cy2,
-		});
-
-		x1 = x1 + r.x;
-		y1 = y1 + r.y;
-
-		// calc for line
-		x1 -= cx2;
-		y1 -= cy2;
-		x2 -= cx2;
-		y2 -= cy2;
+		// 필터링된 라인 그리기
+		var rhead = null, rtail = null;
+		var rdots = null;
+		var ox1 = x1, oy1 = y1, ox2 = x2, oy2 = y2;
 
 		if (this.style.dots){
-			var r = AbGraphics.canvas.makeDash(this.style.dots);
-			if (r.length)
-				ctx.setLineDash(r);
+			rdots = AbGraphics.canvas.makeDash(this.style.dots);
+			if (rdots && rdots.length){
+				var rlen = rdots.length;
+				for (var i=0; i < rlen; i++) rdots[i] = rdots[i] * scaleX;
+			}
 		}
 
-		// line
+		//-----------------------------------------------------------
+
+		var lineRect = {
+			x1: ox1 - cx2,
+			y1: oy1 - cy2,
+			x2: ox2 - cx2,
+			y2: oy2 - cy2,
+		};
+		var CORRECT_LINE_CLIP = 2;
+
+		var clipCorners = this.corners(lineRect.x1, lineRect.y1, lineRect.x2, lineRect.y2, lineWidth + CORRECT_LINE_CLIP);
+
+		//-----------------------------------------------------------
+
+		ctx.save();
+
 		ctx.beginPath();
-		ctx.moveTo(Math.round(x1), Math.round(y1));
-		ctx.lineTo(Math.round(x2), Math.round(y2));
-		ctx.stroke();
+
+		var points = [];
+
+		var chead = this.clipHeadArrow(ctx, {
+			lineRect: lineRect,
+			lineCorners: clipCorners,
+			distance: distance,
+			style: this.style.head.style,
+			size: headSize + lineWidth,
+			lineWidth: lineWidth,
+			rad: rad,
+			x: ox2 - cx2,
+			y: oy2 - cy2,
+		});
+
+		var ctail = this.clipTailArrow(ctx, {
+			lineRect: lineRect,
+			lineCorners: clipCorners,
+			distance: distance,
+			style: this.style.tail.style,
+			size: tailSize + lineWidth,
+			lineWidth: lineWidth,
+			rad: rad,
+			x: ox1 - cx2,
+			y: oy1 - cy2,
+		});
+
+		Array.prototype.push.apply(points, chead);
+		Array.prototype.push.apply(points, ctail);
+
+		//-----------------------------------------------------------
+
+		for (var i=0; i < points.length; i++){
+			if (i == 0) ctx.moveTo(this.round(points[i].x), this.round(points[i].y));
+			else ctx.lineTo(this.round(points[i].x), this.round(points[i].y));
+		}
+
+		//-----------------------------------------------------------
+
+		//ctx.fill();
+		ctx.clip();
+
+		//-----------------------------------------------------------
+		// draw clipped line
+
+		var c = this.corners(lineRect.x1, lineRect.y1, lineRect.x2, lineRect.y2, lineWidth);
+
+		ctx.fillStyle = this.style.color;
+		ctx.strokeStyle = this.style.color;
+
+		this.drawLine(ctx, c, rdots);
+
+		//-----------------------------------------------------------
+
+		ctx.restore();
+
+		//-----------------------------------------------------------
+
+		ctx.fillStyle = this.style.color;
+		ctx.strokeStyle = this.style.color;
+
+		// head arrow
+		ctx.beginPath();
+		rhead = this.drawHeadArrow(ctx, {
+			distance: distance,
+			style: this.style.head.style,
+			size: headSize + lineWidth,
+			lineWidth: lineWidth,
+			rad: rad,
+			x: ox2 - cx2,
+			y: oy2 - cy2,
+		});
+		ctx.fill();
 		ctx.closePath();
 
-		//-----------------------------------------------------------
-		// DEBUG
-		//-----------------------------------------------------------
-
-		if (false){
-			var x1 = this.x1 * scaleX, y1 = this.y1 * scaleY + 5;
-			var x2 = this.x2 * scaleX, y2 = this.y2 * scaleY + 5;
-	
-			x1 -= cx2;
-			y1 -= cy2;
-			x2 -= cx2;
-			y2 -= cy2;
-	
-			ctx.strokeStyle = 'green';
-			ctx.lineWidth = 1;
-			ctx.beginPath();
-			ctx.moveTo(Math.round(x1), Math.round(y1));
-			ctx.lineTo(Math.round(x2), Math.round(y2));
-			ctx.stroke();
-			ctx.closePath();
-		}
-
+		// tail arrow
+		ctx.beginPath();
+		rtail = this.drawTailArrow(ctx, {
+			distance: distance,
+			style: this.style.tail.style,
+			size: tailSize + lineWidth,
+			lineWidth: lineWidth,
+			rad: rad,
+			x: ox1 - cx2,
+			y: oy1 - cy2,
+		});
+		ctx.fill();
+		ctx.closePath();
 
 		AbShapeTool.endDraw(this, ctx);
 	},
+
 }

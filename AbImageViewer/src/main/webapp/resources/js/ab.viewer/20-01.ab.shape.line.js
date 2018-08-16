@@ -180,7 +180,13 @@ AbShapeLine.prototype = {
 
 	//-----------------------------------------------------------
 
-	padding: function() { return { left: 0, top: 5, right: 0, bottom: 5 }; },
+	padding: function() {
+		var page = this.engine ? this.engine.currentPage : null;
+		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
+
+		var pad = (this.style.width >> 1) * scaleX;
+		return { left: 0, top: pad, right: 0, bottom: pad };
+	},
 	contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	editable: function (x, y){ if (this.selected){ return this.indicator.editable(x, y); } return null; },
 	editPos: function (point){ return this.indicator.editPos(point); },
@@ -196,6 +202,9 @@ AbShapeLine.prototype = {
 
 		var x1 = this.x1 * scaleX, y1 = this.y1 * scaleY;
 		var x2 = this.x2 * scaleX, y2 = this.y2 * scaleY;
+		var lineWidth = this.style.width * scaleX;
+		
+		if (lineWidth < 1) lineWidth = 1;
 
 		var distance = AbGraphics.distance(x1, y1, x2, y2);
 		
@@ -210,7 +219,7 @@ AbShapeLine.prototype = {
 
 		ctx.fillStyle = this.style.color;
 		ctx.strokeStyle = this.style.color;
-		ctx.lineWidth = this.style.width;
+		ctx.lineWidth = lineWidth;
 		ctx.lineCap = 'butt';
 
 		// calc for line
@@ -221,6 +230,11 @@ AbShapeLine.prototype = {
 
 		if (this.style.dots){
 			var r = AbGraphics.canvas.makeDash(this.style.dots);
+			if (r && r.length){
+				var rlen = r.length;
+				for (var i=0; i < rlen; i++) r[i] = r[i] * scaleX;
+			}
+
 			if (r.length)
 				ctx.setLineDash(r);
 		}

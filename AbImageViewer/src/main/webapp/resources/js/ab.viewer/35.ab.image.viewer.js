@@ -830,15 +830,8 @@ AbImageViewer.prototype = {
 			this.exec(function (){
 				var page = this.engine.currentPage;
 				if (!page) return;
-
-				this.engine.renderThumbnail(this.thumbnailGenerator, page);
-
-				var decoder = page.decoder();
-
-				var imgData = this.thumbnailGenerator.toImage(decoder);
-				page.source.setThumbnailData(imgData);
-
-				this.notifyObservers('modified', { uid: page.uid, data: imgData });
+				
+				this.renderThumbnail(page);
 			}, 100);
 			break;
 		}
@@ -1418,18 +1411,35 @@ AbImageViewer.prototype = {
 							var page = arguments.callee.page;
 							var index = arguments.callee.index;
 							var self = arguments.callee.self;
-
-							var ctx = AbGraphics.canvas.createContext(page.width, page.height);
-							self.engine.renderImage(ctx, page);
-	
-							AbGraphics.canvas.toBlob(ctx, type == 'jpg' ? 'image/jpeg' : null)
-								.then(function (blob){
-									AbVendor.save(blob, 'image_'+(index+1)+'.' + type);
-									resolve(index);
-								})
-								.catch(function (e){
-									reject(e);
-								});
+							
+							var doFunc = function(){
+								var ctx = AbGraphics.canvas.createContext(page.width, page.height);
+								self.engine.renderImage(ctx, page);
+		
+								AbGraphics.canvas.toBlob(ctx, type == 'jpg' ? 'image/jpeg' : null)
+									.then(function (blob){
+										AbVendor.save(blob, 'image_'+(index+1)+'.' + type);
+										resolve(index);
+									})
+									.catch(function (e){
+										reject(e);
+									});
+							};
+							
+							// 섬네일만 로드된 경우
+							if (page.isReadyImage()){
+								page.source.image()
+									.then(function(){
+										doFunc();
+									})
+									.catch(function(e){
+										console.log(e);
+										
+										reject(e);
+									});
+							}else{
+								doFunc();
+							}
 						};
 						func.type = r;
 						func.page = page;
@@ -2250,15 +2260,44 @@ AbImageViewer.prototype = {
 		if (numShapes){
 			AbMsgBox.confirm(msg, null, 'warn')
 				.then(function (r){
+					var callback = function(pageInfos){
+						if (pageInfos){
+							for (var i=0; i < pageInfos.length; i++){
+								var pageInfo = pageInfos[i];
+								//console.log('[CLEAR][SHAPES][' + pageInfo.index + ']');
+								
+								if (pageInfo.page.editable())
+									this.renderThumbnail(pageInfo.page);
+							}
+						}
+					}.bind(this);
+					
 					if (r == 'ok'){
 						if (isAll)
-							this.engine.removeAllPageShapes();
+							this.engine.removeAllPageShapes({
+								end: callback
+							});
 						else
-							this.engine.removeRangePageShapes(collect.pages);
+							this.engine.removeRangePageShapes(collect.pages, {
+								end: callback
+							});
 					}
 				}.bind(this));
 		}
 
+	},
+
+	//-----------------------------------------------------------
+	
+	renderThumbnail: function(page){
+		this.engine.renderThumbnail(this.thumbnailGenerator, page);
+
+		var decoder = page.decoder();
+
+		var imgData = this.thumbnailGenerator.toImage(decoder);
+		page.source.setThumbnailData(imgData);
+
+		this.notifyObservers('modified', { uid: page.uid, data: imgData });		
 	},
 
 	//-----------------------------------------------------------

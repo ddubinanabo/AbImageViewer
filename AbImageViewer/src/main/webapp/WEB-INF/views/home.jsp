@@ -33,11 +33,11 @@
 		
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
 
-	<%/*
 	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
-	*/%>
 	
+	<%/*
 	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
+	*/%>
 	
 	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
 	<script>
