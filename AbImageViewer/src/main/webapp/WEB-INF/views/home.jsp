@@ -22,22 +22,22 @@
 	<script type="text/javascript" src="resources/js/vendor/rgbcolor.min.js"></script>
 	<script type="text/javascript" src="resources/js/vendor/canvg.min.js"></script>
 	<%}%>
+
+	<% if(kind == AbBrowserKind.ABBROWSER_IE){ %>
+	<script type="text/javascript" src="resources/js/vendor/canvas-toBlob.js"></script>
+	<%}%>
 	
 	<%/*
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.js"></script>
 	*/%>
-	<%/*
-	<script type="text/javascript" src="resources/js/vendor/canvas-toBlob.js"></script>
-	*/%>
-	
 		
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
 
-	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
-	
 	<%/*
-	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
+	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
 	*/%>
+	
+	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
 	
 	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
 	<script>
