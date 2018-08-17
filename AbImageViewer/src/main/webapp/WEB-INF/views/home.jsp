@@ -23,9 +23,7 @@
 	<script type="text/javascript" src="resources/js/vendor/canvg.min.js"></script>
 	<%}%>
 
-	<% if(kind == AbBrowserKind.ABBROWSER_IE){ %>
 	<script type="text/javascript" src="resources/js/vendor/canvas-toBlob.js"></script>
-	<%}%>
 	
 	<%/*
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.js"></script>
