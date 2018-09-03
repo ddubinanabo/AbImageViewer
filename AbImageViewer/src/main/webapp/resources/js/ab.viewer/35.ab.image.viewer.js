@@ -1014,6 +1014,57 @@ AbImageViewer.prototype = {
 	},
 
 	//-----------------------------------------------------------
+	
+	creatingShapes: function (page, shapeDefines){
+		var engine = this.engine;
+		
+		if (shapeDefines){
+			promise = new Promise(function (resolve, reject){
+				var cpage = engine.currentPage;
+				
+				try
+				{
+					// <?xml version="1.0" encoding="UTF-8"?> 제거
+					shapeDefines = AbCommon.removeXmlHeader(shapeDefines);
+					
+					var ps = AbCommon.deserializePageShapes(shapeDefines);
+					var psLen = ps.length, called = 0;
+					for (var i=0; i < psLen; i++){
+						var prop = ps[i];
+						
+						engine.currentPage = page;
+						
+						engine.createShape(prop.name, prop, function (s, error){
+							s.prepare();
+							
+							page.shapes.push(s);
+							
+							s.engine = engine;
+							s.measure();
+							
+							called++;
+							if (called >= psLen){
+								engine.currentPage = cpage;
+								
+								resolve(psLen);
+							}
+						});
+					}
+				}
+				catch (e)
+				{
+					engine.currentPage = cpage;
+					reject(e);
+				}
+			});
+		}else{
+			promise = Promise.resolve(0);
+		}
+		
+		return promise;
+	},
+
+	//-----------------------------------------------------------
 
 	loadPage: function (pageData, sync){
 		if (pageData.page.isLoading())
@@ -1029,51 +1080,10 @@ AbImageViewer.prototype = {
 //				console.log('[PAGE LOADER]');
 //				console.log(e);
 				
-				var promise = null;
-				
-				if (e.shapes){
-					promise = new Promise(function (resolve, reject){
-						var cpage = engine.currentPage;
-						
-						try
-						{
-							var ps = AbCommon.deserializePageShapes(e.shapes);
-							var psLen = ps.length, called = 0;
-							for (var i=0; i < psLen; i++){
-								var prop = ps[i];
-								
-								engine.currentPage = pageData.page;
-								
-								engine.createShape(prop.name, prop, function (s, error){
-									s.prepare();
-									
-									pageData.page.shapes.push(s);
-									
-									s.engine = engine;
-									s.measure();
-									
-									called++;
-									if (called >= psLen){
-										engine.currentPage = cpage;
-										
-										resolve(true);
-									}
-								});
-							}
-						}
-						catch (e)
-						{
-							engine.currentPage = cpage;
-							reject(e);
-						}
+				return this.creatingShapes(pageData.page, e.shapes)
+					.then(function (){
+						return e;
 					});
-				}else{
-					promise = Promise.resolve(true);
-				}
-				
-				return promise.then(function (){
-					return e;
-				});
 			}.bind(this))
 			.then(function (e){
 				return this.setImage(pageData, e.image, e.data, e.type, e.decoder);	
@@ -1209,7 +1219,7 @@ AbImageViewer.prototype = {
 								if (AbCommon.isString(src.thumbnail)){
 									img['thumbnail'] = src.thumbnail;
 								}
-								if (AbCommon.isNumber(src.width) && AbCommon.isNumber(src.height)){
+								if (AbCommon.isNumber(src.width) && AbCommon.isNumber(src.height) && (src.width > 0 && src.height > 0)){
 									img['width'] = src.width;
 									img['height'] = src.height;
 								}
@@ -1220,6 +1230,9 @@ AbImageViewer.prototype = {
 								dat['pages'] = siz;
 							}
 
+							if (src.info)
+								dat['info'] = src.info;
+							
 							var decoder = src.hasOwnProperty('decoder') ? src.decoder : dataPreset.decoder;
 
 							var r = { type: dataPreset.type, decoder: decoder, image: img, data: dat };
@@ -1240,6 +1253,90 @@ AbImageViewer.prototype = {
 				resolve(siz);
 			});			
 		}.bind(this));
+	},
+
+	//-----------------------------------------------------------
+	
+	changeImage: function(index, imageData, options){
+		if (!options) options = {};
+		var removePrevShapes = AbCommon.isBool(options.removePrevShapes) ? options.removePrevShapes : true;
+		
+		var self = this;
+		
+		var images = this.images;
+		var engine = this.engine;
+		var thumbnailGenerator = this.thumbnailGenerator;
+		
+		return new Promise(function(resolve, reject){
+			if (index < 0 || index >= images.length()){
+				AbMsgBox.error('잘못된 호출입니다 (index)');
+				reject(new Error('잘못된 호출입니다 (index)'));
+				return;
+			}
+			
+			if (!imageData){
+				AbMsgBox.error('잘못된 호출입니다 (imageData)');
+				reject(new Error('잘못된 호출입니다 (imageData)'));
+				return;
+			}
+			
+			if (!imageData.image){
+				AbMsgBox.error('잘못된 호출입니다 (imageData.image)');
+				reject(new Error('잘못된 호출입니다 (imageData.image)'));
+				return;
+			}
+			
+			var page = images.get(index);
+			if (page.error){
+				AbMsgBox.error('이미지 로드를 재시도 하세요');
+				reject(new Error('이미지 로드를 재시도 하세요'));
+				return;
+			}
+			
+			var renderDecoder = imageData.decoder;
+			
+			page.changeImage(imageData.image)
+				.then(function (r){
+					if (removePrevShapes){
+						//-----------------------------------------------------------
+						// begin record history
+						//this.history.begin('shape', 'range', engine, [page]);
+						//-----------------------------------------------------------
+						
+						page.shapes.splice(0, page.shapes.length);
+						
+						//-----------------------------------------------------------
+						// end record history
+						//this.history.end(engine);
+						//-----------------------------------------------------------
+					}
+					return this.creatingShapes(page, imageData.shapes)
+				}.bind(self))
+				.then(function (){
+					engine.renderThumbnail(thumbnailGenerator, page);
+
+					var imgData = thumbnailGenerator.toImage(renderDecoder);
+					page.source.setThumbnailData(imgData);
+					
+					if (this.engine.currentPageIndex == index){
+						this.engine.refresh();
+					}
+					
+					this.notifyObservers('modified', {
+						uid: page.uid,
+						data: imgData
+					});
+					
+					return r;
+				}.bind(self))
+				.then(function(){
+					resolve();
+				})
+				.catch(function (e){
+					AbMsgBox.error(e);
+					reject(e);
+				});
+		});
 	},
 
 	//-----------------------------------------------------------

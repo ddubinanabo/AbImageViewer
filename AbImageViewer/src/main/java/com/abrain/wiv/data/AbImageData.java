@@ -38,6 +38,10 @@ public class AbImageData {
 	
 	//-----------------------------------------------------------
 	
+	private AbImageInfo info;
+	
+	//-----------------------------------------------------------
+	
 	public int getWidth() { return width; }
 	public void setWidth(int value) { width = value; }
 	
@@ -63,4 +67,13 @@ public class AbImageData {
 	
 	public String getShapes() { return shapes; }
 	public void setShapes(String value) { shapes = value; }
+
+	//-----------------------------------------------------------
+	
+	public boolean hasInfo() { return info != null; }
+
+	//-----------------------------------------------------------
+
+	public AbImageInfo getInfo() { return info; }
+	public void setInfo(AbImageInfo value) { info = value; }	
 }

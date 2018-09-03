@@ -1,6 +1,4 @@
 
-var toolbar, imageViewer;
-
 //-----------------------------------------------------------
 
 $(function(){
@@ -83,9 +81,11 @@ $(function(){
 	
 	var GAP = 2;
 
-	imageViewer = new AbImageViewer({
+	var imageViewer = new AbImageViewer({
 		margin: { left: GAP, top: GAP, right: GAP, bottom: GAP },
 	});
+	
+	iAbViewer.regist(imageViewer);
 
 	imageViewer.waterMark.image('resources/img/watermark.png');
 
@@ -120,7 +120,7 @@ function loadedImageViewer(){
 	
 	var paramId = $('#param-id').val();
 	if (paramId){
-		imageViewer.openImages(paramId);
+		iAbViewer.get().openImages(paramId);
 	}	
 }
 

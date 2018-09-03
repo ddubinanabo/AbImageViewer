@@ -776,6 +776,10 @@ var AbCommon = {
 	// XNK
 
 	xmlHeader: function (){ return '<?xml version="1.0" encoding="UTF-8"?>'; },
+	
+	removeXmlHeader: function(xmlString){
+		return xmlString.replace(/^\s*<\?(.*)\?>\s*/g, '');
+	},
 
 	deserializeShapeXmlNode: function(node, obj){
 		if (!node || !node.length) return;

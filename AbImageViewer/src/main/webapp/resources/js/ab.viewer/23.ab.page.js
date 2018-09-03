@@ -117,6 +117,26 @@ AbPage.prototype = {
 	},
 
 	//-----------------------------------------------------------
+	
+	changeImage: function(src){
+		if (this.source instanceof AbImage){
+			return this.source.changeImage(src)
+				.then(function(imgElement){
+					this.width = imgElement.width;
+					this.height = imgElement.height;
+					
+				}.bind(this))
+				.catch(function(e){
+					
+				});
+		}
+		
+		return new Promise(function(resolve, reject){
+			resolve();
+		});
+	},
+
+	//-----------------------------------------------------------
 
 	transformed: function (){ return this.x != 0 || this.y != 0 || this.scaled(); },
 	scaled: function(){ return this.scale.x != 1 || this.scale.y != 1; },

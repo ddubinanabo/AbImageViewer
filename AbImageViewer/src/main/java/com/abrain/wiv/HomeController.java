@@ -1,14 +1,13 @@
 package com.abrain.wiv;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,9 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.abrain.wiv.config.AbImageConfig;
 import com.abrain.wiv.converters.PolarisConverter;
 import com.abrain.wiv.data.AbBinaryData;
+import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageType;
+import com.abrain.wiv.data.externals.AbExtImages;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.EmptyDataException;
 import com.abrain.wiv.io.AbPartialFile;
@@ -35,6 +37,9 @@ public class HomeController {
 	
 	@Autowired
 	private DocService svc;
+	
+	@Autowired
+	private AbImageConfig imageConfig;
 
 	/**
 	 * 뷰어 페이지
@@ -45,6 +50,9 @@ public class HomeController {
 	 */
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String home(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		
+		System.out.println("[ACCEPTS] " + imageConfig.ACCEPTS);
+		
 		return "home";
 	}
 

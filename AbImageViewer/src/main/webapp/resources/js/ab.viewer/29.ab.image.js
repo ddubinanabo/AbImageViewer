@@ -106,7 +106,7 @@ AbImage.prototype = {
 //				});
 			});
 	},
-
+	
 	//-----------------------------------------------------------
 
 	imageElement: function() { return this.imgInfo.element; },
@@ -139,6 +139,26 @@ AbImage.prototype = {
 	},
 
 	thumbnail: function(){ return this.getImage(this.thumbInfo, true); },
+
+	//-----------------------------------------------------------
+	
+	changeImage: function (src){
+		var imgdat = this.imgInfo;
+		var loaded = imgdat.loaded;
+		
+		imgdat.loaded = false;
+		imgdat.url = src;
+		
+		if (loaded){
+			return this.image();
+		}else{
+			return new Promise(function (resolve, reject){
+				setTimeout(function(){
+					resolve(imgdat.element);
+				},0);
+			});
+		}
+	},
 
 	//-----------------------------------------------------------
 

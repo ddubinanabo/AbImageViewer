@@ -31,11 +31,13 @@
 		
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
 
-	<%/*
 	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
-	*/%>
+	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>
 	
+	<%/*
 	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
+	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
+	*/%>
 	
 	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
 	<script>
@@ -69,6 +71,9 @@
 						<span class="checkmark"></span>
 					</label>
 					<div lt-topic="info" class="info" title="이미지 정보"></div>
+				</li>
+				<li class="display">
+					<span class="text" lt-topic="text"></span>
 				</li>
 			</ol>
 		</div>
@@ -447,5 +452,8 @@
 		</ul>
 	</div>
 	<!-- 서버 로드 메시지 끝 -->
+	
+	<!-- 테스트 패널 -->
+	<jsp:include page="/WEB-INF/debug/view-home.jsp"></jsp:include>
 </body>
 </html>

@@ -321,13 +321,18 @@ AbGridPager.prototype.prepare = function (){
 	else
 		this.$totalPage = 0;
 	
-	if (this.$page > this.$totalPage)
-		this.$page = this.$totalPage;
+	var page = this.$page;
+	if (this.$totalCount > 0 && page < 1)
+		page = 1;
+	
+	if (page > this.$totalPage){
+		this.$page = page = this.$totalPage;
+	}
 	
 	if (this.$desc)
-		this.$count = this.$totalCount - (this.$page - 1) * this.$lineCount;
+		this.$count = this.$totalCount - (page - 1) * this.$lineCount;
 	else
-		this.$count = (this.$page - 1) * this.$lineCount + 1;
+		this.$count = (page - 1) * this.$lineCount + 1;
 	
 	return this.$count;
 }

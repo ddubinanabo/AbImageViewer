@@ -1066,6 +1066,7 @@ AbImageListView.prototype = {
 
 	insertListItem: function(page,insertIndex){
 		var index = this.children.length;
+		var text = '';
 
 		var e = this.template.children(':eq(0)').clone();
 		var image = page.thumbnail();
@@ -1096,6 +1097,7 @@ AbImageListView.prototype = {
 
 	listItemImage: function (value){
 		var item = null, page = null;
+		var text = '';
 
 		if (AbCommon.isNumber(value)){
 			item = this.children[value];
@@ -1104,6 +1106,13 @@ AbImageListView.prototype = {
 			item = this.map[value];
 			page = this.pages.getById(value);
 		}
+
+		var info = page.info();
+		if (info && info.info)
+			text = info.info.text;
+		
+		if (text == null || text == undefined) text = '';
+		this.topic(item, 'text').text(text);
 
 		item.attr('lt-status', page.statusText());
 
