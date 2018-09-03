@@ -148,13 +148,13 @@ var iAbViewerFrame = {
 				var key = data.key;
 				
 				if (key == execKey){
+					$(window).unbind('message', listener);
+					
 					if (data.success){
 						resolve(data.result);
 					}else{
 						reject(new Error(data.message));
 					}
-					
-					$(window).unbind('message', listener);
 				}
 			};
 			
