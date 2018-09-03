@@ -26,7 +26,7 @@
 			iAbViewerFrame.view(
 				'C:/Users/Administrator/Desktop/원앙',
 				'행복|천사'
-			)
+			);
 		});
 		
 		$('#btn-chg-file').click(function(){
@@ -34,7 +34,7 @@
 				1,
 				'C:/Users/Administrator/Desktop/닭/c1.jpg',
 				'C:/Users/Administrator/Desktop/닭/c1.xml'
-			)
+			);
 		});
 	});
 	

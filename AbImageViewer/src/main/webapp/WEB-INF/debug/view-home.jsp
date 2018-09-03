@@ -58,10 +58,7 @@ $(function(){
 		iAbViewer.view(
 			'C:/Users/Administrator/Desktop/원앙',
 			'테스트|천사|좋은일|행복|도사'
-		)
-			.then(function(){
-				AbMsgBox.success('작업 성공');
-			});
+		);
 	});
 	
 	$te('change-image').click(function(){
@@ -69,10 +66,7 @@ $(function(){
 			1,
 			'C:/Users/Administrator/Desktop/닭/c1.jpg',
 			'C:/Users/Administrator/Desktop/닭/c1.xml'
-		)
-			.then(function(){
-				AbMsgBox.success('작업 성공');
-			});
+		);
 	});
 	
 });
