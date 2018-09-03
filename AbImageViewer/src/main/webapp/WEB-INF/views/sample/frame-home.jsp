@@ -25,7 +25,7 @@
 		$('#btn-folder').click(function(){
 			iAbViewerFrame.view(
 				'C:/Users/Administrator/Desktop/원앙',
-				'테스트|천사|좋은일|행복|도사'
+				'행복|천사'
 			)
 		});
 		
