@@ -50,15 +50,18 @@
 		//-----------------------------------------------------------
 	
 		iAbViewerFrame.attachEvent('click', function (name, data){
-			console.log('[IFRAME][EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+			var flags = []; flags.push(data.name?'('+data.name+') ':''); flags.push(data.token?'('+data.token+') ':'');
+			console.log('[IFRAME][EVENT]['+name+'] '+flags.join('')+'' + data.index + ', uid=' + data.uid);
 		});
 		
 		iAbViewerFrame.attachEvent('select', function (name, data){
-			console.log('[IFRAME][EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+			var flags = []; flags.push(data.name?'('+data.name+') ':''); flags.push(data.token?'('+data.token+') ':'');
+			console.log('[IFRAME][EVENT]['+name+'] '+flags.join('')+'' + data.index + ', uid=' + data.uid);
 		});
 		
 		iAbViewerFrame.attachEvent('renderlist', function (name, data){
-			console.log('[IFRAME][EVENT]['+ name +'] name='+data.name+', token=' + data.token + ' (' + data.loading + '/' + data.visible + ')');
+			var flags = []; flags.push(data.name?'('+data.name+') ':''); flags.push(data.token?'('+data.token+') ':'');
+			console.log('[IFRAME][EVENT]['+ name +'] '+flags.join('')+'name='+data.name+', token=' + data.token + ' (' + data.loading + '/' + data.visible + ')');
 		});
 	});
 	

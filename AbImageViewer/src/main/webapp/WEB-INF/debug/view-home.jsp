@@ -40,7 +40,8 @@ $(function(){
 	});
 
 	iAbViewer.attachEvent('select', function (name, data){
-		console.log('  :: DIRECT :: [EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+		var flags = []; flags.push(data.name?'('+data.name+') ':''); flags.push(data.token?'('+data.token+') ':'');
+		console.log('  :: DIRECT :: [EVENT]['+name+'] '+flags.join('')+'' + data.index + ', uid=' + data.uid);
 	});
 });
 
