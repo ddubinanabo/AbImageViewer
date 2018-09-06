@@ -19,6 +19,7 @@
 	<%/*
 	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
 	*/%>
+	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
 	
 	<script>
 	$(function(){
@@ -26,7 +27,7 @@
 			iAbViewerFrame.view(
 				'C:/Users/Administrator/Desktop/원앙',
 				'행복|천사'
-			);
+			)
 		});
 		
 		$('#btn-chg-file').click(function(){
@@ -34,7 +35,30 @@
 				1,
 				'C:/Users/Administrator/Desktop/닭/c1.jpg',
 				'C:/Users/Administrator/Desktop/닭/c1.xml'
-			);
+			)
+		});
+
+		//-----------------------------------------------------------
+	
+		var func = function (name, data){
+			console.log('::TEST:: [IFRAME][EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+		};
+		
+		iAbViewerFrame.attachEvent('select', func);
+		iAbViewerFrame.detachEvent('select', func);
+
+		//-----------------------------------------------------------
+	
+		iAbViewerFrame.attachEvent('click', function (name, data){
+			console.log('[IFRAME][EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+		});
+		
+		iAbViewerFrame.attachEvent('select', function (name, data){
+			console.log('[IFRAME][EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+		});
+		
+		iAbViewerFrame.attachEvent('renderlist', function (name, data){
+			console.log('[IFRAME][EVENT]['+ name +'] name='+data.name+', token=' + data.token + ' (' + data.loading + '/' + data.visible + ')');
 		});
 	});
 	

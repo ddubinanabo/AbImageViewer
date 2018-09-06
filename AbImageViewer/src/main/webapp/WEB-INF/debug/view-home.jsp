@@ -23,42 +23,12 @@
 
 <script>
 $(function(){
-	// 다이렉트 기능 구현
-	$te('remote-folder2').click(function(){
-		AbCommon.ajax({
-			url: 'api/ext/folder',
-			data: {
-				q: 'C:/Users/Administrator/Desktop/원앙',
-				t: '테스트|천사|좋은일|행복|도사'
-			},
-			
-			success: function(r){
-				imageViewer.addImages(r);
-			},
-		});
-	});
-	
-	$te('change-image2').click(function(){
-		AbCommon.ajax({
-			url: 'api/ext/file',
-			data: {
-				q: 'C:/Users/Administrator/Desktop/닭/c1.jpg',
-				a: 'C:/Users/Administrator/Desktop/닭/c1.xml',
-			},
-			
-			success: function(r){
-				if (r)
-					imageViewer.changeImage(1, r);
-			},
-		});
-	});
-	
 	// 인터페이스 사용
 	$te('remote-folder').click(function(){
 		iAbViewer.view(
 			'C:/Users/Administrator/Desktop/원앙',
 			'테스트|천사|좋은일|행복|도사'
-		);
+		)
 	});
 	
 	$te('change-image').click(function(){
@@ -66,9 +36,12 @@ $(function(){
 			1,
 			'C:/Users/Administrator/Desktop/닭/c1.jpg',
 			'C:/Users/Administrator/Desktop/닭/c1.xml'
-		);
+		)
 	});
-	
+
+	iAbViewer.attachEvent('select', function (name, data){
+		console.log('  :: DIRECT :: [EVENT]['+name+'] ' + data.index + ', uid=' + data.uid);
+	});
 });
 
 function $te(topic){

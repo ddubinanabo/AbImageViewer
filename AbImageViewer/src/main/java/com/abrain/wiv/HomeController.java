@@ -51,7 +51,7 @@ public class HomeController {
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String home(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
-		System.out.println("[ACCEPTS] " + imageConfig.ACCEPTS);
+		//System.out.println("[ACCEPTS] " + imageConfig.ACCEPTS);
 		
 		return "home";
 	}

@@ -140,7 +140,7 @@ public class AbExtImages {
 			
 			//-----------------------------------------------------------
 			
-			System.out.println("[IMAGE FILE] " + filename);
+			//System.out.println("[IMAGE FILE] " + filename);
 			
 			//-----------------------------------------------------------
 			

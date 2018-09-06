@@ -52,6 +52,7 @@ function AbImageViewer(options){
 	//-----------------------------------------------------------
 
 	this.observers = [];
+	this.listeners = {};
 
 	//-----------------------------------------------------------
 	// 마스킹 도형 추가
@@ -631,9 +632,42 @@ AbImageViewer.prototype = {
 		case 'request.load':
 			this.loadPage(value);
 			break;
+		case 'renderlist':
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('renderlist', {
+				name: sender.name,
+				token: sender.token,
+				visible: value.visible,
+				loading: value.loading,
+			});
+			break;
+		case 'click':
+			page = this.images.getById(value.uid);
+			index = this.images.indexOf(page);
+			
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('click', {
+				name: sender.name,
+				token: sender.token,
+				index: index,
+				uid: value.uid,
+				status: value.status
+			});
+			
+			this.engine.selectPage(index);
+			break;
 		case 'select':
 			page = this.images.getById(value);
 			index = this.images.indexOf(page);
+			
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('select', {
+				name: sender.name,
+				token: sender.token,
+				index: index,
+				uid: value,
+			});
+			
 			this.engine.selectPage(index);
 			break;
 		case 'dblclick':
@@ -1247,10 +1281,13 @@ AbImageViewer.prototype = {
 		
 					this.add(loader);
 				}
+				
+				this.exec(function(){
+					this.updatePagesNotifyObservers();
+					
+					resolve(siz);
+				});
 	
-				this.updatePagesNotifyObservers();
-	
-				resolve(siz);
 			});			
 		}.bind(this));
 	},
@@ -2477,5 +2514,49 @@ AbImageViewer.prototype = {
 			}.bind(this),
 		});
 	},
+
+	//-----------------------------------------------------------
 	
+	attachEvent: function (name, listener){
+		if (!AbCommon.isFunction(listener))
+			throw new Error('listener is not function');
+		
+		if (this.listeners[name])
+			this.listeners[name].push(listener);
+		else
+			this.listeners[name] = [listener];
+	},
+	
+	detachEvent: function (name, listener){
+		if (!AbCommon.isFunction(listener))
+			throw new Error('listener is not function');
+		
+		if (this.listeners[name]){
+			var a = this.listeners[name];
+			for (var i=a.length - 1; i >= 0; i--){
+				if (a[i] == listener){
+					a.splice(i, 1);
+				}
+			}
+		}
+	},
+	
+	trigger: function (name, data){
+		var a = [];
+		
+		if (this.listeners['*'])
+			Array.prototype.push.apply(a, this.listeners['*']);
+		
+		if (this.listeners[name])
+			Array.prototype.push.apply(a, this.listeners[name]);
+		
+		if (a.length){
+			var len = a.length;
+			for (var i=0; i < len; i++){
+				var listener = a[i];
+				
+				listener(name, data);
+			}
+		}
+	},
 };

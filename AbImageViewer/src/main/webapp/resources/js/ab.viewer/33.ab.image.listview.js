@@ -74,6 +74,9 @@ function AbImageListView(options){
 		var selectable = $.inArray('click', this.selecting.method) >= 0;
 
 		var status = e.attr('lt-status');
+		var uid = e.attr('lt-uid');
+		
+		this.notifyObservers('click', { uid: uid, status: status });
 
 		if (e.hasClass('selected') || target.hasClass('checkmark') || target.hasClass('info') || (event.target && event.target.tagName.toLowerCase() == 'input')){
 			if (status == 'error' && target.hasClass('content')){
@@ -84,8 +87,6 @@ function AbImageListView(options){
 			}			
 			return;
 		}
-
-		var uid = e.attr('lt-uid');
 		
 		if (status == 'loaded'){
 			if (selectable) this.notifyObservers('select', uid);
@@ -414,6 +415,8 @@ AbImageListView.prototype = {
 			break;
 		}
 	},
+	
+	pageLoadCount: 0,
 
 	notifyAbsolute: function(sender, topic, value){
 		//console.log('[LISTVIEW::'+this.name+'][Viewer]['+ topic + '] ' + value);
@@ -1025,6 +1028,7 @@ AbImageListView.prototype = {
 
 		var checked = this.checkedAll();
 		var enabled = this.enabled();
+		var visibleCount = 0, loadingCount = 0;
 	
 		for (var i=start, r = 0; i < end; i++, r++){
 			var e = this.children[i];
@@ -1042,6 +1046,8 @@ AbImageListView.prototype = {
 				var data = { index: i, page: page };
 				if (selecting && this.selecting.auto) data.select = true;
 
+				loadingCount++;
+				
 				this.notifyObservers('request.load', data);
 			}else if (selecting && this.selecting.auto){
 				this.notifyObservers('select', page.uid);
@@ -1058,7 +1064,14 @@ AbImageListView.prototype = {
 			this.renderedMap[page.uid] = e;
 
 			this.listContainer.append(e);
+			
+			visibleCount++;
 		}
+		
+		this.notifyObservers('renderlist', {
+			visible: visibleCount,
+			loading: loadingCount,
+		});
 	},
 
 	//-----------------------------------------------------------

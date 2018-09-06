@@ -7,12 +7,15 @@ var iAbViewer = {
 	//-----------------------------------------------------------
 		
 	viewers: {},
+	registListeners: [],
 
 	//-----------------------------------------------------------
 	
 	regist: function (viewer, name){
 		if (!name) name = 'main';
 		this.viewers[name] = viewer;
+		
+		this.registed(name, viewer);
 	},
 	
 	release: function (name){
@@ -23,6 +26,35 @@ var iAbViewer = {
 	get: function(name){
 		if (!name) name = 'main';
 		return this.viewers[name];
+	},
+
+	//-----------------------------------------------------------
+	
+	attachRegistListener: function(listener){
+		if (typeof listener !== 'function')
+			throw new Error('listener is not function');
+		
+		this.registListeners.push(listener);
+	},
+	
+	detachRegistListener: function(listener){
+		if (typeof listener !== 'function')
+			throw new Error('listener is not function');
+		
+		for (var i=this.registListeners.length - 1; i > 0; i--){
+			if (this.registListeners[i] == listener){
+				this.registListeners.splice(i, 1);
+			}
+		}
+	},
+	
+	registed: function (name, viewer){
+		if (this.registListeners.length){
+			var len = this.registListeners.length;
+			for (var i=0; i < len; i++){
+				this.registListeners[i](name, viewer);
+			}
+		}
 	},
 
 	//-----------------------------------------------------------
@@ -123,5 +155,22 @@ var iAbViewer = {
 			.then(function(){
 				// exec
 			});
+	},
+	
+	// name
+	//   - select
+	//		- index
+	//		- uid
+
+	attachEvent: function(name, listener){
+		var viewer = this.get();
+		if (viewer)
+			viewer.attachEvent(name, listener);
+	},
+	
+	detachEvent: function(name, listener){
+		var viewer = this.get();
+		if (viewer)
+			viewer.detachEvent(name, listener);
 	},
 };

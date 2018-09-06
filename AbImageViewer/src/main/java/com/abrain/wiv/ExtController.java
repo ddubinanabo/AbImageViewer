@@ -39,6 +39,8 @@ public class ExtController {
 		
 		boolean needCreate = c.equalsIgnoreCase("Y");
 		
+		//System.out.println("[EXTERNAL IMAGE]["+(t.equalsIgnoreCase("thumb") ? "THUMB" : "IMG")+"] " + q + "/" + n);
+		
 		AbImageType type = AbImageType.find(t);
 		AbExtImages eximg = new AbExtImages(imageConfig, q);
 		
