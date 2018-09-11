@@ -23,6 +23,7 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.data.AbImageData;
+import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.DocConverterException;
 import com.abrain.wiv.utils.DebugUtil;
@@ -87,6 +88,11 @@ public class PolarisConverter {
 		File resultDir = new File(resultDirPath);
 		if (!resultDir.exists())
 			resultDir.mkdir();
+		
+		String thumbDirPath = resultDirPath + "/thumbnail";
+		File thumbDir = new File(thumbDirPath);
+		if (!thumbDir.exists())
+			thumbDir.mkdir();
 	
 		String tempDirPath = userDocDirPath + "/temp";
 		File tempDir = new File(tempDirPath);
@@ -112,13 +118,28 @@ public class PolarisConverter {
 		List<AbImageData> images = new ArrayList<>();
 		File[] files = resultDir.listFiles();
 		int numFiles = files.length;
+		
+		// 실제 파일 카운팅
+		int numDocFiles = 0;
 		for (int i=0; i < numFiles; i++){
-			File file = files[i];
+			File file = files[i]; 
 			
 			if (!file.isFile())
 				continue;
 			
-			GraphicsUtil.ThumbnailResult r = GraphicsUtil.thumbnail(file);
+			numDocFiles++;
+		}
+		
+		
+		for (int i=0; i < numFiles; i++){
+			File file = files[i]; 
+			
+			if (!file.isFile())
+				continue;
+
+			String filename = file.getName();
+			
+			GraphicsUtil.ThumbnailResult r = GraphicsUtil.thumbnail(file, thumbDirPath + "/" + file.getName());
 			if (r.e != null){
 				throw r.e;
 			}
@@ -133,10 +154,22 @@ public class PolarisConverter {
 			
 			String url = "doc?q=" + q + "&n=";
 			
-			String imageUrl = url + file.getName();
-			String thumbUrl = url + r.name;
+			String imageUrl = url + filename;
+			String thumbUrl = url + r.name + "&t=thumb";
 			
 			AbImageData img = new AbImageData(imageUrl, thumbUrl, r.srcWidth, r.srcHeight);
+			
+			AbImageInfo info = new AbImageInfo();
+			info.setName(filename);
+			info.setText(filename);
+			
+			info.setOriginName(name);
+			info.setOriginIndex(i);
+			info.setOriginPages(numDocFiles);
+			info.setOriginSize(bytes.length);
+			
+			img.setInfo(info);
+			
 			images.add(img);
 		}	
 		
@@ -145,7 +178,7 @@ public class PolarisConverter {
 
 	//-----------------------------------------------------------------------------------
 	
-	public static void download(String q, String n, HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public static void download(String q, String n, String t, HttpServletRequest request, HttpServletResponse response) throws Exception {
 		if (q == null || q.isEmpty()){
 			throw new ArgumentException();
 		}
@@ -166,7 +199,12 @@ public class PolarisConverter {
 			path += "/";
 		}
 		
-		path += "result/" + n;
+		path += "result/";
+		
+		if (t != null && t.equalsIgnoreCase("thumb"))
+			path += "thumbnail/";
+		
+		path += n;
 		
 		//-----------------------------------------------------------------------------------
 		

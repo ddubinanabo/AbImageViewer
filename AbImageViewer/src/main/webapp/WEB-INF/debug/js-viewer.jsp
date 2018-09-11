@@ -56,6 +56,7 @@
 <script type="text/javascript" src="resources/js/ab.viewer/34.ab.image.loader.js"></script>
 
 <script type="text/javascript" src="resources/js/ab.viewer/35-01.ab.image.transfer.process.helper.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/35-02.ab.image.info.renderer.js"></script>
 
 <script type="text/javascript" src="resources/js/ab.viewer/35.ab.image.viewer.js"></script>
 

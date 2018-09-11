@@ -80,14 +80,14 @@ public class HomeController {
 	 * @throws Exception
 	 */
 	@RequestMapping(value = "/doc")
-	public void doc(String q, String n, HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public void doc(String q, String n, @RequestParam(required=false) String t, HttpServletRequest request, HttpServletResponse response) throws Exception {
 		if (q == null || q.isEmpty())
 			throw new ArgumentException();
 
 		if (n == null || n.isEmpty())
 			throw new ArgumentException();
 		
-		PolarisConverter.download(q, n, request, response);
+		PolarisConverter.download(q, n, t, request, response);
 	}
 	
 	/**

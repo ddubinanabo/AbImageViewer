@@ -39,7 +39,7 @@ public class AbImageData {
 	//-----------------------------------------------------------
 	
 	private AbImageInfo info;
-	
+
 	//-----------------------------------------------------------
 	
 	public int getWidth() { return width; }
@@ -75,5 +75,6 @@ public class AbImageData {
 	//-----------------------------------------------------------
 
 	public AbImageInfo getInfo() { return info; }
-	public void setInfo(AbImageInfo value) { info = value; }	
+	public void setInfo(AbImageInfo value) { info = value; }
+
 }

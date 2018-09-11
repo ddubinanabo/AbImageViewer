@@ -79,8 +79,9 @@ AbPage.prototype = {
 
 	//-----------------------------------------------------------
 
-	infoType: function() { return this.source && this.source.info ? this.source.info.type : null; },
+	infoFrom: function() { return this.source && this.source.info ? this.source.info.from : null; },
 	info: function() { return this.hasImageInfo() ? this.source.info.data : null; },
+	exif: function() { return this.hasImageInfo() ? this.source.info.exif : null; },
 	decoder: function() { return this.source && this.source.info ? this.source.info.decoder : null; },
 
 	//-----------------------------------------------------------

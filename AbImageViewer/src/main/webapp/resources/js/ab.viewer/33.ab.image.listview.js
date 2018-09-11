@@ -77,8 +77,8 @@ function AbImageListView(options){
 		var uid = e.attr('lt-uid');
 		
 		this.notifyObservers('click', { uid: uid, status: status });
-
-		if (e.hasClass('selected') || target.hasClass('checkmark') || target.hasClass('info') || (event.target && event.target.tagName.toLowerCase() == 'input')){
+		
+		if (e.hasClass('selected') || target.hasClass('no') || target.hasClass('display') || target.hasClass('text') || target.hasClass('checkmark') || target.hasClass('info') || (event.target && event.target.tagName.toLowerCase() == 'input')){
 			if (status == 'error' && target.hasClass('content')){
 				var index = e.index() + this.startIndex();
 
@@ -256,7 +256,18 @@ AbImageListView.prototype = {
 			break;
 		case 'modified':
 			var item = this.map[value.uid];
-			if (item) this.topic(item, 'image').attr('src', value.data);
+			if (item){
+				this.topic(item, 'image').attr('src', value.data);
+				
+				var page = this.pages.getById(value.uid);
+				if (page){
+					if (page.hasShapes()){
+						this.topic(item, 'annotation').show();
+					}else{
+						this.topic(item, 'annotation').hide();
+					}		
+				}
+			}
 			break;
 		}
 	},
@@ -1110,7 +1121,7 @@ AbImageListView.prototype = {
 
 	listItemImage: function (value){
 		var item = null, page = null;
-		var text = '';
+		var name = '', text = '';
 
 		if (AbCommon.isNumber(value)){
 			item = this.children[value];
@@ -1121,10 +1132,14 @@ AbImageListView.prototype = {
 		}
 
 		var info = page.info();
-		if (info && info.info)
-			text = info.info.text;
+		if (info){
+			name = info.name;
+			text = info.text;
+		}
 		
+		if (text == null || text == undefined) text = name;
 		if (text == null || text == undefined) text = '';
+		
 		this.topic(item, 'text').text(text);
 
 		item.attr('lt-status', page.statusText());
@@ -1133,6 +1148,12 @@ AbImageListView.prototype = {
 
 		if (image)
 			this.topic(item, 'image').attr('src', image.src);
+
+		if (page.hasShapes()){
+			this.topic(item, 'annotation').show();
+		}else{
+			this.topic(item, 'annotation').hide();
+		}
 
 		if (page.hasImageInfo()){
 			this.topic(item, 'info').bind('click', this.checkInfoHandler);

@@ -99,25 +99,40 @@ public class GraphicsUtil {
 	}
 	
 	//-----------------------------------------------------------
-	
+
 	public static ThumbnailResult thumbnail(File imgFile) {
-		return thumbnail(imgFile, AbImageDecoder.ABDEC_JPG);
+		return thumbnail(imgFile, null, AbImageDecoder.ABDEC_JPG);
 	}
 
 	public static ThumbnailResult thumbnail(File imgFile, AbImageDecoder decoder) {
+		return thumbnail(imgFile, null, decoder);
+	}
+
+	public static ThumbnailResult thumbnail(File imgFile, String outputPath) {
+		return thumbnail(imgFile, outputPath, AbImageDecoder.ABDEC_JPG);
+	}
+
+	public static ThumbnailResult thumbnail(File imgFile, String outputPath, AbImageDecoder decoder) {
 		ThumbnailResult r = new ThumbnailResult();
 		
 		try
 		{
 			File folder = imgFile.getParentFile();
+			File thumbFile = null;
 			
-			String thumbnail = PREFIX + imgFile.getName();
-			
-			String path = folder.getAbsolutePath();
-			if (path != null && path.length() >= 1 && path.charAt(path.length() - 1) != '/')
-				path += "/";
-			
-			File thumbFile = new File(path + thumbnail);
+			String thumbnail = null;
+			if (outputPath != null && !outputPath.isEmpty()) {
+				thumbFile = new File(outputPath);
+				thumbnail = thumbFile.getName();
+			}else {
+				thumbnail = PREFIX + imgFile.getName();
+				
+				String path = folder.getAbsolutePath();
+				if (path != null && path.length() >= 1 && path.charAt(path.length() - 1) != '/')
+					path += "/";
+				
+				thumbFile = new File(path + thumbnail);
+			}
 			
 			//-----------------------------------------------------------
 			

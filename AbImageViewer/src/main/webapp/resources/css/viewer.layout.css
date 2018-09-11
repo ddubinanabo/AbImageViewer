@@ -527,8 +527,12 @@ body {
 float: left로 설정함
 */
 .abv-thumb-popup .abv-thumbnails>section>.adv-list>ul>li ol {	
-	display: block;
-	float: left;
+	display2: block;
+	float2: left;
+	margin2: 5px 5px 15px 25px;
+	
+	display: inlnie-block;
+	vertical-align: top;
 	margin: 5px 5px 15px 25px;
 }
 

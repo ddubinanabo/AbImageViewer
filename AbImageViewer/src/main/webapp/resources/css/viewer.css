@@ -464,6 +464,15 @@ img.thumb {
 	box-shadow: 0px 0px 2px 2px rgba(185,105,40,.8);
 }
 
+.abv-thumbnails ol li.display {
+	width: 140px;
+	word-break: break-all;
+}
+
+.abv-thumbnails ol li.display .text {
+	font-size: 13px;
+}
+
 .abv-thumbnails ol li .checkpoint {
 	position: absolute;
 	top: 3px;
@@ -491,8 +500,8 @@ img.thumb {
 	position: absolute;
 	width: 24px;
 	height: 24px;
-	right: 0;
-	bottom: 0;
+	right: 3px;
+	bottom: 3px;
 	background: url(../icon/info.png);
 
 	opacity: 0.2;
@@ -502,6 +511,25 @@ img.thumb {
 
 .abv-thumbnails ol li .info:hover {
 	opacity: 0.8;
+}
+
+.abv-thumbnails ol li .annotation {
+	display: none;
+	
+	position: absolute;
+	width: 24px;
+	height: 24px;
+	left: 3px;
+	bottom: 3px;
+	background: url(../icon/annotation.png);
+
+	opacity: 0.4;
+
+	cursor: pointer;
+}
+
+.abv-thumbnails ol li .annotation:hover {
+	opacity2: 1;
 }
 
 .abv-thumbnails>section>nav {

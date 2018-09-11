@@ -584,48 +584,11 @@ AbImageViewer.prototype = {
 		switch(topic){
 		case 'info':
 			var page = this.images.getById(value);
-			var html = '';
-
-			var type = page.infoType();
-			var info = page.info();
-			var data = info;
-			var title = '이미지 정보';
-
-			switch (type){
-			case 'file':
-				html = '<table>';
-				html += '<tr><th>이름</th><td>' + AbCommon.escape(data.name) + '</td></tr>';
-				html += '<tr><th>크기</th><td>' + AbCommon.byteScope(data.size) + '</td></tr>';
-				if (data.type)
-					html += '<tr><th>타입</th><td>' + AbCommon.escape(data.type) + '</td></tr>';
-				if (AbCommon.isSetted(data.pages))
-					html += '<tr><th>이미지 수</th><td>' + data.pages + '</td></tr>';
-				if (AbCommon.isSetted(data.index))
-					html += '<tr><th>인덱스</th><td>' + data.index + '</td></tr>';
-				html += '</table>';
-				break;
-			case 'doc':
-				title = '문서 정보';
-				
-				html = '<table>';
-				if (data.name)
-					html += '<tr><th>이름</th><td>' + AbCommon.escape(data.name) + '</td></tr>';
-				if (data.size)
-					html += '<tr><th>크기</th><td>' + AbCommon.byteScope(data.size) + '</td></tr>';
-				if (data.type)
-					html += '<tr><th>타입</th><td>' + AbCommon.escape(data.type) + '</td></tr>';
-				if (AbCommon.isSetted(data.pages))
-					html += '<tr><th>페이지 수</th><td>' + data.pages + '</td></tr>';
-				if (AbCommon.isSetted(data.index))
-					html += '<tr><th>인덱스</th><td>' + data.index + '</td></tr>';
-				html += '</table>';
-				break;
-			}
-
-			if (html){
+			var rd = AbImageInfoRenderer.render(page);
+			if (rd){
 				AbMsgBox.open({
-					title: title,
-					textHtml: html,
+					title: rd.title,
+					textHtml: rd.html,
 				});	
 			}
 			break;
@@ -653,8 +616,6 @@ AbImageViewer.prototype = {
 				uid: value.uid,
 				status: value.status
 			});
-			
-			this.engine.selectPage(index);
 			break;
 		case 'select':
 			page = this.images.getById(value);
@@ -1120,7 +1081,7 @@ AbImageViewer.prototype = {
 					});
 			}.bind(this))
 			.then(function (e){
-				return this.setImage(pageData, e.image, e.data, e.type, e.decoder);	
+				return this.setImage(pageData, e.image, e.info, e.from, e.decoder);	
 			}.bind(this))
 			.catch(function (e){
 				pageData.page.status = AbPage.prototype.ERROR;
@@ -1131,7 +1092,7 @@ AbImageViewer.prototype = {
 			}.bind(this));
 	},
 
-	setImage: function(pageData, image, data, type, decoder){
+	setImage: function(pageData, image, imageInfo, from, decoder){
 		// 렌더링 디코더
 		var renderDecoder = 'jpeg';
 		if (decoder){
@@ -1142,8 +1103,8 @@ AbImageViewer.prototype = {
 			}
 		}
 
-		var info = { type: type, data: data, decoder: renderDecoder };
-
+		// 이미지 객체에 저장될 이미지 정보
+		var info = { from: from, data: imageInfo, decoder: renderDecoder };
 		var options = { info: info };
 		var isThumbnail = false;
 
@@ -1213,9 +1174,13 @@ AbImageViewer.prototype = {
 
 	//-----------------------------------------------------------
 
-	addImages: function (images, dataPreset){
-		if (!dataPreset) dataPreset = {};
-		if (!dataPreset.type) dataPreset.type = 'doc';
+	// images: 이미지 배열
+	// options: 옵션
+	// 		type: 이미지 타입(local/server)
+	//		decoder: 렌더링 힌트
+	addImages: function (images, options){
+		if (!options) options = {};
+		if (!options.from) options.from = 'server';
 
 		return new Promise(function (resolve, reject){
 			if (!$.isArray(images)){
@@ -1242,7 +1207,10 @@ AbImageViewer.prototype = {
 		
 						return new Promise(function (resolve, reject){
 							var img = {};
-							var dat = $.extend({}, dataPreset.data);
+							var imageInfo = $.extend({}, options.preset);
+							
+							if (src.info)
+								imageInfo = $.extend(imageInfo, src.info);
 
 							if (AbCommon.isString(src)){
 								img['image'] = src;
@@ -1260,16 +1228,13 @@ AbImageViewer.prototype = {
 							}
 
 							if (siz > 1){
-								dat['index'] = index;
-								dat['pages'] = siz;
+								imageInfo['index'] = index;
+								imageInfo['pages'] = siz;
 							}
-
-							if (src.info)
-								dat['info'] = src.info;
 							
-							var decoder = src.hasOwnProperty('decoder') ? src.decoder : dataPreset.decoder;
+							var decoder = src.hasOwnProperty('decoder') ? src.decoder : options.decoder;
 
-							var r = { type: dataPreset.type, decoder: decoder, image: img, data: dat };
+							var r = { from: options.from, decoder: decoder, image: img, info: imageInfo };
 							if (src.shapes)
 								r['shapes'] = src.shapes;
 

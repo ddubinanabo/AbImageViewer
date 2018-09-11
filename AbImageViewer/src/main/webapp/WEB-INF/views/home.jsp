@@ -70,6 +70,7 @@
 						<input type="checkbox" lt-topic="bookmark"/>
 						<span class="checkmark"></span>
 					</label>
+					<div lt-topic="annotation" class="annotation" title="주석/마스킹 있음"></div>
 					<div lt-topic="info" class="info" title="이미지 정보"></div>
 				</li>
 				<li class="display">

@@ -29,6 +29,8 @@ var AbImageLoader = {
 			};
 			decoder = this.test(data.name, data.type);
 		}
+		
+		var makeInfo = this.createResultInfoByFileData;
 
 		var kind = decoder ? decoder.kind : null;
 		var loader = null;
@@ -60,7 +62,8 @@ var AbImageLoader = {
 						};
 
 						worker.onmessage = function (e){
-							setTimeout(resolve.bind(null, { type: 'file', decoder: decoder, image: e.data.image, data: e.data.data }), 0);
+							var info = makeInfo(e.data.data);
+							setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: e.data.image, info: info }), 0);
 							worker.terminate();
 						};
 
@@ -77,7 +80,8 @@ var AbImageLoader = {
 					return new Promise(function (resolve, reject){
 						var reader = new FileReader();
 						reader.onload = function(event){
-							setTimeout(resolve.bind(null, { type: 'file', decoder: decoder, image: event.target.result, data: data }), 0);
+							var info = makeInfo(data);
+							setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: event.target.result, info: info }), 0);
 						};
 						reader.onerror = function (e){
 							reader.abort();
@@ -104,6 +108,15 @@ var AbImageLoader = {
 		loader.data = data;
 
 		return loader;
+	},
+	
+	createResultInfoByFileData: function (data){
+		return {
+			name: data.name,
+			text: data.name,
+			origin: data,
+			exif: null
+		};
 	},
 
 	test: function (name, type){
@@ -215,6 +228,8 @@ var AbImageLoader = {
 			}
 		};
 		clear.siz = this.docs.length;
+		
+		var makeInfo = this.createResultInfoByFileData;
 
 		var url = this.URLS.CONVERTER;
 		var siz = this.docs.length;
@@ -245,11 +260,11 @@ var AbImageLoader = {
 
 							$form.remove();
 							clear();
-
-							console.log('OK!!');
 							
-							if (AbCommon.isFunction(options.getList))
-								options.getList(r,  { type: 'doc', data: data, decoder: decoder });
+							if (AbCommon.isFunction(options.getList)){
+								var info = makeInfo(data);
+								options.getList(r, { from: 'doc', preset: info, decoder: decoder });
+							}
 
 							if (AbCommon.isFunction(callback))
 								callback();
