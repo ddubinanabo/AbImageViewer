@@ -309,7 +309,7 @@ AbToolbar.prototype = {
 	},
 
 	toolbarType: function(e){
-		var type = e.attr('tb-type');
+		var type = e ? e.attr('tb-type') : null;
 		if (type == 'radio'){
 			var group = e.attr('tb-group');
 			
@@ -417,7 +417,7 @@ AbToolbar.prototype = {
 
 	enableTopic: function(topic, enabled){
 		function enableElemnent(e, enabled){
-			if (!e.length) return;
+			if (!e || !e.length) return;
 
 			var htmlElement = e.get(0);
 			var tagName = htmlElement.tagName.toLowerCase();

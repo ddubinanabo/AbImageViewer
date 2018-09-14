@@ -6,8 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AbImageConfig {
 	
-	@Value("${image.file.accepts}")
-	public String ACCEPTS;
-	
+	@Value("#{'${image.file.accepts}'.trim().toLowerCase().split('\\s*\\,\\s*')}")
+	public String[] ACCEPTS;
 	
 }

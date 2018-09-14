@@ -46,6 +46,10 @@ function AbImageViewer(options){
 	var styleOptions = options.style || {};
 
 	//-----------------------------------------------------------
+	
+	this.config = options.config || {};
+
+	//-----------------------------------------------------------
 
 	this.margin = options.margin || null;
 	
@@ -88,6 +92,11 @@ function AbImageViewer(options){
 	this.listPopupStyle = styleOptions.listPopup || 'default'; // default (기본보기와 동일), readonly (읽기 전용)
 
 	//-----------------------------------------------------------
+	
+	// 툴바가 없을 시 기본 모드 설정 (edit/view) view가 디폴트
+	this.defaultMode = options.mode || 'view';
+
+	//-----------------------------------------------------------
 
 	this.thumbnailGenerator = new AbThumbnailGenerator();
 
@@ -128,24 +137,26 @@ AbImageViewer.prototype = {
 	PARALLELS: 3, // 이미지 전송 시 병렬 개수
 	
 	URLS: {
-		OPEN: 'http://localhost:8084/wiv/api/images',
+		CONFIG: 'api/config',
+		
+		OPEN: 'api/images',
 		
 		SAVE: {
-			ALLOC: 'http://localhost:8084/wiv/api/alloc',
-			MODIFY: 'http://localhost:8084/wiv/api/modify-prepare',
+			ALLOC: 'api/alloc',
+			MODIFY: 'api/modify-prepare',
 			
-			IMAGE: 'http://localhost:8084/wiv/api/save-image',
-			REMOVE: 'http://localhost:8084/wiv/api/remove',
+			IMAGE: 'api/save-image',
+			REMOVE: 'api/remove',
 			
-			COMPLETED: 'http://localhost:8084/wiv/api/save-completed',
+			COMPLETED: 'api/save-completed',
 		},
 		
 		PRINT: {
-			ALLOC: 'http://localhost:8084/wiv/api/print-support/alloc',
-			IMAGE: 'http://localhost:8084/wiv/api/print-support/save',
-			REMOVE: 'http://localhost:8084/wiv/api/print-support/remove',
+			ALLOC: 'api/print-support/alloc',
+			IMAGE: 'api/print-support/save',
+			REMOVE: 'api/print-support/remove',
 			
-			DOWNLOAD: 'http://localhost:8084/wiv/print-support/img',
+			DOWNLOAD: 'print-support/img',
 		},
 	},
 	
@@ -377,9 +388,12 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	sync: function(){
+		var mode = null;
+		
 		this.toolbar.forEach(function(topic, value){
 			switch (topic){
 			case 'mode':
+				mode = value;
 				this.engine.engineMode = value ? 'edit' : 'view';
 				this.showEditControls(value);
 				break;
@@ -388,6 +402,14 @@ AbImageViewer.prototype = {
 				break;
 			}
 		}.bind(this));
+		
+		// 기본 모드 설정
+		if (mode === null){
+			mode = this.defaultMode;
+			
+			this.engine.engineMode = mode;
+			this.showEditControls(mode === 'edit');
+		}
 
 		this.enableToolbarTopics();
 	},
@@ -1561,18 +1583,26 @@ AbImageViewer.prototype = {
 	},
 
 	saveToLocalText: function(){
+		var configSave = this.config.shape ? this.config.shape.save : 'all';
+		
+		var target = { text: '주석/마스킹', value: 'all' };
+		if (configSave === 'masking'){
+			target.text = '마스킹';
+			target.value = configSave;
+		}
+		
 		// 체크된 페이지 또는 전체 페이지 수집
 		var collect = this.collectSelectedOrAllPages();
 
 		var numShapes = 0, msg = null, isAll = false;
 		if (collect.type == 'all'){
 			numShapes = this.images.numShapes();
-			msg = '모든 이미지의 주석/마스킹 정보를 저장하시겠습니까';
+			msg = '모든 이미지의 '+target.text+' 정보를 저장하시겠습니까';
 			isAll = true;
 		}else{
 			for (var i = collect.pages.length - 1; i >= 0; i--)
 				numShapes += collect.pages[i].shapes.length;
-			msg = '선택한 이미지(들)의 주석/마스킹 정보를 저장하시겠습니까';
+			msg = '선택한 이미지(들)의 '+target.text+' 정보를 저장하시겠습니까';
 		}
 
 		if (!numShapes)
@@ -1604,6 +1634,10 @@ AbImageViewer.prototype = {
 						var nums = page.shapes.length;
 						for (var j=0; j < nums; j++){
 							var s = page.shapes[j];
+							
+							if (target.value === 'masking' && s.type !== 'masking')
+								continue;
+							
 							output.push(s.serialize());
 						}
 
@@ -2454,29 +2488,45 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 	
 	openImages: function (id){
-		var loader = $('#server-loading');
+		var loader = AbLoading.get({
+			text: '이미지들을 불러오는 중입니다...',
+		});
 		loader.show();
-
-		AbCommon.ajax({
-			caller: this,
-			title: '이미지 열기',
-			url: this.URLS.OPEN,
-			data: {
-				id: id,
-			},
-			
-			success: function (r){
-				if (r && $.isArray(r) && r.length)
-					this.addImages(r);
-					
-				loader.hide();
+		
+		var viewer = this;
+		
+		return new Promise(function(resolve, reject){
+			AbCommon.ajax({
+				caller: viewer,
+				title: '이미지 열기',
+				url: viewer.URLS.OPEN,
+				data: {
+					id: id,
+				},
 				
-				this._requestParam = id;
-			}.bind(this),
+				success: function (r){
+					viewer._requestParam = id;
+					
+					var promise = null;
+					if (r && $.isArray(r) && r.length){
+						promise = viewer.addImages(r);
+					}else{
+						promise = Promise.resolve(0);
+					}
+					
+					promise.then(function(){
+						loader.hide();
+						
+						resolve();
+					});
+				},
 
-			error: function (r){
-				loader.hide();
-			}.bind(this),
+				error: function (r){
+					loader.hide();
+					
+					reject(r);
+				},
+			});
 		});
 	},
 

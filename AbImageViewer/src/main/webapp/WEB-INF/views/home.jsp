@@ -41,6 +41,9 @@
 	
 	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
 	<script>
+	AbViewController.onInitailize = function(viewer){
+		//AbMsgBox.show('오케이');
+	};
 	</script>
 	<style>
 	</style>
@@ -50,7 +53,16 @@
 	<c:if test="${not empty id}">
 		<input type="hidden" id="param-id" value="${id}"/>
 	</c:if>
+	<c:if test="${not empty q}">
+		<input type="hidden" id="param-q" value="${q}"/>
+	</c:if>
 	<!-- 인자 전달 (끝) -->
+
+	<!-- 테스트	
+	<div style="position: absolute; left: 0; top: 0; z-index: 200; background-color: white; padding: 10px;">
+		${config.shape.save}
+	</div>
+	-->
 
 	<div style="display: none;">
 		<!-- 섬네일 목록 아이템 시작 -->
@@ -93,7 +105,7 @@
 		<!--<div>뷰어헤더</div>-->
 	</header>
 	<nav class="abv-nav noselection">
-		<div class="abv-toolbar tb-toolbar main-toolbar" id="tb-main">
+		<div class="abv-toolbar tb-toolbar main-toolbar hide" id="tb-main">
 			<!--툴바-->
 			<ul class="horiz tb-main">
 				<li tb-topic="file.open" title="이미지 열기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_01.png"/></li>
@@ -239,7 +251,7 @@
 					</div>
 				</div>
 			</div>
-		</section>		
+		</section>	
 		<aside class="abv-right-side noselection tb-toolbar" id="rb-right">
 			<div class="vblock" title="주석"></div>
 			<ul class="vert">
@@ -446,7 +458,7 @@
 				<div class="window">
 					<ul class="pl-loading fhoriz fcenter">
 						<li><div class="loader"></div></li>
-						<li class="text">이미지들을 불러오는 중입니다...</li>
+						<li class="text" pl-topic="text"></li>
 					</ul>
 				</div>
 			</li>

@@ -185,39 +185,49 @@ AbWaterMark.prototype = {
 		this.$source = null;
 		this.$type = 'image';
 		this.$status = 'loading';
+		
+		return new Promise(function (resolve, reject){
+			if (value instanceof AbImage){
+				value.image()
+					.then(function (e){
+						this.$source = e;
+						this.$status = 'loaded';
 
-		if (value instanceof AbImage){
-			value.image()
-				.then(function (e){
-					this.$source = e;
-					this.$status = 'loaded';
+						this.render();
+						
+						resolve();
+					}.bind(this))
+					.catch(function(e){
+						this.error(e);
+					}.bind(this));
+			}else if (value instanceof Image){
+				this.$source = value;
+				this.$status = 'loaded';
 
-					this.render();
-				}.bind(this))
-				.catch(function(e){
-					this.error(e);
-				}.bind(this));
-		}else if (value instanceof Image){
-			this.$source = value;
-			this.$status = 'loaded';
+				this.render();
+				
+				resolve();
+			}else if (AbCommon.isString(value)){
+				AbCommon.loadImage(value)
+					.then(function (e){
+						this.$source = e;
+						this.$status = 'loaded';
 
-			this.render();
-		}else if (AbCommon.isString(value)){
-			AbCommon.loadImage(value)
-				.then(function (e){
-					this.$source = e;
-					this.$status = 'loaded';
+						this.render();
+						
+						resolve();
+					}.bind(this))
+					.catch(function (e){
+						this.error(e);
+					}.bind(this));
+			}else{
+				this.$status = 'loaded';
 
-					this.render();
-				}.bind(this))
-				.catch(function (e){
-					this.error(e);
-				}.bind(this));
-		}else{
-			this.$status = 'loaded';
-
-			this.render();
-		}
+				this.render();
+				
+				resolve();
+			}
+		}.bind(this));
 	},
 
 	//-----------------------------------------------------------

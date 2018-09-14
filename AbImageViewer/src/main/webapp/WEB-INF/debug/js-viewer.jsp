@@ -10,6 +10,7 @@
 <script type="text/javascript" src="resources/js/ab.viewer/04.ab.css.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/05.ab.duration.timer.js"></script>
 
+<script type="text/javascript" src="resources/js/ab.viewer/06-01.ab.loading.js"></script>
 
 <script type="text/javascript" src="resources/js/ab.viewer/06.ab.common.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/07.ab.graphics.js"></script>

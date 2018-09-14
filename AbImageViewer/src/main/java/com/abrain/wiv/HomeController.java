@@ -1,13 +1,11 @@
 package com.abrain.wiv;
 
 import java.io.File;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,18 +13,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.abrain.wiv.config.AbImageConfig;
+import com.abrain.wiv.config.AbImageViewerConfig;
 import com.abrain.wiv.converters.PolarisConverter;
 import com.abrain.wiv.data.AbBinaryData;
-import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageType;
-import com.abrain.wiv.data.externals.AbExtImages;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.EmptyDataException;
 import com.abrain.wiv.io.AbPartialFile;
 import com.abrain.wiv.services.DocService;
 import com.abrain.wiv.utils.DebugUtil;
-import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.WebUtil;
 
 /**
@@ -39,7 +34,23 @@ public class HomeController {
 	private DocService svc;
 	
 	@Autowired
-	private AbImageConfig imageConfig;
+	private AbImageViewerConfig viewerConfig;
+
+	//-----------------------------------------------------------
+	
+	private void prepare(
+			String id, String q,
+			Model model) throws Exception {
+		
+		if (id != null && !id.isEmpty())
+			model.addAttribute("id", id);
+		else if (q != null && !q.isEmpty())
+			model.addAttribute("q", q);
+		
+		model.addAttribute("config", viewerConfig);
+	}
+
+	//-----------------------------------------------------------
 
 	/**
 	 * 뷰어 페이지
@@ -49,9 +60,14 @@ public class HomeController {
 	 * @throws Exception
 	 */
 	@RequestMapping(value = "/", method = RequestMethod.GET)
-	public String home(HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public String home(
+			@RequestParam(defaultValue="") String q, 
+			Model model) throws Exception {
 		
-		//System.out.println("[ACCEPTS] " + imageConfig.ACCEPTS);
+		prepare(null, q, model);
+		
+		//System.out.println("[VIEWER][IMAGE][SAVE]=" + viewerConfig.image.save);
+		//System.out.println("[VIEWER]=" + viewerConfig.toJSON());
 		
 		return "home";
 	}
@@ -64,9 +80,10 @@ public class HomeController {
 	 * @throws Exception
 	 */
 	@RequestMapping(value = "/{id}", method = RequestMethod.GET)
-	public String homeWithId(@PathVariable(value="id") String id, HttpServletRequest request, HttpServletResponse response, Model model) throws Exception {
-		if (id != null && !id.isEmpty())
-			model.addAttribute("id", id);
+	public String homeWithId(
+			@PathVariable(value="id") String id,
+			Model model) throws Exception {
+		prepare(id, null, model);
 		
 		return "home";
 	}

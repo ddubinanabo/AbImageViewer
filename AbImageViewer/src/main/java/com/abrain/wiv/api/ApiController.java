@@ -4,25 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
-import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import com.abrain.wiv.abstracts.AbstractApiController;
+import com.abrain.wiv.config.AbImageViewerConfig;
 import com.abrain.wiv.converters.PolarisConverter;
 import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbPlainText;
 import com.abrain.wiv.exceptions.ArgumentException;
-import com.abrain.wiv.exceptions.EmptyDataException;
 import com.abrain.wiv.io.AbPartialFile;
 import com.abrain.wiv.services.DocService;
 import com.abrain.wiv.utils.WebUtil;
@@ -35,8 +32,17 @@ public class ApiController extends AbstractApiController {
 	
 	@Autowired
 	private DocService svc;
+	
+	@Autowired
+	private AbImageViewerConfig viewerConfig;
 
 	//-----------------------------------------------------------
+
+	@RequestMapping(value="/api/config", method=RequestMethod.POST)
+	@ResponseBody
+	public Object config () throws Exception{
+		return viewerConfig;
+	}
 	
 	/**
 	 * 문서 컨버팅

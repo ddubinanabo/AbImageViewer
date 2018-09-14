@@ -285,6 +285,17 @@ public class AbExtImages {
 				}
 			}
 		}
+		public ImageFileFilter(String[] accepts) {
+			if (accepts != null) {
+				for (int i=0; i < accepts.length; i++) {
+					String ext = accepts[i].trim();
+					if (ext.isEmpty())
+						continue;
+					
+					this.accepts.add(ext.toLowerCase());
+				}
+			}
+		}
 		
 		private List<String> accepts = new ArrayList<>();
 		
