@@ -46,7 +46,7 @@ var AbExifMetaReader = {
 			
 			var cnt = 0;
 			for (var p in gpsData){
-				if (data.hasOwnProperty(p) && gpsData[p]){
+				if (gpsData.hasOwnProperty(p) && gpsData[p]){
 					if (gpsData[p])
 						cnt++;
 				}
