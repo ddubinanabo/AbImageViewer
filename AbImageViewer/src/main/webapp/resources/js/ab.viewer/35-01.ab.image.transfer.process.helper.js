@@ -193,6 +193,7 @@ AbImageTransferProcessHelper.prototype = {
 			}
 
 			map[page.uid] = imgInfos.length;
+			
 			imgInfos.push({
 				width: type ? 0 : page.source.width,
 				height: type ? 0 : page.source.height,
@@ -211,6 +212,7 @@ AbImageTransferProcessHelper.prototype = {
 			length: pageInfos.length,
 			pageInfos: pageInfos,
 			imgInfos: imgInfos,
+			source: source,
 			map: map,
 		};
 		
@@ -271,9 +273,9 @@ AbImageTransferProcessHelper.prototype = {
 						pages: self.length
 					},
 					success: function(r){
-						console.log('[SEND-SERVER] allocated (' + r.text + ')');
+						console.log('[SEND-SERVER] allocated (' + r.key + ') ' + (r.time ? r.time : ''));
 						
-						self.transferID = r.text;
+						self.transferID = r.key;
 						
 						resolve(true);
 					},
@@ -304,10 +306,9 @@ AbImageTransferProcessHelper.prototype = {
 		var handlers = this.handlers;
 		
 		var printShapes = this.printShapes === true;
-
 		var data = this.data;
 		
-		var pageInfo = data.pageInfos[index];
+		var pageInfo = data.source[index];
 		var current = {
 			index: index,
 			pageInfo: pageInfo,
@@ -350,7 +351,7 @@ AbImageTransferProcessHelper.prototype = {
 	submit: function (index){
 		var data = this.data;
 		
-		var pageInfo = data.pageInfos[index];
+		var pageInfo = data.source[index];
 		var current = {
 			index: index,
 			pageInfo: pageInfo,
@@ -489,7 +490,7 @@ AbImageTransferProcessHelper.prototype = {
 			if (errmsg)
 				reject(new Error(errmsg));
 			
-			var length = self.data.pageInfos.length;
+			var length = self.data.source.length;
 			if (!length)
 				reject(new Error(self.msgs.empty));
 			

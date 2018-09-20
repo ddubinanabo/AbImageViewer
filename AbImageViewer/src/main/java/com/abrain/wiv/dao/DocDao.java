@@ -8,8 +8,11 @@ import org.springframework.stereotype.Repository;
 import com.abrain.wiv.abstracts.AbstractDao;
 import com.abrain.wiv.data.AbBinaryData;
 import com.abrain.wiv.data.AbImageDbData;
+import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbImageType;
+import com.abrain.wiv.data.exif.AbExif;
+import com.abrain.wiv.data.exif.AbExifGPS;
 
 @SuppressWarnings("unchecked")
 @Repository
@@ -32,14 +35,18 @@ public class DocDao extends AbstractDao {
 			String id,
 			int seq,
 			String ip,
-			AbImagePack.AbImageInfo imageInfo,
+			AbImagePack.ImageInfo imageInfo,
 			byte[] imageSource,
 			byte[] imageResult,
-			AbImagePack.AbThumbnailInfo thumbInfo,
+			AbImagePack.ThumbnailInfo thumbInfo,
 			byte[] thumbSource){
 		HashMap<String, Object> param = new HashMap<String, Object>();
+		
 		param.put("ID", id);
 		param.put("SEQ", seq);
+		param.put("IP", ip);
+		param.put("ROT", imageInfo.angle);
+		param.put("IMG_DEC", imageInfo.decoder);
 		param.put("WID", imageInfo.width);
 		param.put("HGT", imageInfo.height);
 		param.put("IMG_SRC", imageSource);
@@ -47,16 +54,70 @@ public class DocDao extends AbstractDao {
 		param.put("IMG_RSLT", imageResult);
 		param.put("IMG_RSLT_SIZ", imageResult != null ? imageResult.length : 0);
 		param.put("SHAPES", imageInfo.shapes);
-		param.put("IMG_DEC", imageInfo.decoder);
 		
 		param.put("THUMB_WID", thumbInfo.width);
 		param.put("THUMB_HGT", thumbInfo.height);
 		param.put("THUMB_SRC", thumbSource);
 		param.put("THUMB_SRC_SIZ", thumbSource.length);
 		
-		//-----------------------------------------------------------
+		if (imageInfo.hasInfo()) {
+			AbImageInfo info = imageInfo.info;
+			
+			param.put("INF_NM", info.getName());
+			param.put("INF_TXT", info.getText());
+			param.put("INF_TP", info.getType());
+			param.put("INF_ORG_NM", info.getOriginName());
+			param.put("INF_ORG_SIZ", info.getOriginSize());
+			param.put("INF_ORG_PAGES", info.getOriginPages());
+			param.put("INF_ORG_IDX", info.getOriginIndex());
+			
+			if (info.hasExif()) {
+				AbExif exif = info.getExif();
+				
+				param.put("EXIF_YN", "Y");
+				param.put("EXIF_MAKE", exif.getMake());
+				param.put("EXIF_MODEL", exif.getModel());
+				param.put("EXIF_SW", exif.getSoftware());
+				param.put("EXIF_DT", exif.getDatetime());
+				param.put("EXIF_X_DIM", exif.getXdimension());
+				param.put("EXIF_Y_DIM", exif.getYdimension());
+				param.put("EXIF_OR", exif.getOrientation());
+				param.put("EXIF_X_RES", exif.getXresolution());
+				param.put("EXIF_Y_RES", exif.getYresolution());
+				param.put("EXIF_RES_UNIT", exif.getResolutionUnit());
+				
+				if (exif.hasGPS()) {
+					AbExifGPS gps = exif.getGps();
+					
+					Number[] lat = gps.getLat();
+					Number[] lng = gps.getLng();
+					
+					param.put("EXIF_GPS_YN", "Y");
+					param.put("EXIF_GPS_LATREF", gps.getLatRef());
+					param.put("EXIF_GPS_LAT", gps.degreeLat());
+					param.put("EXIF_GPS_LAT_D", lat[0]);
+					param.put("EXIF_GPS_LAT_M", lat[1]);
+					param.put("EXIF_GPS_LAT_S", lat[2]);
+					param.put("EXIF_GPS_LNGREF", gps.getLngRef());
+					param.put("EXIF_GPS_LNG", gps.degreeLng());
+					param.put("EXIF_GPS_LNG_D", lng[0]);
+					param.put("EXIF_GPS_LNG_M", lng[1]);
+					param.put("EXIF_GPS_LNG_S", lng[2]);
+					param.put("EXIF_GPS_ALTREF", gps.getAltRef());
+					param.put("EXIF_GPS_ALT", gps.getAlt());
+				}else {
+					param.put("EXIF_GPS_YN", "N");
+				}
+			}else {
+				param.put("EXIF_YN", "N");
+				param.put("EXIF_GPS_YN", "N");
+			}
+		}else {
+			param.put("EXIF_YN", "N");
+			param.put("EXIF_GPS_YN", "N");
+		}
 		
-		param.put("IP", ip);
+		//-----------------------------------------------------------		
 			
 		sqlSession.insert("doc-regist", param);
 	}

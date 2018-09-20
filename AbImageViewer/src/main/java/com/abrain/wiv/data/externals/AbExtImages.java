@@ -4,13 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
-import javax.imageio.stream.ImageOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FilenameUtils;
@@ -21,7 +18,9 @@ import com.abrain.wiv.data.AbImageDecoder;
 import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.AbImageType;
 import com.abrain.wiv.data.SplayTree;
+import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.exceptions.NotFoundFileException;
+import com.abrain.wiv.readers.AbExifReader;
 import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.GraphicsUtil;
 import com.abrain.wiv.utils.WebUtil;
@@ -137,10 +136,22 @@ public class AbExtImages {
 		for (File file : files) {
 			String filename = file.getName();
 			String basename = FilenameUtils.getBaseName(filename);
+
+			//-----------------------------------------------------------
+			
+			String mimeType = FileUtil.contentType(file);
+			String extension = FilenameUtils.getExtension(filename);
+			String decoder = AbImageDecoder.renderingHint(extension, mimeType);
 			
 			//-----------------------------------------------------------
 			
-			//System.out.println("[IMAGE FILE] " + filename);
+			System.out.println("=====================================================");
+			System.out.println("[IMAGE FILE] " + filename + "(" + mimeType + ") " + decoder );
+			System.out.println("-----------------------------------------------------");
+			
+			//-----------------------------------------------------------
+			
+			AbExif exif = AbExifReader.read(file);
 			
 			//-----------------------------------------------------------
 			
@@ -158,6 +169,11 @@ public class AbExtImages {
 			AbImageInfo imgInfo = new AbImageInfo();
 			imgInfo.setName(filename);
 			imgInfo.setText(filename);
+			imgInfo.setType(mimeType);
+			imgInfo.setSize(file.length());
+			
+			if (exif != null)
+				imgInfo.setExif(exif);
 			
 			String cgi = "q=" + path + "&n=" + name;
 			String thumbCgi = "c=Y&" + cgi;
@@ -168,7 +184,6 @@ public class AbExtImages {
 			if (node != null) {
 				String thumbFilename = node.value().getName();
 				
-				String thPath = URLEncoder.encode(thumbPath, "UTF-8");
 				String thName = URLEncoder.encode(thumbFilename, "UTF-8");
 				
 				thumbCgi = "q=" + path + "&n=" + thName;
@@ -183,7 +198,7 @@ public class AbExtImages {
 			if (annotation != null)
 				img.setShapes(annotation);
 			img.setInfo(imgInfo);
-			img.setDecoder("jpg");
+			img.setDecoder(decoder);
 			
 			images.add(img);
 		}
@@ -200,12 +215,13 @@ public class AbExtImages {
 			WebUtil.download(response, file, name);			
 		}else if (type == AbImageType.ABIMG_THUMBNAIL) {
 			if (needCreate) {
-				String extension = FilenameUtils.getExtension(name);
-				AbImageDecoder decoder = AbImageDecoder.fromExtension(extension);
-				
 				File file = new File(imgPath + "/" + name);
+				String extension = FilenameUtils.getExtension(name);
+				String mimeType = FileUtil.contentType(file);
 				
-				GraphicsUtil.ThumbnailImageResult r = GraphicsUtil.renderThumbnail(file);
+				AbImageDecoder decoder = AbImageDecoder.analysis(extension, mimeType);
+				
+				GraphicsUtil.ThumbnailImageResult r = GraphicsUtil.renderThumbnail(file, decoder);
 				if (r.e != null)
 					throw r.e;
 				
@@ -246,13 +262,25 @@ public class AbExtImages {
 		//-----------------------------------------------------------
 		
 		String filename = file.getName();
-		
+		String extension = FilenameUtils.getExtension(filename);
 		String encPath = URLEncoder.encode(path, "UTF-8");
+		
+		String mimeType = FileUtil.contentType(file);
+		
+		String decoder = AbImageDecoder.renderingHint(extension, mimeType);
+		
+		//-----------------------------------------------------------
+		
+		AbExif exif = AbExifReader.read(file);
 		
 		AbImageInfo imgInfo = new AbImageInfo();
 		imgInfo.setName(filename);
 		imgInfo.setText(filename);
+		imgInfo.setType(mimeType);
 		
+		if (exif != null)
+			imgInfo.setExif(exif);
+	
 		String cgi = "q=" + encPath;
 		
 		AbImageData img = new AbImageData(
@@ -262,7 +290,7 @@ public class AbExtImages {
 		if (annotation != null)
 			img.setShapes(annotation);
 		img.setInfo(imgInfo);
-		img.setDecoder("jpg");
+		img.setDecoder(decoder);
 
 		return img;
 	}

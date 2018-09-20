@@ -307,7 +307,7 @@ AbImageListView.prototype = {
 			item = this.map[uid];
 			if (item && item.attr('lt-status') !== 'loaded')
 				this.listItemImage(uid);
-
+			break;
 		case 'page.remove':
 			this.removeBookmarks();
 			break;

@@ -29,6 +29,7 @@ public class ExtController {
 		String q,
 		String n,
 		@RequestParam(defaultValue="N") String c,
+		@RequestParam(defaultValue="") String d,
 		@RequestParam(defaultValue="") String t,
 		HttpServletResponse response) throws Exception {
 		if (q == null || q.isEmpty())
@@ -51,6 +52,7 @@ public class ExtController {
 	public void file(
 		String q,
 		@RequestParam(defaultValue="N") String c,
+		@RequestParam(defaultValue="") String d,
 		@RequestParam(defaultValue="") String t,
 		HttpServletResponse response) throws Exception {
 		if (q == null || q.isEmpty())

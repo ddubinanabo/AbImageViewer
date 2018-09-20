@@ -12,6 +12,8 @@ import javax.imageio.ImageIO;
 import javax.imageio.stream.ImageOutputStream;
 import javax.swing.ImageIcon;
 
+import org.apache.commons.io.FilenameUtils;
+
 import com.abrain.wiv.data.AbImageDecoder;
 
 public class GraphicsUtil {
@@ -29,8 +31,18 @@ public class GraphicsUtil {
 	}
 	
 	//-----------------------------------------------------------
-
+	
 	public static ThumbnailImageResult renderThumbnail(File imgFile) {
+		String filename = imgFile.getName();
+		String extension = FilenameUtils.getExtension(filename);
+		String mimeType = FileUtil.contentType(imgFile);
+		
+		AbImageDecoder decoder = AbImageDecoder.analysis(extension, mimeType);
+	
+		return renderThumbnail(imgFile, decoder);
+	}
+
+	public static ThumbnailImageResult renderThumbnail(File imgFile, AbImageDecoder decoder) {
 		ThumbnailImageResult r = new ThumbnailImageResult();
 		
 		try
@@ -57,7 +69,9 @@ public class GraphicsUtil {
 			
 			//-----------------------------------------------------------
 			
-			BufferedImage dest = new BufferedImage(thumbWidth, thumbHeight, BufferedImage.TYPE_INT_RGB);
+			int imageType = decoder == AbImageDecoder.ABDEC_PNG ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB;
+			
+			BufferedImage dest = new BufferedImage(thumbWidth, thumbHeight, imageType);
 			dest.setRGB(0, 0, thumbWidth, thumbHeight, pixels, 0, thumbWidth);
 			
 			r.srcWidth = srcWidth;
@@ -136,7 +150,7 @@ public class GraphicsUtil {
 			
 			//-----------------------------------------------------------
 			
-			ThumbnailImageResult tr = renderThumbnail(imgFile);
+			ThumbnailImageResult tr = renderThumbnail(imgFile, decoder);
 			if (tr.e != null) {
 				r.e = tr.e;
 				return r;

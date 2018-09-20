@@ -20,6 +20,10 @@ function AbViewerEngine(options){
 	};
 	
 	//-----------------------------------------------------------
+	
+	this.enableNotifySelectPage = AbCommon.isBool(options.notifySelectPage) ? options.notifySelectPage : true;
+	
+	//-----------------------------------------------------------
 
 	this.waterMark = options.waterMark && options.waterMark instanceof AbWaterMark ? options.waterMark : null;
 	if (this.waterMark)
@@ -2877,7 +2881,8 @@ AbViewerEngine.prototype = {
 						}
 					}
 					// Notify
-					this.notifyObservers('page', 'select');
+					if (this.enableNotifySelectPage === true)
+						this.notifyObservers('page', 'select');
 				}
 			}
 		}
@@ -3364,7 +3369,7 @@ AbViewerEngine.prototype = {
 				
 				//-----------------------------------------------------------
 	
-				var image = page.image();
+				var image = page.image({ origin: true });
 				if (image){
 					var pageAngle = page.angle;
 					//var pageAngle = 380 % 360;
@@ -3575,13 +3580,20 @@ AbViewerEngine.prototype = {
 		if (this.animateStates.$engine === true)
 			return;
 
-		this.exec(function (){
-			var ctx = this.viewContext;
+//		this.exec(function (){
+//			var ctx = this.viewContext;
+//
+//			if (!this.style.color)
+//				this.clearCanvas(ctx);
+//			ctx.drawImage(this.context.canvas, 0, 0);
+//		});
+		
+		var ctx = this.viewContext;
 
-			if (!this.style.color)
-				this.clearCanvas(ctx);
-			ctx.drawImage(this.context.canvas, 0, 0);
-		});
+		if (!this.style.color)
+			this.clearCanvas(ctx);
+		ctx.drawImage(this.context.canvas, 0, 0);
+		
 	},
 
 	animate: function (){

@@ -81,7 +81,7 @@ AbPage.prototype = {
 
 	infoFrom: function() { return this.source && this.source.info ? this.source.info.from : null; },
 	info: function() { return this.hasImageInfo() ? this.source.info.data : null; },
-	exif: function() { return this.hasImageInfo() ? this.source.info.exif : null; },
+	exif: function() { return this.hasImageInfo() && this.source.info.data ? this.source.info.data.exif : null; },
 	decoder: function() { return this.source && this.source.info ? this.source.info.decoder : null; },
 
 	//-----------------------------------------------------------
@@ -90,12 +90,15 @@ AbPage.prototype = {
 		return this.source;
 	},
 
-	image: function(){
+	image: function(options){
 		if (this.source instanceof AbImage){
 			if (this.source.hasImage())
 				return this.source.imageElement();
-			else if (this.source.hasThumbnail())
+			else if (this.source.hasThumbnail()){
+				if (options && options.origin === true)
+					return this.source.originThumbnailElement();
 				return this.source.thumbnailElement();
+			}
 			return null;
 		}
 		return this.source;

@@ -30,7 +30,7 @@ var AbImageLoader = {
 			decoder = this.test(data.name, data.type);
 		}
 		
-		var makeInfo = this.createResultInfoByFileData;
+		var makeInfo = this.makeResultInfoByFileData;
 
 		var kind = decoder ? decoder.kind : null;
 		var loader = null;
@@ -62,9 +62,15 @@ var AbImageLoader = {
 						};
 
 						worker.onmessage = function (e){
-							var info = makeInfo(e.data.data);
-							setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: e.data.image, info: info }), 0);
 							worker.terminate();
+							
+							makeInfo(e.data.data, { exif: 'read' })
+								.then(function(info){
+									setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: e.data.image, info: info }), 0);
+								})
+								.catch(function(e){
+									setTimeout(reject.bind(null,e), 0);
+								});
 						};
 
 						worker.postMessage(data);
@@ -80,8 +86,13 @@ var AbImageLoader = {
 					return new Promise(function (resolve, reject){
 						var reader = new FileReader();
 						reader.onload = function(event){
-							var info = makeInfo(data);
-							setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: event.target.result, info: info }), 0);
+							makeInfo(data, { exif: 'read' })
+								.then(function(info){
+									setTimeout(resolve.bind(null, { from: 'local', decoder: decoder, image: event.target.result, info: info }), 0);
+								})
+								.catch(function(e){
+									setTimeout(reject.bind(null,e), 0);
+								});
 						};
 						reader.onerror = function (e){
 							reader.abort();
@@ -110,13 +121,39 @@ var AbImageLoader = {
 		return loader;
 	},
 	
-	createResultInfoByFileData: function (data){
-		return {
+	makeResultInfoByFileData: function (data, options){
+		var promise = null;
+		var meta = {
 			name: data.name,
 			text: data.name,
+			type: data.type,
 			origin: data,
 			exif: null
 		};
+		
+		var self = this;
+		
+		if (options && options.exif === 'read'){
+			return new Promise(function (resolve, reject){
+				try
+				{
+					AbVendor.exif('file', data, function(pictureMetaData, instance){
+						meta.exif = AbExifMetaReader.read(pictureMetaData);
+						
+						console.log(pictureMetaData);
+						console.log(meta.exif);
+						
+						resolve(meta);
+					});
+				}
+				catch (e)
+				{
+					reject(e);
+				}
+			});
+		}else{
+			return Promise.resolve(meta);
+		}
 	},
 
 	test: function (name, type){
@@ -229,7 +266,7 @@ var AbImageLoader = {
 		};
 		clear.siz = this.docs.length;
 		
-		var makeInfo = this.createResultInfoByFileData;
+		var makeInfo = this.makeResultInfoByFileData;
 
 		var url = this.URLS.CONVERTER;
 		var siz = this.docs.length;
@@ -262,8 +299,13 @@ var AbImageLoader = {
 							clear();
 							
 							if (AbCommon.isFunction(options.getList)){
-								var info = makeInfo(data);
-								options.getList(r, { from: 'doc', preset: info, decoder: decoder });
+								makeInfo(data)
+									.then(function(info){
+										options.getList(r, { from: 'doc', preset: info, decoder: decoder });
+									})
+									.catch(function(e){
+										console.log(e);
+									});
 							}
 
 							if (AbCommon.isFunction(callback))

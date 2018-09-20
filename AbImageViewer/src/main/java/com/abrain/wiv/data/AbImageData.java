@@ -1,5 +1,10 @@
 package com.abrain.wiv.data;
 
+/**
+ * 브라우저에 제공하는 이미지 정보
+ * @author Administrator
+ *
+ */
 public class AbImageData {
 	public AbImageData(){}
 	public AbImageData(String image, String thumbnail){
@@ -27,10 +32,19 @@ public class AbImageData {
 		this.height = height;
 		this.shapes = shapes;
 	}
+	public AbImageData(String image, String thumbnail, int angle, int width, int height, String shapes, String decoder){
+		this.image = image;
+		this.thumbnail = thumbnail;
+		this.decoder = decoder;
+		this.angle = angle;
+		this.width = width;
+		this.height = height;
+		this.shapes = shapes;
+	}
 	
 	//-----------------------------------------------------------
 	
-	private int width, height;
+	private int angle, width, height;
 	private String decoder;
 	private String image;
 	private String thumbnail;
@@ -41,6 +55,9 @@ public class AbImageData {
 	private AbImageInfo info;
 
 	//-----------------------------------------------------------
+	
+	public int getAngle() { return angle; }
+	public void setAngle(int value) { angle = value; }
 	
 	public int getWidth() { return width; }
 	public void setWidth(int value) { width = value; }

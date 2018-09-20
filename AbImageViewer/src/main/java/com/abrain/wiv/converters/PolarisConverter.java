@@ -23,9 +23,12 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.data.AbImageData;
+import com.abrain.wiv.data.AbImageDecoder;
 import com.abrain.wiv.data.AbImageInfo;
+import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.DocConverterException;
+import com.abrain.wiv.readers.AbExifReader;
 import com.abrain.wiv.utils.DebugUtil;
 import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.GraphicsUtil;
@@ -47,6 +50,8 @@ public class PolarisConverter {
 	private static final int IMG_HEIGHT = 990;
 	
 	private static final String IMG_TYPE = "JPEG";
+	private static final AbImageDecoder IMG_DECODER = AbImageDecoder.ABDEC_JPG;
+	private static final String IMG_MIMETYPE = "image/jpeg";
 	
 	//-----------------------------------------------------------------------------------
 	
@@ -138,8 +143,11 @@ public class PolarisConverter {
 				continue;
 
 			String filename = file.getName();
+//			String extension = FilenameUtils.getExtension(filename);
+//			String mimeType = FileUtil.contentType(file);
+//			String decoder = AbImageDecoder.renderingHint(extension, mimeType);
 			
-			GraphicsUtil.ThumbnailResult r = GraphicsUtil.thumbnail(file, thumbDirPath + "/" + file.getName());
+			GraphicsUtil.ThumbnailResult r = GraphicsUtil.thumbnail(file, thumbDirPath + "/" + file.getName(), IMG_DECODER);
 			if (r.e != null){
 				throw r.e;
 			}
@@ -158,16 +166,25 @@ public class PolarisConverter {
 			String thumbUrl = url + r.name + "&t=thumb";
 			
 			AbImageData img = new AbImageData(imageUrl, thumbUrl, r.srcWidth, r.srcHeight);
+			img.setDecoder(AbImageDecoder.toString(IMG_DECODER));
+			
+			//-----------------------------------------------------------
+			
+			//AbExif exif = AbExifReader.read(file);
 			
 			AbImageInfo info = new AbImageInfo();
 			info.setName(filename);
 			info.setText(filename);
+			info.setType(IMG_MIMETYPE);
+			info.setSize(file.length());
 			
 			info.setOriginName(name);
 			info.setOriginIndex(i);
 			info.setOriginPages(numDocFiles);
-			info.setOriginSize(bytes.length);
+			info.setOriginSize((long)bytes.length);
 			
+			//if (exif != null) info.setExif(exif);
+		
 			img.setInfo(info);
 			
 			images.add(img);

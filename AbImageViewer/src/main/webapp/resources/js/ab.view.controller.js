@@ -179,6 +179,8 @@ var AbViewController = {
 		var imageViewer = new AbImageViewer({
 			margin: { left: GAP, top: GAP, right: GAP, bottom: GAP },
 			config: viewerConfig,
+			//animate: false,
+			//notifySelectPage: true,
 		});
 		
 		if (typeof iAbViewer != 'undefined')

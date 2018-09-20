@@ -1,6 +1,5 @@
 package com.abrain.wiv.utils;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,13 +8,40 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+import javax.activation.MimetypesFileTypeMap;
 
 public class FileUtil {
 	public static final int BUFSIZ = 20480;
+
+	//-----------------------------------------------------------------------------------
 	
+	public static String contentType(File file) {
+		Path path = Paths.get(file.getAbsolutePath());
+		
+		String mimeType = null;
+		try
+		{
+			mimeType = Files.probeContentType(path);
+		}
+		catch (Exception e)
+		{
+			DebugUtil.print(e);
+		}
+		return mimeType;
+	}
+//	
+//	private static MimetypesFileTypeMap mime;
+//	
+//	public static String contentType(File file) {
+//		if (mime == null) mime = new MimetypesFileTypeMap();
+//		return mime.getContentType(file);
+//	}
+
 	//-----------------------------------------------------------------------------------
 
 	public static String safeBaseName(String basename){

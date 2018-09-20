@@ -172,7 +172,14 @@
 			<artifactId>jackson-mapper-asl</artifactId>
 			<version>1.9.10</version>
 		</dependency>
-		
+
+		<!-- drewnoakes metadata-extractor  -->		
+		<dependency>
+			<groupId>com.drewnoakes</groupId>
+			<artifactId>metadata-extractor</artifactId>
+			<version>2.11.0</version>
+		</dependency>
+
 	</dependencies>
 	
 	<repositories>

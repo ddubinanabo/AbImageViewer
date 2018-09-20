@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.abrain.wiv.abstracts.AbstractApiController;
 import com.abrain.wiv.config.AbImageViewerConfig;
 import com.abrain.wiv.converters.PolarisConverter;
+import com.abrain.wiv.data.AbAllocKeyData;
 import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageDbData;
+import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbPlainText;
 import com.abrain.wiv.exceptions.ArgumentException;
@@ -73,13 +75,14 @@ public class ApiController extends AbstractApiController {
 	
 	/**
 	 * 인쇄 지원 아이디 할당 (임시 폴더 생성)
-	 * @return
+	 * @return AbAllocKeyData 객체
 	 */
 	@RequestMapping(value="/api/print-support/alloc")
 	@ResponseBody
 	public Object printSupportAlloc(){
 		AbPartialFile.AllocResult r = AbPartialFile.alloc(request, AbPartialFile.MID_PRINT_SUPPORT);
-		return new AbPlainText(r.id);
+		//return new AbPlainText(r.id);
+		return new AbAllocKeyData(r.id);
 	}
 	
 	/**
@@ -138,9 +141,9 @@ public class ApiController extends AbstractApiController {
 	// 저장 지원
 	
 	/**
-	 * 아이디 할당
+	 * 이미지 목록 키 할당
 	 * @param pages
-	 * @return
+	 * @return AbAllocKeyData 객체
 	 * @throws Exception
 	 */
 	@RequestMapping(value="/api/alloc", method=RequestMethod.POST)
@@ -153,7 +156,7 @@ public class ApiController extends AbstractApiController {
 		if (r instanceof Exception){
 			throw (Exception)r;
 		}
-		return new AbPlainText((String)r);
+		return r;
 	}
 
 	/**
@@ -303,8 +306,8 @@ public class ApiController extends AbstractApiController {
 			
 			String ip = WebUtil.getRemoteIP();
 			
-			AbImagePack.AbImageInfo imgDec = AbImagePack.AbImageInfo.fromJSON(imageInfo);
-			AbImagePack.AbThumbnailInfo thumbDec = AbImagePack.AbThumbnailInfo.fromJSON(thumbInfo);
+			AbImagePack.ImageInfo imgDec = AbImagePack.ImageInfo.fromJSON(imageInfo);
+			AbImagePack.ThumbnailInfo thumbDec = AbImagePack.ThumbnailInfo.fromJSON(thumbInfo);
 			
 			//-----------------------------------------------------------
 			// modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미일 뿐,
@@ -379,17 +382,22 @@ public class ApiController extends AbstractApiController {
 			int siz = datas.size();
 			for (int i=0; i < siz; i++){
 				AbImageDbData data = datas.get(i);
+				AbImageInfo info = data.info();
 				
 				String q = "q=" + id + "&s=" + data.seq;
 				
-				rs.add(new AbImageData(
+				AbImageData row = new AbImageData(
 					"img?" + q,
 					"img?t=thumb&" + q,
+					data.imgRot,
 					(int)data.imgWid,
 					(int)data.imgHgt,
 					data.shapes,
 					data.imgDec
-				));
+				);
+				row.setInfo(info);
+				
+				rs.add(row);
 			}
 		}
 		

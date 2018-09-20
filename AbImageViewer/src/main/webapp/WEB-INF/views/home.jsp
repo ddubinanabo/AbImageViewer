@@ -30,6 +30,7 @@
 	*/%>
 		
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
+	<script type="text/javascript" src="resources/js/vendor/exif.min.js"></script>
 
 	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
 	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>

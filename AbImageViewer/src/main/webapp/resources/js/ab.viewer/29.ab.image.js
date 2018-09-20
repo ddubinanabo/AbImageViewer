@@ -229,7 +229,6 @@ AbImage.prototype = {
 
 			return new Promise(function (resolve, reject){
 				setTimeout(resolve.bind(null, { element: img, data: img.src }), 0);
-				
 			});
 		}
 	},

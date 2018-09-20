@@ -868,7 +868,17 @@ var AbCommon = {
 	isDataUrl: function (s){
 		return s && AbCommon.isString(s) && s.indexOf('data:') == 0;
 	},
+	
+	isBlobUrl: function (s){
+		return s && AbCommon.isString(s) && s.indexOf('blob:') == 0;
+	},
 
+	dataUrlContent: function (value){
+		return value.substr(value.indexOf(',') + 1);
+	},
+	
+	//-----------------------------------------------------------
+	
 	createImage: function(){
 		var img = new Image();
 		
@@ -894,6 +904,35 @@ var AbCommon = {
 		});
 	},
 	
+	loadImageAsDataURL: function (url){
+		return new Promise(function(resolve, reject){
+			if (AbCommon.isDataUrl(url)){
+				resolve(url);
+			}else{
+				var fileReader = new FileReader();
+				fileReader.onload = function(e){
+					resolve(e.target.result);
+				};
+				
+				var xhr = AbCommon.xmlHttpRequest({
+					path: url,
+					responseType: 'blob',
+					
+					load: function (e, xhr){
+						fileReader.readAsDataURL(xhr.response);
+					},
+					
+					error: function (e, xhr){
+						reject(e);
+					},
+				});
+				
+				xhr.send();
+			}
+		});
+	},
+	
+	/* 사용안함 */
 	loadImageExt: function(url, options){
 		if (!options) options = {};
 		
@@ -1507,6 +1546,11 @@ var AbCommon = {
 		if (options.path)
 			xhr.open(options.type || 'GET', options.path, asyncExec);
 
+		// arraybuffer
+		// blob
+		// document
+		// json
+		// text
 		xhr.mozResponseType = xhr.responseType = options.responseType || 'arraybuffer';
 
 		if (options.progress)
@@ -1514,8 +1558,13 @@ var AbCommon = {
 
 		if (options.load)
 			xhr.onload = function(e){
-				if (AbCommon.isFunction(options.load))
-					options.load.call(options, e, xhr);
+				if (this.status == 200 || this.status === 0) {
+					if (AbCommon.isFunction(options.load))
+						options.load.call(options, e, xhr);
+				}else{
+					if (AbCommon.isFunction(options.error))
+						options.error.call(options, new Error('Could not load'), xhr);
+				}
 			};
 
 		if (options.error)
@@ -1529,6 +1578,17 @@ var AbCommon = {
 
 	xhrArrayBufferResponse: function (xhr){
 		return xhr.mozResponseArrayBuffer || xhr.mozResponse || xhr.responseArrayBuffer || xhr.response;
+	},
+	
+	arrayBufferToBase64: function (ab){
+		var a = new Uint8Array(ab);
+		var raw = String.fromCharCode.apply(null, a);
+		return btoa(raw);
+	},
+	
+	arrayBufferToDataUrl: function (ab, mimeType){
+		var b64 = this.arrayBufferToBase64(ab);
+		return 'data:' + mimeType + ';base64,' + b64; 
 	},
 	
 	//-------------------------------------------------------------------------------------------------------
@@ -1693,5 +1753,7 @@ var AbCommon = {
 			}
 		}
 	},
-
+	
+	//-------------------------------------------------------------------------------------------------------
+	
 };

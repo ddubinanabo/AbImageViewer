@@ -41,6 +41,18 @@ AbThumbnailGenerator.prototype = {
 	MAX_HEIGHT: 120,
 
 	//-----------------------------------------------------------
+	
+	width: function (){ return this.context.canvas.width; },
+	height: function (){ return this.context.canvas.height; },
+	
+	size: function (){
+		return {
+			width: this.context.canvas.width,
+			height: this.context.canvas.height,
+		};
+	},
+
+	//-----------------------------------------------------------
 
 	calcRatio: function (){
 		var r = AbGraphics.box.zoom(this.source.width, this.source.height, this.limit.width, this.limit.height);

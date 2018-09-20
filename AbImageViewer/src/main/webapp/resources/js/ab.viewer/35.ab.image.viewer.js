@@ -79,6 +79,7 @@ function AbImageViewer(options){
 	//-----------------------------------------------------------
 	
 	this.animatingEngine = AbCommon.isBool(options.animate) ? options.animate: true;
+	this.enableNotifySelectPage = AbCommon.isBool(options.notifySelectPage) ? options.notifySelectPage : true;
 
 	//-----------------------------------------------------------
 	// 요청 인자
@@ -114,12 +115,16 @@ function AbImageViewer(options){
 
 	this.waterMark = options.waterMark && options.waterMark instanceof AbWaterMark ? options.waterMark : new AbWaterMark();
 	this.waterMark.observe(this);
+	
+	//-----------------------------------------------------------
 
 	this.engine = new AbViewerEngine({
 		pages: this.images,
 		history: this.history,
 		margin: this.margin,
 		waterMark: this.waterMark,
+		
+		notifySelectPage: this.enableNotifySelectPage,
 	});
 };
 	
@@ -142,7 +147,7 @@ AbImageViewer.prototype = {
 		OPEN: 'api/images',
 		
 		SAVE: {
-			ALLOC: 'api/alloc',
+			ALLOC: 'api/alloc', // alloc API는 AbImageKeyData 객체를 리턴해야 합니다.
 			MODIFY: 'api/modify-prepare',
 			
 			IMAGE: 'api/save-image',
@@ -152,7 +157,7 @@ AbImageViewer.prototype = {
 		},
 		
 		PRINT: {
-			ALLOC: 'api/print-support/alloc',
+			ALLOC: 'api/print-support/alloc', // alloc API는 AbImageKeyData 객체를 리턴해야 합니다.
 			IMAGE: 'api/print-support/save',
 			REMOVE: 'api/print-support/remove',
 			
@@ -600,7 +605,7 @@ AbImageViewer.prototype = {
 	},
 
 	listViewNotify: function(sender, topic, value){
-		//console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ' + value);
+		console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ' + value);
 
 		var page = null, index = -1;
 		switch(topic){
@@ -1010,13 +1015,15 @@ AbImageViewer.prototype = {
 		this.engine.clearPages();
 	},
 
-	add: function(promise, history){
-		if (!AbCommon.isBool(history)) history = false;
+	add: function(promise, options){
+		var history = options && AbCommon.isBool(options.history) ? options.history : false;
+		var angle = options && AbCommon.isNumber(options.angle) ? options.angle : 0;
 
 		var page = new AbPage({
 			uid: this.images.uuid(),
 			status: AbPage.prototype.READY,
 			loader: promise,
+			angle: angle,
 		});
 
 		var pageIndex = this.engine.pages.length();
@@ -1118,10 +1125,13 @@ AbImageViewer.prototype = {
 		// 렌더링 디코더
 		var renderDecoder = 'jpeg';
 		if (decoder){
-			if (decoder.hasOwnProperty('render') && AbCommon.isString(decoder.render)){
-				renderDecoder = decoder.render;
-			}else if (!AbCommon.isString(decoder)){
-				renderDecoder = 'png';
+			if (AbCommon.isString(decoder)){
+				renderDecoder = decoder;
+			}else{
+				if (decoder.hasOwnProperty('render') && AbCommon.isString(decoder.render))
+					renderDecoder = decoder.render;
+				else
+					renderDecoder = 'png';
 			}
 		}
 
@@ -1160,7 +1170,8 @@ AbImageViewer.prototype = {
 		var engine = this.engine;
 		var thumbnailGenerator = this.thumbnailGenerator;
 
-		return promise.then(function (e){
+		return promise
+			.then(function (e){
 				if (!abimg.hasThumbnail()){
 					if (abimg.thumbInfo.url)
 						return abimg.thumbnail();
@@ -1171,17 +1182,28 @@ AbImageViewer.prototype = {
 				page.width = abimg.width;
 				page.height = abimg.height;
 				page.source = abimg;
+				
+				if (page.angle){
+					var pr = AbGraphics.angle.point(page.angle, 0, 0, page.width, page.height);
+					page.width = Math.round(Math.abs(pr.x));
+					page.height = Math.round(Math.abs(pr.y));
+				}
 
 				page.error = null;
 				page.status = AbPage.prototype.LOADED;
 				
-				if (page.shapes.length){
+				var promise = null;
+				if (page.shapes.length || page.angle){
+					
 					engine.renderThumbnail(thumbnailGenerator, page);
-
+					
 					var imgData = thumbnailGenerator.toImage(renderDecoder);
-					page.source.setThumbnailData(imgData);
+					return page.source.setThumbnailData(imgData);
+				}else{
+					return Promise.resolve();
 				}
-				
+			}.bind(this))
+			.then(function(e){
 				this.notifyObservers('page.loaded', pageData);
 			}.bind(this))
 			.catch(function(e){
@@ -1221,52 +1243,54 @@ AbImageViewer.prototype = {
 			this.exec(function (){
 				var siz = images.length;
 				for (var i=0; i < siz; i++){
-					var src = images[i];
+					var row = images[i];
 	
 					var loader = function (){
-						var src =  arguments.callee.src;
+						var row =  arguments.callee.row;
 						var index =  arguments.callee.index;
 		
 						return new Promise(function (resolve, reject){
 							var img = {};
 							var imageInfo = $.extend({}, options.preset);
 							
-							if (src.info)
-								imageInfo = $.extend(imageInfo, src.info);
+							if (row.info)
+								imageInfo = $.extend(imageInfo, row.info);
 
-							if (AbCommon.isString(src)){
-								img['image'] = src;
-							}else{
-								if (AbCommon.isString(src.image)){
-									img['image'] = src.image;
-								}
-								if (AbCommon.isString(src.thumbnail)){
-									img['thumbnail'] = src.thumbnail;
-								}
-								if (AbCommon.isNumber(src.width) && AbCommon.isNumber(src.height) && (src.width > 0 && src.height > 0)){
-									img['width'] = src.width;
-									img['height'] = src.height;
-								}
-							}
-
-							if (siz > 1){
-								imageInfo['index'] = index;
-								imageInfo['pages'] = siz;
-							}
+							var decoder = options.decoder;
 							
-							var decoder = src.hasOwnProperty('decoder') ? src.decoder : options.decoder;
+							if (AbCommon.isString(row)){
+								img['image'] = row;
+							}else{
+								if (AbCommon.isString(row.image)){
+									img['image'] = row.image;
+								}
+								if (AbCommon.isString(row.thumbnail)){
+									img['thumbnail'] = row.thumbnail;
+								}
+								if (AbCommon.isNumber(row.width) && AbCommon.isNumber(row.height) && (row.width > 0 && row.height > 0)){
+									img['width'] = row.width;
+									img['height'] = row.height;
+								}
+								if (AbCommon.isNumber(row.angle)){
+									img['angle'] = row.angle;
+								}
+								if (row.decoder)
+									decoder = row.decoder;
+							}
 
 							var r = { from: options.from, decoder: decoder, image: img, info: imageInfo };
-							if (src.shapes)
-								r['shapes'] = src.shapes;
+							if (row.shapes)
+								r['shapes'] = row.shapes;
 
 							resolve(r);
 						});
 					};
-					loader.src = src;
+					loader.row = row;
 					loader.index = i;
 		
-					this.add(loader);
+					this.add(loader, {
+						angle: row.angle
+					});
 				}
 				
 				this.exec(function(){
@@ -1410,7 +1434,7 @@ AbImageViewer.prototype = {
 
 				var loader = AbImageLoader.load(file);
 				if (loader)
-					this.add(loader, true);
+					this.add(loader, { history: true });
 			}
 
 			this.updatePagesNotifyObservers();
@@ -1826,8 +1850,12 @@ AbImageViewer.prototype = {
 					var decoder = d.page.decoder();
 					if (!decoder) decoder = null;
 					
+					var promise = null;
+					
 					switch (d.type){
 					case 'image':
+						promise = Promise.resolve();
+						
 						imgElement = d.abimg.imageElement();
 						
 						output.splice(0, output.length);
@@ -1844,70 +1872,103 @@ AbImageViewer.prototype = {
 							output.push('</page>');
 						}
 						
+						// WAS의 AbImagePack.ImageInfo 대응
 						info = JSON.stringify({
+							angle: d.page.angle,
 							width: imgElement.width,
 							height: imgElement.height,
 							shapes: output.length ? output.join('') : null,
 							decoder: decoder,
+							
+							info: d.page.info(),
 						});
 						break;
 						
 					case 'image-source':
 						imgElement = d.abimg.imageElement();
-						img = AbGraphics.canvas.renderImage(imgElement, decoder);
 						
-						console.log('[IMAGE-SOURCE][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
-						
-						content = img.substr(img.indexOf(',') + 1);
+						promise = AbCommon.loadImageAsDataURL(imgElement.src)
+							.then(function(r){
+								content = AbCommon.dataUrlContent(r);
+							});
 						break;
 						
 					case 'image-result':
-						r = imgInfo.url;
+						promise = AbCommon.loadImageAsDataURL(imgInfo.url)
+							.then(function(r){
+								content = AbCommon.dataUrlContent(r);
+							});
 						
-						console.log('[IMAGE-RESULT][' + d.index + '] ' + r.substr(0, r.indexOf(',')));
+						//console.log('[IMAGE-RESULT][' + d.index + '] ' + r.substr(0, r.indexOf(',')));
+						break;
+
+					case 'thumb':
+						imgElement = d.abimg.originThumbnailElement();
 						
-						content = r.substr(r.indexOf(',') + 1);
+						// WAS의 AbImagePack.ThumbnailInfo 대응
+						info = JSON.stringify({
+							width: imgElement.width,
+							height: imgElement.height,
+						});
+						
+						promise = AbCommon.loadImageAsDataURL(imgElement.src)
+							.then(function(r){
+								content = AbCommon.dataUrlContent(r);
+							});
+						
+						//console.log('[THUMBNAIL][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
 						break;
 						
-					case 'thumb':
+					case 'thumb2':
+						promise = Promise.resolve();
+						
 						imgElement = d.abimg.originThumbnailElement();
 						img = AbGraphics.canvas.renderImage(imgElement, decoder);
 						
 						console.log('[THUMBNAIL][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
 						
+						// WAS의 AbImagePack.ThumbnailInfo 대응
 						info = JSON.stringify({
 							width: imgElement.width,
 							height: imgElement.height,
-						});					
+						});
 						
 						content = img.substr(img.indexOf(',') + 1);
 						break;
 						
 					case 'end':
+						promise = Promise.resolve();
 						break;
 					}
 				
 					//-----------------------------------------------------------
 					
-					self.submitContent(fc, id, d.index, d.type, info, content, function (){
-						try
-						{
-							if (dindex + 1 >= dlength){
+					promise
+						.then(function(r){
+							self.submitContent(fc, id, d.index, d.type, info, content, function (){
+								try
+								{
+									if (dindex + 1 >= dlength){
+										fc.dispose();
+										resolve(true);
+									}else{
+										dindex++;
+										setTimeout(exec, delay);
+									}
+								}
+								catch (e){
+									fc.dispose();
+									reject(e);				
+								}
+							}, function (e){
 								fc.dispose();
-								resolve(true);
-							}else{
-								dindex++;
-								setTimeout(exec, delay);
-							}
-						}
-						catch (e){
+								reject(e);
+							});
+						})
+						.catch(function(e){
 							fc.dispose();
-							reject(e);				
-						}
-					}, function (e){
-						fc.dispose();
-						reject(e);
-					});					
+							reject(e);
+						});
 				}
 				catch (e)
 				{
@@ -2147,6 +2208,14 @@ AbImageViewer.prototype = {
 			chain: function (sendor, current, data){
 				var promise = null;
 				
+				if (current.pageInfo && current.pageInfo.page.angle){
+					var page = current.pageInfo.page;
+					
+					var pr = AbGraphics.angle.point(page.angle, 0, 0, current.imgInfo.width, current.imgInfo.height);
+					current.imgInfo.width = Math.round(Math.abs(pr.x));
+					current.imgInfo.height = Math.round(Math.abs(pr.y));
+				}
+				
 				if (AbPrint.isLandscapeImage(current.imgInfo)){
 					promise = AbCommon.loadImage(current.imgInfo.url)
 									.then(function (eimg){
@@ -2213,7 +2282,7 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 	
 	submitPrintSupport: function (sendor, current, data){
-
+		
 		//-----------------------------------------------------------
 
 		var fc = AbCommon.formController('#print-support-forms', 'id,index');
@@ -2230,7 +2299,12 @@ AbImageViewer.prototype = {
 		var id = sendor.transferID;
 		
 		var src = current.imgInfo.url;
-		src = src.substr(src.indexOf(",") + 1);
+		if (!AbCommon.isDataUrl(src)){
+			sendor.outputImageUrls[current.index] = src;
+			return Promise.resolve(true);
+		}
+		
+		src = AbCommon.dataUrlContent(src);
 		
 		//-----------------------------------------------------------
 		

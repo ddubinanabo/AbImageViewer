@@ -1,5 +1,7 @@
 package com.abrain.wiv.services;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -7,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.abrain.wiv.dao.DocDao;
+import com.abrain.wiv.data.AbAllocKeyData;
 import com.abrain.wiv.data.AbBinaryData;
 import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImagePack;
@@ -21,15 +24,37 @@ public class DocService {
 	private DocDao dao;
 	
 	//-----------------------------------------------------------
+	//-----------------------------------------------------------
+	//-----------------------------------------------------------
 
-	public String alloc(){
+	public static class Key {
+		public String id, time;
+	}
+	
+	//-----------------------------------------------------------
+	
+	/**
+	 * 이미지 목록 키 생성
+	 * @return
+	 */
+	public Object alloc(){
 		UUID uid = UUID.randomUUID();
 		String id = uid.toString().replaceAll("-", "").toUpperCase();
 		
-		System.out.println("[ALLOC] " + id);
+		// 17 자리
+		SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+		String alloctime = format.format(new Date());
 		
-		return id;
+		System.out.println("[ALLOC][TIME][ " + alloctime);
+		System.out.println("[ALLOC][ID] " + id);
+		
+		return new AbAllocKeyData(id, alloctime);
 	}
+	
+	//-----------------------------------------------------------
+	
+//	public String uid(String id) { return id != null ? id.substring(0, 17) : null; }
+//	public String allocTime(String id) { return id != null ? id.substring(17) : null; }
 	
 	//-----------------------------------------------------------
 
@@ -37,10 +62,10 @@ public class DocService {
 			String id,
 			int seq,
 			String ip,
-			AbImagePack.AbImageInfo imageInfo,
+			AbImagePack.ImageInfo imageInfo,
 			byte[] imageSource,
 			byte[] imageResult,
-			AbImagePack.AbThumbnailInfo thumbInfo,
+			AbImagePack.ThumbnailInfo thumbInfo,
 			byte[] thumbSource){
 		
 		try
