@@ -6,7 +6,7 @@
 
 <!doctype html>
 <html lang="en">
-<head>
+<head class="noselection">
 	<meta charset="UTF-8">
 	<title>이미지 뷰어</title>
 	<!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
@@ -128,13 +128,14 @@
 				<li tb-topic="page.rotate.ccw" title="화면 회전 (반시계)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_16.png"/></li>
 				<li tb-topic="page.rotate.cw" title="화면 회전" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_17.png"/></li>
 				<li class="sep" tb-topic="page.rotate.180" title="화면 회전 (180º)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_18.png"/></li>
-				<li tb-topic="mode" title="편집/보기 모드" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_19.png" ></li>
-				<li class="sep" tb-topic="show.shapes" title="주석/마스킹 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_20.png"></li>
-				<li class="sep" tb-topic="clear.shapes" title="주석/마스킹 초기화" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_21.png"></li>
+				<li class="sep" tb-topic="mode" title="편집/보기 모드" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_19.png" ></li>
+				<li tb-topic="show.annotation" title="주석 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_20.png"></li>
+				<li class="sep" tb-topic="show.masking" title="마스킹 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_21.png"></li>
+				<li class="sep" tb-topic="clear.shapes" title="주석/마스킹 초기화" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_22.png"></li>
 				<li class="sep nowrap">
-					<img src="resources/icon/tbm_22-01.png" class="tb-lmar" tb-topic="page.prev" title="이전 이미지" tb-type="click"/>
+					<img src="resources/icon/tbm_23-01.png" class="tb-lmar" tb-topic="page.prev" title="이전 이미지" tb-type="click"/>
 					<input type="text" class="center" tb-topic="page.no" tb-type="text" size="1" value="0" disabled="disabled"/> / <span tb-topic="page.total" tb-type="label">0</span>
-					<img src="resources/icon/tbm_22-02.png" class="tb-rmar" tb-topic="page.next" title="다음 이미지" tb-type="click"/>
+					<img src="resources/icon/tbm_23-02.png" class="tb-rmar" tb-topic="page.next" title="다음 이미지" tb-type="click"/>
 				</li>
 				<li>
 					<div class="custom-select">
@@ -265,11 +266,12 @@
 				<li ve-type="creation" tb-topic="annotation.highlightpen" title="형판펜으로 칠하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_06.png"/></li>
 				<li ve-type="creation" tb-topic="annotation.textbox" title="메모하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_07.png"/></li>
 				<li ve-type="creation" tb-topic="annotation.checker" title="체크" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_08.png"/></li>
+				<li ve-type="creation" tb-topic="annotation.stamp" title="스탬프" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_09.png"/></li>
 			</ul>
 			<div class="vhblock" title="마스킹"></div>
 			<ul class="vert">
-				<li ve-type="creation" tb-topic="masking.rectangle" title="사각형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_09.png"/></li>
-				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_10.png"/></li>
+				<li ve-type="creation" tb-topic="masking.rectangle" title="사각형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_m_01.png"/></li>
+				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_m_02.png"/></li>
 			</ul>
 		</aside>
 		<!-- 섬네일 모아보기 시작 -->
@@ -466,6 +468,38 @@
 		</ul>
 	</div>
 	<!-- 서버 로드 메시지 끝 -->
+	<!-- 도형 스타일러 창 시작 -->
+	<div id="abstylewindow" class="center-flybox">
+		<ul>
+			<li>
+				<div class="window abstyler-window">
+					<ul>
+						<li>
+							<h3 abs-topic="title">스타일 설정</h3>
+						</li>
+						<li class="abstyler-body-title">
+							<div abs-topic="body-title">스타일</div>
+						</li>
+						<li class="abstyler-body">
+							<div class="abstyler">
+								<!-- 샘플 시작 -->
+								<!--
+								<div class="abstyler-field "><div class="abstyler-field-text">채우기색상</div><div class="abstyler-input" abs-kind="color" abs-topic="color" abs-color="rgba(254,238,176,1)" abs-alpha="false" abs-notset="false"><div style="background-color: rgb(254, 238, 176);"></div></div></div><fieldset class="abstyler-group" abs-kind="group" abs-topic="stroke"><legend>선 스타일</legend><div class="abstyler-field "><div class="abstyler-field-text">두께</div><div class="custom-select"><select class="abstyler-input" abs-kind="select" abs-topic="stroke.width" abs-type="number"><option value="0">없음</option><option selected="selected" value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div></div><div class="abstyler-field "><div class="abstyler-field-text">색상</div><div class="abstyler-input" abs-kind="color" abs-topic="stroke.color" abs-color="#5B522B" abs-alpha="false"><div style="background-color: rgb(91, 82, 43);"></div></div></div></fieldset><fieldset class="abstyler-group" abs-kind="group" abs-topic="text"><legend>글자 스타일</legend><div class="abstyler-field "><div class="abstyler-field-text">크기</div><input type="text" class="abstyler-input" abs-kind="text" abs-topic="text.size" abs-range-start="1" abs-type="number-unit" abs-unit="px"><span class="abstyler-input-suffix">px</span></div><div class="abstyler-field "><div class="abstyler-field-text">글자모양</div><div class="custom-select"><select class="abstyler-input" abs-kind="select" abs-topic="text.font" abs-type="string"><option value="Malgun Gothic">맑은 고딕</option><option value="gulim">굴림</option><option value="Dotum">돋움</option><option value="Arial">Arial</option><option value="Courier New">Courier New</option><option value="Times New Roman">Times New Roman</option><option value="Verdana">Verdana</option><option value="Helvetica">Helvetica</option><option selected="selected" value="Tahoma">Tahoma</option></select></div></div><div class="abstyler-field abstyler-single-field abstyler-begin-single-field"><label>기울림<input type="checkbox" class="abstyler-input" abs-kind="check" abs-topic="text.italic"><div class="checkmark"></div></label></div><div class="abstyler-field abstyler-single-field abstyler-next-single-field"><label>굵게<input type="checkbox" class="abstyler-input" abs-kind="check" abs-topic="text.bold"><div class="checkmark"></div></label></div><div class="abstyler-field abstyler-single-field abstyler-next-single-field"><label>밑줄<input type="checkbox" class="abstyler-input" abs-kind="check" abs-topic="text.under"><div class="checkmark"></div></label></div><div class="abstyler-field abstyler-single-field abstyler-end-single-field"><label>취소선<input type="checkbox" class="abstyler-input" abs-kind="check" abs-topic="text.cancel"><div class="checkmark"></div></label></div><div class="abstyler-field "><div class="abstyler-field-text">색상</div><div class="abstyler-input" abs-kind="color" abs-topic="text.color" abs-color="black" abs-alpha="false" abs-notset="false"><div style="background-color: black;"></div></div></div><div class="abstyler-field "><div class="abstyler-field-text">글자높이</div><input type="text" class="abstyler-input" abs-kind="text" abs-topic="text.lineHeight" abs-range-start="10" abs-type="number" abs-unit="%"><span class="abstyler-input-suffix">%</span></div><div class="abstyler-field "><div class="abstyler-field-text">정렬</div><div class="custom-select"><select class="abstyler-input" abs-kind="select" abs-topic="text.align" abs-type="string"><option selected="selected" value="left">왼쪽</option><option value="center">중앙</option><option value="right">오른쪽</option><option value="justify">맞춤</option></select></div></div></fieldset>
+								-->
+								<!-- 샘플 끝 -->
+							</div>
+						</li>
+						<li class="abstyler-panel">
+							<input type="button" abs-cmd="reset" value="기본값"/>
+							<input type="button" abs-cmd="ok" value="확인"/>
+							<input type="button" abs-cmd="cancel" value="취소"/>
+						</li>
+					</ul>
+				</div>
+			</li>
+		</ul>
+	</div>
+	<!-- 도형 스타일러 창 끝 -->
 	
 	<!-- 테스트 패널 -->
 	<jsp:include page="/WEB-INF/debug/view-home.jsp"></jsp:include>

@@ -257,20 +257,28 @@ AbPage.prototype = {
 
 	//-----------------------------------------------------------
 
-	drawShapes: function (ctx, drawIndicator){
-		if (!AbCommon.isBool(drawIndicator)) drawIndicator = true;
+	drawShapes: function (ctx, options){
+		var indicator = true;
+		var showingShapeTypeMap = {};
+		
+		if (options && AbCommon.isBool(options.indicator)) indicator = options.indicator;
+		if (options && options.showingShapeTypeMap) showingShapeTypeMap = options.showingShapeTypeMap;
 
 		var len = this.shapes.length;
 		var sels = [], fsel = null;
 		var bak = { selected: false, focused: false };
 		for (var i=0; i < len; i++){
 			var s = this.shapes[i];
+			
+			if (showingShapeTypeMap && showingShapeTypeMap[s.type] === false)
+				continue;
+			
 			if (s.focused)
 				fsel = s;
 			else if (s.selected)
 				sels.push(s);
 
-			if (drawIndicator === false){
+			if (indicator === false){
 				bak.selected = s.selected;
 				bak.focused = s.focused;
 
@@ -280,27 +288,36 @@ AbPage.prototype = {
 
 			s.draw(ctx, this);
 
-			if (drawIndicator === false){
+			if (indicator === false){
 				s.selected = bak.selected;
 				s.focused = bak.focused;
 			}
 		}
-		if (sels.length && drawIndicator){
+		if (sels.length && indicator){
 			for (var i = sels.length - 1; i >= 0; i--)
 				sels[i].indicator.draw(ctx);
 		}
 
-		if (fsel && drawIndicator){
+		if (fsel && indicator){
 			fsel.indicator.draw(ctx);
 		}
 	},
 
-	drawOrigin: function(ctx, scale){
+	drawOrigin: function(ctx, options){
+		var scale = 1;
+		var showingShapeTypeMap = {};
+		
+		if (options && AbCommon.isNumber(options.scale)) scale = options.scale;
+		if (options && options.showingShapeTypeMap) showingShapeTypeMap = options.showingShapeTypeMap;
+		
 		var scaleX = this.scale.x, scaleY = this.scale.y;
 
 		this.scale.x = this.scale.y = scale;
 
-		this.drawShapes(ctx, false);
+		this.drawShapes(ctx, {
+			indicator: false,
+			showingShapeTypeMap: options ? options.showingShapeTypeMap : null,
+		});
 
 		this.scale.x = scaleX;
 		this.scale.y = scaleY;

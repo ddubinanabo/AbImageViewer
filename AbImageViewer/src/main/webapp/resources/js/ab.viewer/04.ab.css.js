@@ -83,7 +83,7 @@ var AbCss = {
 		if( rgb ) {
 			return [parseInt(rgb[1]),parseInt(rgb[2]),parseInt(rgb[3]),1];
 		}
-		if(color.indexOf('hsl')== 0)
+		if(color.indexOf('hsl')== 0 || color.indexOf('hsla')== 0)
 			return this.hsl2Rgb(color);
 	},
 

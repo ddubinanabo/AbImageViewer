@@ -1,0 +1,29 @@
+{
+  "waterMark": {
+    "image": "resources/img/watermark.png"
+  },
+  "image": {
+    "save": "current"
+  },
+  "toolbar": {
+    "layout": [
+      "all"
+    ]
+  },
+  "shape": {
+    "save": "all",
+    "addUI": "none",
+    "selection": {
+      "style": "box",
+      "target": [
+        "rectangle",
+        "ellipse",
+        "arrow",
+        "pen",
+        "masking.rectangle",
+        "masking.ellipse"
+      ],
+      "lineDrawStyle": "box"
+    }
+  }
+}

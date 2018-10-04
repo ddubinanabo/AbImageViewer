@@ -48,19 +48,6 @@ function AbShapeLine(options){
 AbShapeLine.prototype = {
 	constructor: AbShapeLine,
 
-	BRACKET_SIZE: 0.4,
-
-	//-----------------------------------------------------------
-
-	arrowStyle: function (style, defaultStyle){
-		if (!style) return defaultStyle;
-
-		switch (style){
-		case 'trigngle': case 'diamond': case 'circle': case 'bracket': case 'none': return style;
-		}
-		return defaultStyle;
-	},
-
 	//-----------------------------------------------------------
 
 	styleDesc: function(){
@@ -191,7 +178,10 @@ AbShapeLine.prototype = {
 	editable: function (x, y){ if (this.selected){ return this.indicator.editable(x, y); } return null; },
 	editPos: function (point){ return this.indicator.editPos(point); },
 	resize: function (point, px, py){ return this.indicator.resize(point, px, py); },
-	measure: function(){},
+	measure: function(){
+		this.indicator.selectionStyle = this.engine.selectionStyle(this.name);
+		this.indicator.selectionDrawStyle = this.engine.config('shape.selection.lineDrawStyle');
+	},
 
 	//-----------------------------------------------------------
 

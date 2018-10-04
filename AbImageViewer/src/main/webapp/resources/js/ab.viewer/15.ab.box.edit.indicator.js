@@ -35,30 +35,30 @@ function AbBoxEditIndicator(options){
 		default: {
 			control: {
 				stroke: {
-					color: focusControlStrokeStyle.color || '#BC719B', // '#4787C7', // '#4682B4',
+					color: focusControlStrokeStyle.color || 'rgba(127,172,209,1)', //'rgba(70,130,180,.6)', //'#6DA3CF', //'#3372A6', //'#266599', //'#BC719B', // '#4787C7', // '#4682B4',
 					width: focusControlStrokeStyle.width || 1,
 				},
 		
-				color: focusControlStyle.color || '#FF99D3', // '#389CFF', // '#99CCFF',	
+				color: focusControlStyle.color || 'rgba(201,228,252,1)', //'rgba(153,204,255,.3)', //'#AED6FF', //'#74A8DC', //'#5497D9', //'#FF99D3', // '#389CFF', // '#99CCFF',	
 				size: focusControlStyle.size || 10,
 			},
 	
-			color: focusStyle.color || '#BC719B', // '#4787C7', // '#00BFFF',
+			color: focusStyle.color || 'rgba(95,212,251,1)', //'rgba(0,191,255,.8)', //'#28C9FF', //'#00A9E1', //'#008DBC', //'#BC719B', // '#4787C7', // '#00BFFF',
 			width: focusStyle.width || 1,							
 		},
-
+	
 		focus: {
 			control: {
 				stroke: {
-					color: defaultControlStrokeStyle.color || '#4682B4',
+					color: defaultControlStrokeStyle.color || 'rgba(70,130,180,1)', //'#4682B4',
 					width: defaultControlStrokeStyle.width || 1,
 				},
 		
-				color: defaultControlStyle.color || '#99CCFF',	
+				color: defaultControlStyle.color || 'rgba(153,204,255,1)', //'#99CCFF',	
 				size: defaultControlStyle.size || 10,
 			},
 	
-			color: defaultStyle.color || '#00BFFF',
+			color: defaultStyle.color || 'rgba(0,191,255,1)', //'#00BFFF',
 			width: defaultStyle.width || 1,	
 		}
 	};
@@ -305,7 +305,7 @@ AbBoxEditIndicator.prototype = {
 			var incAngle = angle - this.target.angle;
 
 			this.target.setAngle(angle);
-			console.log('[ANGLE] ' + this.target.angle);
+			//console.log('[ANGLE] ' + this.target.angle);
 
 			return incAngle;
 		}else{

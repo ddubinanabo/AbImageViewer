@@ -112,7 +112,9 @@ var AbImageInfoRenderer = {
 	},
 	
 	render$local: function(page, info){
-		var data = info.origin;
+		var hasOriginInfo = AbCommon.isSetted(info.originName);
+
+		var data = hasOriginInfo ? info : info.origin;
 		if (!data) return null;
 		
 		var html = '<table>';
@@ -122,6 +124,11 @@ var AbImageInfoRenderer = {
 		if (data.originPages > 1){
 			html += '<tr><th>원본의 이미지 수</th><td>' + data.originPages + '</td></tr>';
 			html += '<tr><th>원본의 이미지 인덱스</th><td>' + data.originIndex + '</td></tr>';
+		}
+
+		if (hasOriginInfo){
+			html += '<tr><td>&nbsp;</td></tr>';
+			html += '<tr class="title"><th colspan="2">이미지 정보</th></tr>';
 		}
 		
 		html += '<tr><th>이름</th><td>' + AbCommon.escape(data.name) + '</td></tr>';

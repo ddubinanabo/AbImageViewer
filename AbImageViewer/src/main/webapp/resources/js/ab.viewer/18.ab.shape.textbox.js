@@ -94,7 +94,7 @@ AbShapeTextBox.prototype = {
 				{ name: 'color', text: '채우기색상', style: 'color', alpha: false, notset: false },
 				{ name: 'stroke', text: '선 스타일', childs: [
 					{ name: 'width', text: '두께', style: 'select', type: 'number', values: 'lineWidth' },
-					{ name: 'color', text: '색상', style: 'color', alpha: false },
+					{ name: 'color', text: '색상', style: 'color', alpha: false, notset: false },
 				] },
 				{ name: 'text', text: '글자 스타일', childs: [
 					{ name: 'size', text: '크기', style: 'text', type: 'number-unit', unit: 'px', range: { start: 1 } },
@@ -519,6 +519,7 @@ AbShapeTextBox.prototype = {
 	//-----------------------------------------------------------
 
 	measureText: function(ctx, text){
+		if (text) text = text.replace(/ /g, '&nbsp;');
 		return AbGraphics.canvas.measureText(ctx, this.style.text.lineHeight, this, text);
 	},
 
@@ -536,11 +537,13 @@ AbShapeTextBox.prototype = {
 			var lineText = lines[iline];
 			var words = lineText.split(/\s{1}/g), wlen = words.length;
 
-			var line = '', rwords = [];
+			var line = '', lineac=0, rwords = [];
 			var pTestWidth = 0;
 			for (var i=0; i < wlen; i++){
-				var testLine = line + (line.length ? ' ' : '') + words[i];
+				var testLine = line + (lineac ? ' ' : '') + words[i];
 				var testWidth = ctx.measureText(testLine).width;
+
+				lineac++;
 
 				if (options.maxWidth && testWidth > options.maxWidth && i > 0) {
 					if (w == 0 || w < pTestWidth) w = pTestWidth;
@@ -572,11 +575,11 @@ AbShapeTextBox.prototype = {
 				pTestWidth = testWidth;
 			}
 
-			if (line){
+			if (lineac > 0){
 				var testWidth = ctx.measureText(line).width;
 
 				if (w == 0 || w < testWidth) w = testWidth;
-				var lh = this.measureText(ctx, line);
+				var lh = this.measureText(ctx, !line ? ' ' : line);
 				h += lh.height;
 
 				a.push({

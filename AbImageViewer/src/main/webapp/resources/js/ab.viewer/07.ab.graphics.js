@@ -791,6 +791,8 @@ var AbGraphics = {
 		},
 
 		measureText: function (ctx, lineHeight, cache, text){
+			//console.log('[MEASURE TEXT] ' + ctx.font);
+
 			var e1 = cache['$measureElement1'];
 			var e2 = cache['$measureElement2'];
 			if (!e1){
@@ -799,11 +801,13 @@ var AbGraphics = {
 					position: 'absolute',
 					padding: '0',
 					margin: '0',
+
 					// top: 10,
 					// left: 10,
 					// zIndex: 100,
 					// background: 'red',
 					// color: 'white',
+
 					top: -10000,
 					left: -10000,
 					zIndex: -1,
@@ -817,11 +821,13 @@ var AbGraphics = {
 					position: 'absolute',
 					padding: '0',
 					margin: '0',
+
 					// top: 100,
 					// left: 10,
 					// zIndex: 100,
 					// background: 'red',
 					// color: 'white',
+
 					top: -10000,
 					left: -10000,
 					zIndex: -1,
@@ -849,8 +855,8 @@ var AbGraphics = {
 			element = e2.length ? e2.get(0) : null;
 			var size2 = element ? { width: element.offsetWidth, height: element.offsetHeight } : { width: 0, height: 0 };
 
-			//e1.detach();
-			//e2.detach();
+			e1.detach();
+			e2.detach();
 
 			return {
 				width: size1.width,

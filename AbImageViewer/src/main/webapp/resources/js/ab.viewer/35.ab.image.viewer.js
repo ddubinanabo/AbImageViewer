@@ -47,7 +47,7 @@ function AbImageViewer(options){
 
 	//-----------------------------------------------------------
 	
-	this.config = options.config || {};
+	this.$config = options.config || {};
 
 	//-----------------------------------------------------------
 
@@ -112,6 +112,10 @@ function AbImageViewer(options){
 
 	this.styler = null;
 	this.toolbar = null;
+	this.colorPicker = null;
+
+	this.stylerWindow = null;
+	this.stylerWindowSelector = options.stylerWindowSelector || '#abstylewindow';
 
 	this.waterMark = options.waterMark && options.waterMark instanceof AbWaterMark ? options.waterMark : new AbWaterMark();
 	this.waterMark.observe(this);
@@ -119,6 +123,8 @@ function AbImageViewer(options){
 	//-----------------------------------------------------------
 
 	this.engine = new AbViewerEngine({
+		config: this.$config,
+		
 		pages: this.images,
 		history: this.history,
 		margin: this.margin,
@@ -169,13 +175,49 @@ AbImageViewer.prototype = {
 	IMAGE_TYPES: [ 'image', 'image-source', 'image-result', 'thumb' ],
 
 	//-----------------------------------------------------------
+	
+	config: function (name){
+		function configObject(config, name){
+			var o = config;
+			var path = name.split('.'), idx = 0;
+			var pathSiz = path.length - 1, leap = path[path.length - 1];
+			while (idx < pathSiz){
+				o = o[path[idx]];
+				if (!o)
+					return null;
+				idx++;
+			}
+			return {
+				config: o,
+				leap: leap
+			};
+		}
+		
+		var r = configObject(this.$config, name);
+		
+		if (!r)
+			return null;
+		
+		return r.config[r.leap];
+	},
+
+	//-----------------------------------------------------------
 
 	install: function(){
 		var promiseFunc = function (resolve, reject){
 			
 			try
 			{
-				this.styler = new AbShapeStyler();
+				this.colorPicker = new AbColorPicker();
+
+				this.stylerWindow = new AbShapeStyler({
+					selector: this.stylerWindowSelector + ' .abstyler',
+					colorPicker: this.colorPicker
+				});
+
+				this.styler = new AbShapeStyler({
+					colorPicker: this.colorPicker
+				});
 				this.styler.observe(this);
 
 				//-----------------------------------------------------------
@@ -442,6 +484,8 @@ AbImageViewer.prototype = {
 			'page.rotate.180',
 			'mode',
 			'show.shapes',
+			'show.annotation',
+			'show.masking',
 			'clear.shapes',
 			'page.scale',
 
@@ -454,6 +498,7 @@ AbImageViewer.prototype = {
 			'annotation.highlightpen',
 			'annotation.textbox',
 			'annotation.checker',
+			'annotation.stamp',
 			
 			'masking.rectangle',
 			'masking.ellipse'
@@ -522,10 +567,17 @@ AbImageViewer.prototype = {
 			this.engine.mode(value ? 'edit' : 'view');
 			this.showEditControls(value);
 			break;
+			
 		case 'show.shapes':
 			this.engine.showShapes(value);
 			break;
-
+		case 'show.annotation':
+			this.engine.showShapes('annotation', value);
+			break;
+		case 'show.masking':
+			this.engine.showShapes('masking', value);
+			break;
+			
 		case 'clear.shapes': this.clearShapes(); break;
 			
 		case 'page.prev': this.prevPage(); break;
@@ -558,22 +610,20 @@ AbImageViewer.prototype = {
 		case 'annotation.highlightpen':
 		case 'annotation.textbox':
 		case 'annotation.checker':
-			if (!this.engine.editable()){
-				sender.set('annotation.cursor', true);
-				break;
-			}
-
-			this.engine.exec(function(){
-				this.addShape(topic.replace('annotation.',''));
-			});
+		case 'annotation.stamp':
+			this.addShape(topic.replace('annotation.',''))
+				.then(function(r){
+					if (r === 'cancel')
+						sender.set('annotation.cursor', true);
+				});
 			break;
 		case 'masking.rectangle':
 		case 'masking.ellipse':
-			if (!this.engine.editable()){
-				sender.set('annotation.cursor', true);
-				break;
-			}
-			this.engine.addShape(topic);
+			this.addShape(topic)
+				.then(function(r){
+					if (r === 'cancel')
+						sender.set('annotation.cursor', true);
+				});
 			break;
 		case 'thumb-popup.open':
 			this.showListViewPopup(true);
@@ -1008,6 +1058,94 @@ AbImageViewer.prototype = {
 	},
 
 	render: function (){ this.engine.render(); },
+
+	//-----------------------------------------------------------
+
+	defaultShapeStyles: {},
+	
+	addShape: function (shapeName){
+		var enableShapeWindow = this.config('shape.addUI') === 'window';
+		
+		if (enableShapeWindow){
+			return this.shapeStyleWindow(shapeName)
+						.then(function (r){
+							if (r.result === 'cancel'){
+								return r.result;
+							}
+							
+							return new Promise(function(resolve, reject){
+								this.engine.exec(function(){
+									this.addShape(shapeName);
+									resolve('ok');
+								});
+							}.bind(this));
+						}.bind(this))
+						.catch(function(e){
+							AbMsgBox.error(e + '');
+						});
+		}else{
+			return new Promise(function (resolve, reject){
+				this.engine.exec(function(){
+					this.addShape(shapeName);
+					resolve('ok');
+				});
+			}.bind(this));
+		}
+	},
+
+	shapeStyleWindow: function (s){
+		if (!this.engine.editable()){
+			return Promise.resolve({ result: 'cancel' });
+		}
+
+		var shape = this.engine.shapeObject(s);
+		if (!shape)
+			return Promise.reject(new Error('Unknown shape string'));
+
+		if (!AbCommon.hasShapeStyle(shape))
+			return Promise.resolve({ result: 'ok' });
+
+		// 기본 스타일 저장
+		if (!this.defaultShapeStyles[s])
+			this.defaultShapeStyles[s] = AbCommon.clone(shape.style);
+
+		var e = $(this.stylerWindowSelector);
+		var ebtns = e.find('[abs-cmd]');
+		var viewer = this;
+		var defaultStyle = this.defaultShapeStyles[s];
+
+		return new Promise(function (resolve, reject){
+			// attach panel events
+			var clickHandler = function(event){
+				var btn = $(this);
+				var cmd = btn.attr('abs-cmd');
+
+				if (cmd == 'ok' || cmd == 'cancel'){
+					viewer.stylerWindow.clear();
+					ebtns.unbind('click', clickHandler);
+					e.hide();
+					
+					viewer.styler.unlock();
+	
+					resolve({ result: cmd, style: shape.style });
+				}else if (cmd == 'reset'){
+					AbCommon.copyProp(defaultStyle, shape.style);
+					viewer.stylerWindow.set(shape);
+				}
+			};
+
+			viewer.styler.lock();
+			
+			ebtns.bind('click', clickHandler);
+
+			// open
+			e.show();
+
+			//var observe = function (sendor, topic, value, shape){
+
+			viewer.stylerWindow.set(shape);
+		});
+	},
 
 	//-----------------------------------------------------------
 
@@ -1607,7 +1745,7 @@ AbImageViewer.prototype = {
 	},
 
 	saveToLocalText: function(){
-		var configSave = this.config.shape ? this.config.shape.save : 'all';
+		var configSave = this.config('shape.save') || 'all';
 		
 		var target = { text: '주석/마스킹', value: 'all' };
 		if (configSave === 'masking'){
@@ -1689,8 +1827,10 @@ AbImageViewer.prototype = {
 		if (collect.type == 'all'){
 			msg = '모든 이미지를 서버로 전송하시겠습니까?';
 			isAll = true;
+		}else if (collect.type == 'single'){
+			msg = '선택한 이미지를 서버로 전송하시겠습니까?';
 		}else{
-			msg = '선택한 이미지(들)를 서버로 전송하시겠습니까?';
+			msg = '선택한 이미지들을 서버로 전송하시겠습니까?';
 		}
 
 		if (!collect.pages.length)
@@ -2185,6 +2325,7 @@ AbImageViewer.prototype = {
 			parallels: this.PARALLELS,
 			
 			printShapes: this.engine.showShapes(),
+			printShapeTypeMap: this.engine.showShapeTypeMap(),
 			
 			errorImageExit: true, // 오류난 이미지 있을 시 프로세스 중단
 		

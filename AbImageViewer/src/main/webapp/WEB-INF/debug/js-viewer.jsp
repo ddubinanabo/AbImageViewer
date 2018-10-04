@@ -38,6 +38,7 @@
 <script type="text/javascript" src="resources/js/ab.viewer/20-01.ab.shape.line.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/20.ab.shape.arrow.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/21.ab.shape.pen.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/22-01.ab.shape.stamp.js"></script>
 <script type="text/javascript" src="resources/js/ab.viewer/22.ab.shape.highlight.pen.js"></script>
 
 <script type="text/javascript" src="resources/js/ab.viewer/23.ab.page.js"></script>

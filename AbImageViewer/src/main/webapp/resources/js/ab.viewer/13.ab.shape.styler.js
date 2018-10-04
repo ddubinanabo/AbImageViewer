@@ -7,6 +7,8 @@ function AbShapeStyler(options){
 
 	//-----------------------------------------------------------
 
+	this.locked = false;
+
 	this.shape = null;
 	this.styleDesc = null;
 
@@ -14,7 +16,7 @@ function AbShapeStyler(options){
 
 	//-----------------------------------------------------------
 
-	this.colorPicker = new AbColorPicker({
+	this.colorPicker = options.colorPicker && options.colorPicker instanceof AbColorPicker ? options.colorPicker : new AbColorPicker({
 		selector: options.colorPickerSelector,
 	});
 
@@ -194,14 +196,27 @@ AbShapeStyler.prototype = {
 		this.e.find('input[type="text"]').change(function(event){
 			var e = $(event.currentTarget);
 			var topic = e.attr('abs-topic');
+			var text = e.attr('abs-text');
 			var type = e.attr('abs-type');
 			var unit = e.attr('abs-unit');
 			//var number = e.attr('abs-number');
 			var rangeStart = e.attr('abs-range-start');
 			var rangeEnd = e.attr('abs-range-end');
+			var trim = e.attr('abs-trim');
+			var notempty = e.attr('abs-notempty');
 			var value = e.val();
 
 			value = this.typeValue(type, value);
+			if (trim === 'true')
+				value = $.trim(value);
+
+			if (notempty === 'true' && !value){
+				value = this.style(topic);
+				e.val(this.input(value, type, unit));
+
+				this.alert(text+'을(를) 입력하세요');
+				return;
+			}
 
 			if (rangeStart || rangeEnd){
 				var sr = this.typeValue(type, rangeStart);
@@ -239,6 +254,8 @@ AbShapeStyler.prototype = {
 
 	// observe color picker
 	notify: function (sender, topic, value, token){
+		if (!this.shape || this.locked === true) return;
+		
 		switch(topic){
 		case 'color':
 			var e = $(token);
@@ -316,6 +333,11 @@ AbShapeStyler.prototype = {
 
 	//-----------------------------------------------------------
 
+	lock: function() { this.locked = true; },
+	unlock: function() { this.locked = false; },
+
+	//-----------------------------------------------------------
+
 	alert: function (s){
 		alert(s);
 		//AbMsgBox.warning(s);
@@ -373,6 +395,9 @@ AbShapeStyler.prototype = {
 	},
 
 	style: function(topic, value){
+		if (!this.shape)
+			return false;
+
 		var r = this.styleObject(topic);
 
 		if (arguments.length == 2){
@@ -407,24 +432,57 @@ AbShapeStyler.prototype = {
 
 	createTopics: function(parent, descs, style){
 		var descSiz = descs.length, cnt=0;
+		var psingle = false, single = false, nsingle = false;
+
 		for (var i=0; i < descSiz; i++){
 			var d = descs[i];
+			var nd = i + 1 < descSiz ? descs[i + 1] : null;
 			var topic = parent.topic ? parent.topic +'.'+d.name : d.name;
 
 			var e = null;
+
+			nsingle = false;
+
 			if ($.isArray(d.childs)){
 				e = this.createGroup(topic, d);
 
 				if (this.createTopics({ topic: topic, e: e }, d.childs, style[d.name]) == 0)
 					e = null;
+
+				single = false;
 			}else{
 				switch(d.style){
-				case 'color': e = this.createColor(topic, d, style[d.name]); break;
-				case 'select': e = this.createSelect(topic, d, style[d.name]); break;
-				case 'check': e = this.createCheck(topic, d, style[d.name]); break;
-				case 'text': e = this.createText(topic, d, style[d.name]); break;
+				case 'check': single = true; break;
+				default: single = false; break;
 				}
+
+				if (nd){
+					switch(nd.style){
+					case 'check': nsingle = true; break;
+					default: nsingle = false; break;
+					}
+				}
+
+				var options = {
+					beginSingle: false,
+					endSingle: false
+				};
+
+				if (single){
+					if (!psingle) options.beginSingle = true;
+					if (!nsingle) options.endSingle = true;
+				}
+
+				switch(d.style){
+				case 'color': e = this.createColor(topic, d, style[d.name], options); break;
+				case 'select': e = this.createSelect(topic, d, style[d.name], options); break;
+				case 'check': e = this.createCheck(topic, d, style[d.name], options); break;
+				case 'text': e = this.createText(topic, d, style[d.name], options); break;
+				}
+
 			}
+
+			psingle = single;
 
 			if (e){
 				parent.e.append(e);
@@ -438,12 +496,15 @@ AbShapeStyler.prototype = {
 
 	//-----------------------------------------------------------
 
-	createField: function (topic, d, needTextNode){
-		if (!AbCommon.isBool(needTextNode)) needTextNode = true;
+	createField: function (topic, d, options){
+		if (!options) options = {};
+		if (!AbCommon.isBool(options.textNode)) options.textNode = true;
 
-		var e = $('<div class="abstyler-field"/>');
+		var fieldCss = options.fieldCss || '';
 
-		if (d.text && needTextNode){
+		var e = $('<div class="abstyler-field '+fieldCss+'"/>');
+
+		if (d.text && options.textNode){
 			var le = $('<div class="abstyler-field-text"/>');
 			le.text(d.text);
 
@@ -467,7 +528,7 @@ AbShapeStyler.prototype = {
 		return e;
 	},
 
-	createColor: function(topic, d, style){
+	createColor: function(topic, d, style, options){
 		var fe = this.createField(topic, d);
 
 		var e = $('<div class="abstyler-input" abs-kind="color"/>');
@@ -490,7 +551,7 @@ AbShapeStyler.prototype = {
 		return fe;
 	},
 
-	updateColor: function(topic, d, style){
+	updateColor: function(topic, d, style, options){
 		var e = this.inputElement(topic);
 
 		e.attr('abs-color', style);
@@ -505,7 +566,7 @@ AbShapeStyler.prototype = {
 		}
 	},
 
-	createSelect: function(topic, d, style){
+	createSelect: function(topic, d, style, options){
 		var fe = this.createField(topic, d);
 
 		var ecover = $('<div class="custom-select"/>')
@@ -565,14 +626,29 @@ AbShapeStyler.prototype = {
 		return fe;
 	},
 
-	updateSelect: function(topic, d, style){
+	updateSelect: function(topic, d, style, options){
 		var e = this.inputElement(topic);
 		
 		e.val(style);
 	},
 
-	createCheck: function(topic, d, style){
-		var fe = this.createField(topic, d, false);
+	createCheck: function(topic, d, style, options){
+		var fieldCss = ['abstyler-single-field'];
+		var beginSingle = options && options.beginSingle === true ? true : false;
+		var endSingle = options && options.endSingle === true ? true : false;
+
+		if (beginSingle === true)
+			fieldCss.push('abstyler-begin-single-field');
+		else if (endSingle === true)
+			fieldCss.push('abstyler-end-single-field');
+		else
+			fieldCss.push('abstyler-next-single-field');
+
+
+		var fe = this.createField(topic, d, {
+			textNode: false,
+			fieldCss: fieldCss.join(' '),
+		});
 
 		var e = $('<label/>');
 		var ce = $('<input type="checkbox" class="abstyler-input" abs-kind="check"/>');
@@ -589,17 +665,26 @@ AbShapeStyler.prototype = {
 		return fe;
 	},
 
-	updateCheck: function(topic, d, style){
+	updateCheck: function(topic, d, style, options){
 		var e = this.inputElement(topic);
 
 		e.attr('checked', style ? true : false);
 	},
 
-	createText: function(topic, d, style){
+	createText: function(topic, d, style, options){
 		var fe = this.createField(topic, d);
 
 		var e = $('<input type="text" class="abstyler-input" abs-kind="text"/>');
 		e.attr('abs-topic', topic);
+		e.attr('abs-text', d.text);
+
+		if (d.size) {
+			e.css('width', 'auto');
+			e.attr('size', d.size);
+		}
+
+		if (AbCommon.isBool(d.trim)) e.attr('abs-trim', d.trim);
+		if (AbCommon.isBool(d.notempty)) e.attr('abs-notempty', d.notempty);
 
 		if (d.range) {
 			if (AbCommon.isSetted(d.range.start)) e.attr('abs-range-start', d.range.start);
@@ -624,7 +709,7 @@ AbShapeStyler.prototype = {
 		return fe;
 	},
 
-	updateText: function(topic, d, style){
+	updateText: function(topic, d, style, options){
 		var e = this.inputElement(topic);
 		var type = e.attr('abs-type');
 		var unit = e.attr('abs-unit');

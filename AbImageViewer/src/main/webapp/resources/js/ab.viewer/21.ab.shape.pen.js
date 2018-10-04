@@ -157,7 +157,7 @@ AbShapePen.prototype = {
 			//console.log('{ x:' + p.x + ', y:' + p.y + ' },');
 		}
 
-		var s = '['; for (var i=0; i < len; i++){ var p = this.points[i]; s += '{ x:' + p.x + ', y:' + p.y + ' }, ';  } s += '],'; console.log(s);
+		//var s = '['; for (var i=0; i < len; i++){ var p = this.points[i]; s += '{ x:' + p.x + ', y:' + p.y + ' }, ';  } s += '],'; console.log(s);
 	},
 
 	setAngle: function (degree){ this.angle = degree; },
@@ -215,9 +215,10 @@ AbShapePen.prototype = {
 	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
 	//contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	contains: function(x, y, w, h){
+		var configValue = this.engine.selectionStyle(this.name);
 		var len = this.points.length;
 
-		if (arguments.length >= 4 || len < 2)
+		if (configValue === 'box' || arguments.length >= 4 || len < 2)
 			return this.indicator.contains.apply(this.indicator, arguments);
 
 		var page = this.engine.currentPage;

@@ -82,7 +82,7 @@ public class AbImageViewerConfig {
 		//-----------------------------------------------------------------------------------
 	
 		public boolean hasLayout(String name) {
-			return ArrayUtil.indexOf(layout, name) >= 0;
+			return layout != null && ArrayUtil.indexOf(layout, name) >= 0;
 		}
 	}
 
@@ -94,14 +94,40 @@ public class AbImageViewerConfig {
 		
 		@Value("${viewer.shape.add.ui}")
 		public String addUI;
-		
-		@Value("${viewer.shape.selection}")
-		public String selection;
+
+		@Autowired
+		public ShapeSelection selection;
 
 		//-----------------------------------------------------------------------------------
 		
 		public String getSave() { return save; }
 		public String getAddUI() { return addUI; }
-		public String getSelection() { return selection; }
+		public ShapeSelection getSelection() { return selection; }
 	}
+
+	@Component
+	public static class ShapeSelection {
+		
+		@Value("${viewer.shape.selection.style}")
+		public String style;
+		
+		@Value("#{'${viewer.shape.selection.target}'.trim().toLowerCase().split('\\s*\\,\\s*')}")
+		public String[] target;
+
+		@Value("${viewer.shape.selection.lineDrawStyle}")
+		public String lineDrawStyle;
+
+		//-----------------------------------------------------------------------------------
+		
+		public String getStyle() { return style; }
+		public String[] getTarget() { return target; }
+		public String getLineDrawStyle() { return lineDrawStyle; }
+
+		//-----------------------------------------------------------------------------------
+	
+		public boolean hasTarget(String name) {
+			return target != null && ArrayUtil.indexOf(target, name) >= 0;
+		}
+	}
+
 }

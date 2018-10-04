@@ -24,35 +24,37 @@ function AbLineEditIndicator(options){
 	var defaultControlStrokeStyle = defaultControlStyle.stroke || {};
 	var focusControlStyle = focusStyle.control || {};
 	var focusControlStrokeStyle = focusControlStyle.stroke || {};
+	
+	this.selectionStyle = 'path'; // box|path
 
 	this.style = {
 		default: {
 			control: {
 				stroke: {
-					color: focusControlStrokeStyle.color || '#BC719B', // '#4787C7', // '#4682B4',
+					color: focusControlStrokeStyle.color || 'rgba(127,172,209,1)', //'rgba(70,130,180,.6)', //'#6DA3CF', //'#3372A6', //'#266599', //'#BC719B', // '#4787C7', // '#4682B4',
 					width: focusControlStrokeStyle.width || 1,
 				},
 		
-				color: focusControlStyle.color || '#FF99D3', // '#389CFF', // '#99CCFF',	
+				color: focusControlStyle.color || 'rgba(201,228,252,1)', //'rgba(153,204,255,.3)', //'#AED6FF', //'#74A8DC', //'#5497D9', //'#FF99D3', // '#389CFF', // '#99CCFF',	
 				size: focusControlStyle.size || 10,
 			},
 	
-			color: focusStyle.color || '#BC719B', // '#4787C7', // '#00BFFF',
+			color: focusStyle.color || 'rgba(95,212,251,1)', //'rgba(0,191,255,.8)', //'#28C9FF', //'#00A9E1', //'#008DBC', //'#BC719B', // '#4787C7', // '#00BFFF',
 			width: focusStyle.width || 1,							
 		},
-
+	
 		focus: {
 			control: {
 				stroke: {
-					color: defaultControlStrokeStyle.color || '#4682B4',
+					color: defaultControlStrokeStyle.color || 'rgba(70,130,180,1)', //'#4682B4',
 					width: defaultControlStrokeStyle.width || 1,
 				},
 		
-				color: defaultControlStyle.color || '#99CCFF',	
+				color: defaultControlStyle.color || 'rgba(153,204,255,1)', //'#99CCFF',	
 				size: defaultControlStyle.size || 10,
 			},
 	
-			color: defaultStyle.color || '#00BFFF',
+			color: defaultStyle.color || 'rgba(0,191,255,1)', //'#00BFFF',
 			width: defaultStyle.width || 1,	
 		}
 	};
@@ -153,8 +155,14 @@ AbLineEditIndicator.prototype = {
 	},
 
 	//-----------------------------------------------------------
+	
+	contains: function (x, y, w, h){
+		if (this.selectionStyle === 'box')
+			return this.containsBox.apply(this, arguments);
+		return this.containsLine.apply(this, arguments);
+	},
 
-	contains: function(x, y, w, h){
+	containsLine: function(x, y, w, h){
 		var page = this.target.engine.currentPage;
 		var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
 
@@ -178,6 +186,31 @@ AbLineEditIndicator.prototype = {
 			if (validPointRadius < 1) validPointRadius = 1;
 			var d = AbGraphics.contains.line(trect.x1, trect.y1, trect.x2, trect.y2, x, y, validPointRadius);
 			return d;
+		}
+	},
+
+	containsBox: function(x, y, w, h){
+		var page = this.target.engine.currentPage;
+		var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
+
+		if (arguments.length >= 4){	
+			var pc = page.toCanvasBox(x, y, w, h);
+			x = pc.x; y = pc.y; w = pc.width; h = pc.height;
+
+			var tbox = this.target.box();
+			tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+			tbox = page.toCanvasBox(tbox);
+			
+			return AbGraphics.contains.box(x, y, w, h, tbox.x, tbox.y, tbox.width, tbox.height);
+		}else{
+			var tbox = this.target.box();
+			tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+			tbox = page.toCanvasBox(tbox);
+
+			var pc = page.toCanvas(x, y);
+			x = pc.x; y = pc.y;
+
+			return AbGraphics.contains.box(tbox.x, tbox.y, tbox.width, tbox.height, x, y);
 		}
 	},
 
@@ -246,7 +279,7 @@ AbLineEditIndicator.prototype = {
 			var incAngle = angle - this.target.angle;
 
 			this.target.angle = angle;
-			console.log('[ANGLE] ' + angle + ', INC=' + incAngle);
+			//console.log('[ANGLE] ' + angle + ', INC=' + incAngle);
 
 			var p = AbGraphics.angle.rect(incAngle, centerX, centerY, trect.x1, trect.y1, trect.x2, trect.y2);
 
@@ -321,6 +354,18 @@ AbLineEditIndicator.prototype = {
 		ctx.restore();
 	},
 
+	targetScaledBox: function (){
+		var tbox = this.target.box();
+
+		var engineScale = AbCommon.engineScale(this.target);
+		tbox.x *= engineScale.x;
+		tbox.y *= engineScale.y;
+		tbox.width *= engineScale.x;
+		tbox.height *= engineScale.y;
+
+		return tbox;
+	},
+
 	targetScaledRect: function (){
 		var trect = this.target.rect();
 
@@ -332,8 +377,15 @@ AbLineEditIndicator.prototype = {
 
 		return trect;
 	},
-
+	
 	draw: function(ctx){
+		if (this.selectionDrawStyle === 'box')
+			this.drawBox(ctx);
+		else
+			this.drawLine(ctx);
+	},
+
+	drawLine: function(ctx){
 		ctx.save();
 
 		//angle = 0;
@@ -358,6 +410,48 @@ AbLineEditIndicator.prototype = {
 		ctx.lineTo(c.leftTop.x, c.leftTop.y);
 		ctx.stroke();
 		ctx.closePath();
+
+		ctx.strokeStyle = style.control.stroke.color;
+		ctx.lineWidth = style.control.stroke.width;
+		ctx.fillStyle = style.control.color;
+
+		if (c.anglePoint){
+			ctx.beginPath();
+			ctx.moveTo(c.centerTop.x, c.centerTop.y);
+			ctx.lineTo(c.anglePoint.x, c.anglePoint.y);
+			ctx.stroke();
+			this.drawControl(ctx, c.anglePoint.x, c.anglePoint.y, 'circle');
+		}
+
+		if (this.controls.left) this.drawControl(ctx, c.left.x, c.left.y, 'box', c.radWide);
+		if (this.controls.right) this.drawControl(ctx, c.right.x, c.right.y, 'box', c.radWide);
+		
+		ctx.restore();
+	},
+	
+	drawBox: function(ctx){
+		ctx.save();
+
+		//angle = 0;
+		var trect = this.targetScaledRect();
+		var tbox = this.targetScaledBox();
+		var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
+		var angle = this.target.angle;
+
+		var cx = ((trect.x2 - trect.x1) >> 1), cy = ((trect.y2 - trect.y1) >> 1);
+		ctx.translate(trect.x1 + cx, trect.y1 + cy);
+
+		var c = this.corners();
+
+		var style = this.target.focused ? this.style.focus : this.style.default;	
+
+		ctx.strokeStyle = style.color;
+		ctx.lineWidth = style.width;
+
+		tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+		cx = (tbox.width >> 1), cy = (tbox.height >> 1);
+		
+		ctx.strokeRect(-cx, -cy, tbox.width, tbox.height);
 
 		ctx.strokeStyle = style.control.stroke.color;
 		ctx.lineWidth = style.control.stroke.width;

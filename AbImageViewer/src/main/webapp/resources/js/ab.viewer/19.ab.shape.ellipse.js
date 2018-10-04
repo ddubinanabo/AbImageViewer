@@ -64,7 +64,7 @@ AbShapeEllipse.prototype = {
 				{ name: 'color', text: '채우기색상', style: 'color' },
 				{ name: 'stroke', text: '선 스타일', childs: [
 					{ name: 'width', text: '두께', style: 'select', type: 'number', values: 'lineWidth' },
-					{ name: 'color', text: '색상', style: 'color', alpha: false },
+					{ name: 'color', text: '색상', style: 'color', alpha: false, notset: false },
 				] },
 			],
 		};
@@ -183,9 +183,15 @@ AbShapeEllipse.prototype = {
 	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
 	contains: function(x, y, w, h){
 		if (arguments.length < 4){
-			if (this.style.color)
-				return this.hitTest(x, y, w);
-			return this.hitTestSkeleton(x, y, w);
+			var configValue = this.engine.selectionStyle(this.name);
+			
+			if (configValue === 'box'){
+				return this.indicator.contains.apply(this.indicator, arguments);
+			}else{
+				if (this.style.color)
+					return this.hitTest(x, y, w);
+				return this.hitTestSkeleton(x, y, w);
+			}
 		}
 		return this.indicator.contains.apply(this.indicator, arguments);
 	},

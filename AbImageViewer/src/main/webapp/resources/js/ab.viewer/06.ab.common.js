@@ -455,6 +455,11 @@ var AbCommon = {
 			&& typeof o.addPoint == 'function'
 			&& typeof o.endPoint == 'function';
 	},
+
+	hasShapeStyle: function (o) {
+		var styleDesc = o ? o.styleDesc() : null;
+		return styleDesc && styleDesc.descs && styleDesc.descs.length > 0;
+	},
 	
 	// 도형 객체가 비동기로 선행 작업을 요하는 지 체크
 	needPreloading: function (o){

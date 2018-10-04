@@ -328,7 +328,7 @@ AbColorPicker.prototype = {
 			box = box.children();
 			box.css('background-color', color);
 
-			this.notifyObservers('color', colorl);
+			this.notifyObservers('color', color);
 			this.close();
 		}
 	},

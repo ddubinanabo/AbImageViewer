@@ -179,7 +179,7 @@ AbShapeHighlightPen.prototype = {
 		this.height = (this.maxPointY + hs) - this.y;
 		
 		//console.log('[POINT] x='+x+', y='+y + ' [BOX] min(x=' + this.minPointX + ', y=' + this.minPointY+'), max(x='+this.maxPointX+', y=' + this.maxPointY+')');
-		console.log('[POINT][ADD] width=' + this.width + ', height=' + this.height);
+		//console.log('[POINT][ADD] width=' + this.width + ', height=' + this.height);
 	},
 
 	endPoint: function(){
@@ -206,7 +206,7 @@ AbShapeHighlightPen.prototype = {
 			}
 		}
 
-		var s = '['; for (var i=0; i < len; i++){ var p = this.points[i]; s += '{ x:' + p.x + ', y:' + p.y + ' }, ';  } s += '],'; console.log(s);
+		//var s = '['; for (var i=0; i < len; i++){ var p = this.points[i]; s += '{ x:' + p.x + ', y:' + p.y + ' }, ';  } s += '],'; console.log(s);
 	},
 
 	setAngle: function (degree){ this.angle = degree; },
@@ -287,7 +287,9 @@ AbShapeHighlightPen.prototype = {
 	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
 	//contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	contains: function(x, y, ctx){
-		if (arguments.length >= 4)
+		var configValue = this.engine.selectionStyle(this.name);
+		
+		if (configValue === 'box' || arguments.length >= 4)
 			return this.indicator.contains.apply(this.indicator, arguments);
 			
 		var ws = this.style.width >> 1;
@@ -514,7 +516,7 @@ AbShapeHighlightPen.prototype = {
 				rhs = hs * scaleY;
 				rws = rws * r.ratioX - rws;
 				rhs = rhs * r.ratioY - rhs;
-				cor = AbShapeHighlightPen.CORRECT_WEIGHT;
+				cor = AbShapeHighlightPen.prototype.CORRECT_WEIGHT;
 			}
 
 			//-----------------------------------------------------------

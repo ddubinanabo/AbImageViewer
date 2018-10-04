@@ -16,6 +16,7 @@ var AbImageTransferProcessHelper = function(options){
 
 	this.selector = options.selector;
 	this.printShapes = AbCommon.isBool(options.printShapes) ? options.printShapes : true;
+	this.printShapeTypeMap = options.printShapeTypeMap;
 
 	//-----------------------------------------------------------
 	
@@ -306,6 +307,7 @@ AbImageTransferProcessHelper.prototype = {
 		var handlers = this.handlers;
 		
 		var printShapes = this.printShapes === true;
+		var printShapeTypeMap = this.printShapeTypeMap;
 		var data = this.data;
 		
 		var pageInfo = data.source[index];
@@ -333,7 +335,7 @@ AbImageTransferProcessHelper.prototype = {
 					var decoder = pageInfo.page.decoder();
 
 					var ctx = AbGraphics.canvas.createContext();
-					engine.renderImage(ctx, pageInfo.page, printShapes);
+					engine.renderImage(ctx, pageInfo.page, printShapes, printShapeTypeMap);
 					var src = AbGraphics.canvas.toImage(ctx, decoder);
 
 					current.imgInfo.width = pageInfo.page.source.width;

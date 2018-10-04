@@ -202,7 +202,7 @@ AbShapeArrow.prototype = {
 
 	center: function (){ return { x: this.x1 + ((this.x2 - this.x1) / 2), y: this.y1 + ((this.y2 - this.y1) / 2) }; },
 	restoreMinimumSize: function() {
-		var siz = this.controlSize();
+		var siz = this.controlSize() << 1;
 		//return AbGraphics.box.inflate(box.x, box.y, box.width, box.height, this.style.head.size, this.style.head.size);
 		return { width: siz, height: siz };
 	},
@@ -217,7 +217,10 @@ AbShapeArrow.prototype = {
 	editable: function (x, y){ if (this.selected){ return this.indicator.editable(x, y); } return null; },
 	editPos: function (point){ return this.indicator.editPos(point); },
 	resize: function (point, px, py){ return this.indicator.resize(point, px, py); },
-	measure: function(){},
+	measure: function(){
+		this.indicator.selectionStyle = this.engine.selectionStyle(this.name);
+		this.indicator.selectionDrawStyle = this.engine.config('shape.selection.lineDrawStyle');
+	},
 
 	//-----------------------------------------------------------
 
@@ -422,8 +425,8 @@ AbShapeArrow.prototype = {
 			ctx.lineTo(this.round(p1.x), this.round(p1.y));
 
 			return {
-				full: this.roundPos(AbGraphics.rotate.pointByDistance(d.rad, d.size)),
-				half: this.roundPos(AbGraphics.rotate.pointByDistance(d.rad, halfSize))
+				full: AbGraphics.rotate.pointByDistance(d.rad, d.size),
+				half: AbGraphics.rotate.pointByDistance(d.rad, halfSize)
 			};
 		} else if (style === 'diamond'){
 			var p1 = AbGraphics.rotate.point(d.rad, d.x, d.y, d.x + d.size,  d.y);
@@ -497,11 +500,6 @@ AbShapeArrow.prototype = {
 		var rb = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x2, y2);
 		var lb = AbGraphics.rotate.point(rad, trect.x1, trect.y1, x1, y2);
 
-		// this.roundPos(lt);
-		// this.roundPos(rt);
-		// this.roundPos(rb);
-		// this.roundPos(lb);
-
 		var radwide = AbGraphics.angle.radian90(lt.x, lt.y, lb.x, lb.y);
 
 		return {
@@ -521,8 +519,11 @@ AbShapeArrow.prototype = {
 		};
 	},
 
+	wannaClip: function(){ return this.style.width > 1; },
+
 	drawLine: function(ctx, c, rdots){
-		if (c.thickness <= 1){
+		//if (c.thickness <= 1){
+		if (!this.wannaClip()){
 			if (rdots && rdots.length)
 				ctx.setLineDash(rdots);
 			
@@ -636,50 +637,51 @@ AbShapeArrow.prototype = {
 
 		//-----------------------------------------------------------
 
-		ctx.save();
+		if (this.wannaClip()){
+			ctx.save();
+			ctx.beginPath();
 
-		ctx.beginPath();
+			var points = [];
 
-		var points = [];
+			var chead = this.clipHeadArrow(ctx, {
+				lineRect: lineRect,
+				lineCorners: clipCorners,
+				distance: distance,
+				style: this.style.head.style,
+				size: headSize + lineWidth,
+				lineWidth: lineWidth,
+				rad: rad,
+				x: ox2 - cx2,
+				y: oy2 - cy2,
+			});
 
-		var chead = this.clipHeadArrow(ctx, {
-			lineRect: lineRect,
-			lineCorners: clipCorners,
-			distance: distance,
-			style: this.style.head.style,
-			size: headSize + lineWidth,
-			lineWidth: lineWidth,
-			rad: rad,
-			x: ox2 - cx2,
-			y: oy2 - cy2,
-		});
+			var ctail = this.clipTailArrow(ctx, {
+				lineRect: lineRect,
+				lineCorners: clipCorners,
+				distance: distance,
+				style: this.style.tail.style,
+				size: tailSize + lineWidth,
+				lineWidth: lineWidth,
+				rad: rad,
+				x: ox1 - cx2,
+				y: oy1 - cy2,
+			});
 
-		var ctail = this.clipTailArrow(ctx, {
-			lineRect: lineRect,
-			lineCorners: clipCorners,
-			distance: distance,
-			style: this.style.tail.style,
-			size: tailSize + lineWidth,
-			lineWidth: lineWidth,
-			rad: rad,
-			x: ox1 - cx2,
-			y: oy1 - cy2,
-		});
+			Array.prototype.push.apply(points, chead);
+			Array.prototype.push.apply(points, ctail);
 
-		Array.prototype.push.apply(points, chead);
-		Array.prototype.push.apply(points, ctail);
+			//-----------------------------------------------------------
 
-		//-----------------------------------------------------------
+			for (var i=0; i < points.length; i++){
+				if (i == 0) ctx.moveTo(this.round(points[i].x), this.round(points[i].y));
+				else ctx.lineTo(this.round(points[i].x), this.round(points[i].y));
+			}
 
-		for (var i=0; i < points.length; i++){
-			if (i == 0) ctx.moveTo(this.round(points[i].x), this.round(points[i].y));
-			else ctx.lineTo(this.round(points[i].x), this.round(points[i].y));
+			//-----------------------------------------------------------
+
+			//ctx.fill();
+			ctx.clip();
 		}
-
-		//-----------------------------------------------------------
-
-		//ctx.fill();
-		ctx.clip();
 
 		//-----------------------------------------------------------
 		// draw clipped line
@@ -693,7 +695,8 @@ AbShapeArrow.prototype = {
 
 		//-----------------------------------------------------------
 
-		ctx.restore();
+		if (this.wannaClip())
+			ctx.restore();
 
 		//-----------------------------------------------------------
 

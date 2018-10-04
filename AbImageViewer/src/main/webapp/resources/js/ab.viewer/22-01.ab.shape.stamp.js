@@ -1,13 +1,14 @@
-function AbShapeRectangle(options){
+function AbShapeStamp(options){
 	if (!options) options = {};
 	var style = options.style || {};
 	var strokeStyle = style.stroke || {};
 
-	this.name = 'rectangle';	// name of shape
+	this.name = 'stamp';		// name of shape
 	this.type = 'annotation';	// annotation, masking
 	this.shapeType = 'shape';	// shape, polygon, image
 	this.shapeStyle = 'box';	// box, line
 	this.token = null;			// for customize
+	var textPadding = { left: 6, top: 6, right: 6, bottom: 6 };
 
 	this.selected = false;
 	this.focused = false;
@@ -15,6 +16,15 @@ function AbShapeRectangle(options){
 	this.indicator = AbCommon.isDefined(AbBoxEditIndicator) ? new AbBoxEditIndicator({ target: this }) : null;
 
 	this.angle = options.angle || 0;
+	this.textPadding = {
+		left: textPadding.left,
+		top: textPadding.top,
+		right: textPadding.right,
+		bottom: textPadding.bottom,
+
+		horiz: function() { return this.left + this.right; },
+		vert: function() { return this.top + this.bottom; },
+	};
 
 	if (AbCommon.allNumbers(options.x, options.y, options.width, options.height)){
 		this.x = options.x;
@@ -30,13 +40,18 @@ function AbShapeRectangle(options){
 		this.height = box.height;
 	}
 
-	this.style = {
-		stroke: {
-			width: AbCommon.isNumber(strokeStyle.width) ? strokeStyle.width : 1,
-			color: strokeStyle.color || '#41719C', //'#840200',
-		},
+	this.extra = {
+		borderWidth: 6, // pixel
+		fontWeight: 700,
+		lineHeight: 1.13,
+		fontSizeFraction: 0.222,
+		font: 'Times New Roman', // 맑은 고딕(Malgun Gothic), 굴림(gulim), 돋움(Dotum), Arial, Courier New, Times New Roman, Verdana, Helvetica, Tahoma
+		fontSize: 40, // pixel
+	};
 
-		color: AbCommon.isDefined(style.color) ? style.color : 'rgba(91,155,213,0.8)', //'#FF0000',
+	this.style = {
+		color: AbCommon.isDefined(style.color) ? style.color : 'rgba(255,0,0,1)', //'#FF0000',
+		text: AbCommon.isString(style.text) ? style.text : 'APPROVE',
 	};
 };
 	
@@ -44,20 +59,16 @@ function AbShapeRectangle(options){
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-AbShapeRectangle.prototype = {
-	constructor: AbShapeRectangle,
+AbShapeStamp.prototype = {
+	constructor: AbShapeStamp,
 
 	//-----------------------------------------------------------
 
 	styleDesc: function(){
 		return {
-			select: [ 'color', 'stroke.width' ],
 			descs: [
-				{ name: 'color', text: '채우기색상', style: 'color' },
-				{ name: 'stroke', text: '선 스타일', childs: [
-					{ name: 'width', text: '두께', style: 'select', type: 'number', values: 'lineWidth' },
-					{ name: 'color', text: '색상', style: 'color', alpha: false, notset: false },
-				] },
+				{ name: 'color', text: '채우기색상', style: 'color', notset: false, },
+				{ name: 'text', text: '내용', style: 'text', trim: true, notempty: true, size: 10 },
 			],
 		};
 	},
@@ -87,12 +98,7 @@ AbShapeRectangle.prototype = {
 
 		var style = serializer.addGroup('style');
 		serializer.add(style, 'color', this.style.color);
-		
-		if (this.style.stroke){
-			var stroke = serializer.addGroup(style, 'stroke');
-			serializer.add(stroke, 'width', this.style.stroke.width);
-			serializer.add(stroke, 'color', this.style.stroke.color);
-		}
+		serializer.add(style, 'text', this.style.text);
 
 		return serializer.serialize();
 	},
@@ -154,18 +160,7 @@ AbShapeRectangle.prototype = {
 	//-----------------------------------------------------------
 
 	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
-	contains: function(x, y, w, h){
-		var configValue = this.engine.selectionStyle(this.name);
-		
-		if (configValue === 'box'){
-			return this.indicator.contains.apply(this.indicator, arguments);
-		}else{
-			if (this.style.color)
-				return this.indicator.contains.apply(this.indicator, arguments);
-			else
-				return this.indicator.containsSide.apply(this.indicator, arguments);
-		}
-	},
+	contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	editable: function (x, y){ if (this.selected) return this.indicator.editable(x, y); return null; },
 	editPos: function (point){ return this.indicator.editPos(point); },
 	resize: function (point, px, py){ return this.indicator.resize(point, px, py); },
@@ -174,23 +169,84 @@ AbShapeRectangle.prototype = {
 
 	//-----------------------------------------------------------
 
+	measureText: function (ctx, text){
+		var fontSize = this.extra.fontSize;
+		ctx.font = this.extra.fontWeight + ' ' + fontSize + 'px ' + this.extra.font;
+		//ctx.font = fontSize + 'px ' + this.extra.font;
+		ctx.textBaseline = 'alphabetic';
+
+		//console.log('[FONT-SIZE]' + fontSize);
+
+		return { width: ctx.measureText(text).width, height: fontSize * this.extra.lineHeight };
+	},
+
+	drawStamp: function (ctx, x, y, w, h){
+		var text = this.style.text;
+
+		ctx.save();
+
+		var gap = this.extra.borderWidth;
+		var hgap = gap / 2;
+		var padLeft = this.textPadding.left, padRight = this.textPadding.right;
+		var padTop = this.textPadding.top, padBottom = this.textPadding.bottom;
+	
+		var inx = hgap + padLeft;
+		var iny = hgap + padTop;
+		var horiz = (gap + (padLeft + padRight)), vert = (gap + (padTop + padBottom));
+	
+		var r = this.measureText(ctx, text);
+		var textWidth = r.width, textHeight = r.height;
+		
+		var zr = AbGraphics.box.zoom(textWidth + horiz, textHeight + vert, w, h);
+		var rx = zr.ratioX;
+		var ry = zr.ratioY;
+
+		//console.log('[RATIO] (' + rx + ', ' + ry + ') text(' + textWidth + ', ' + textHeight + ') box(' + w + ', ' + h + ') font=' + ctx.font);
+
+		var fontSize = this.extra.fontSize;
+		var lineHeight = this.extra.lineHeight;
+		var fontSizeFraction = this.extra.fontSizeFraction;
+
+		var textHeight = fontSize * lineHeight;
+
+		ctx.translate(x, y);
+		ctx.scale(rx, ry);
+
+		ctx.lineWidth = gap;
+		ctx.strokeRect(hgap, hgap, (w / rx) - gap, (h / ry) - gap);
+
+		ctx.translate(inx, iny);
+
+		var txtx = 0;
+		var txty = 0;
+		txty += textHeight;
+		txty -= textHeight * fontSizeFraction;
+
+		ctx.translate(txtx, txty);
+
+		ctx.fillText(text, 0, 0);
+		ctx.restore();
+	},
+
+	//-----------------------------------------------------------
+
 	draw: function(ctx, page, direct){
-		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
+		var scale = page ? page.scale.x : 1;
+
+		//var mx = this.measureText(ctx, this.style.text, 1); this.width = mx.width + this.textPadding.horiz() + this.extra.borderWidth; this.height = mx.height + this.textPadding.vert() + this.extra.borderWidth;
+		//this.width *= 2; this.height *= 2;
+
+		//var mx = this.measureText(ctx, this.style.text, 1);
 
 		AbShapeTool.beginRectDraw(this, ctx, page);
-		
-		if (this.style.color){
-			ctx.fillStyle = this.style.color;
-			ctx.fillRect(0, 0, this.width * scaleX, this.height * scaleY);
-		}
 
-		if (this.style.stroke && this.style.stroke.width && this.style.stroke.color){
-			ctx.strokeStyle = this.style.stroke.color;
-			ctx.lineWidth = this.style.stroke.width;
+		ctx.fillStyle = this.style.color;
+		ctx.strokeStyle = this.style.color;
 
-			ctx.strokeRect(0, 0, this.width * scaleX, this.height * scaleY);
-		}
-		
+		ctx.scale(scale, scale);
+
+		this.drawStamp(ctx, 0, 0, this.width, this.height);
+
 		AbShapeTool.endDraw(this, ctx);
 	},
 }

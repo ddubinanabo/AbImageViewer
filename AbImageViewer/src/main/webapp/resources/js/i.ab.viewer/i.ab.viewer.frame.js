@@ -3,6 +3,15 @@ var iAbViewerFrame = {
 
 	//-----------------------------------------------------------
 	
+	reset: function (){
+		for (var p in this.frames){
+			if (this.frames.hasOwnProperty(p))
+				delete this.frames[p];
+		}
+	},
+
+	//-----------------------------------------------------------
+	
 	prepare: function(){
 		var a = $('iframe[ab-topic]');
 		var len = a.length;
@@ -269,6 +278,8 @@ var iAbViewerFrame = {
 //-----------------------------------------------------------
 
 $(function(){
+	// iframe 바깥 세팅
 	iAbViewerFrame.prepare();
+	// iframe 안 세팅
 	iAbViewerFrame.receiveCommands();
 });

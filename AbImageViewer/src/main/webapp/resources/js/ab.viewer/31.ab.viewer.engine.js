@@ -14,6 +14,10 @@ function AbViewerEngine(options){
 	this.focusedShape = null;
 	
 	//-----------------------------------------------------------
+	
+	this.$config = options.config || {};
+	
+	//-----------------------------------------------------------
 
 	this.style = {
 		color: styleOption.hasOwnProperty('color') ? styleOption.color : null, // '#F8F8F9',
@@ -44,7 +48,9 @@ function AbViewerEngine(options){
 
 	this.enableAnimate = true;
 
-	this.$showShapes = true;
+	// 보여질 도형 타입 맵
+	this.showingShapes = true;
+	this.showingShapeTypeMap = {};
 
 	this.margin = {
 		left: optionMargin.left,
@@ -221,7 +227,7 @@ function AbViewerEngine(options){
 		box: function(){ return AbGraphics.box.rect(this.start.x, this.start.y, this.end.x, this.end.y); },
 
 		// 드로잉 한 좌표 (화면 좌표)
-		drawd: null,
+		drawed: null,
 
 		reset: function (){
 			if (this.target){
@@ -412,6 +418,7 @@ AbViewerEngine.prototype = {
 		arrow: new AbShapeArrow(),
 		line: new AbShapeLine(),
 		checker: new AbShapeImage({ name: 'checker', source: AbIcons.CHECKER }),
+		stamp: new AbShapeStamp(),
 	},
 	
 	//-----------------------------------------------------------
@@ -643,16 +650,85 @@ AbViewerEngine.prototype = {
 	},
 
 	//-----------------------------------------------------------
+	
+	config: function (name){
+		function configObject(config, name){
+			var o = config;
+			var path = name.split('.'), idx = 0;
+			var pathSiz = path.length - 1, leap = path[path.length - 1];
+			while (idx < pathSiz){
+				o = o[path[idx]];
+				if (!o)
+					return null;
+				idx++;
+			}
+			return {
+				config: o,
+				leap: leap
+			};
+		}
+		
+		var r = configObject(this.$config, name);
+		
+		if (!r)
+			return null;
+		
+		return r.config[r.leap];
+	},
+
+	selectionStyle: function (shapeName){
+		//console.log('[selection-style][' + shapeName + ']');
+		
+		var config = this.$config;
+		var style = 'path', target = ['all'];
+		
+		if (config && config.shape && config.shape.selection){
+			if (config.shape.selection.style) style = config.shape.selection.style;
+			if (config.shape.selection.target && $.isArray(config.shape.selection.target))
+				target = config.shape.selection.target;
+		}
+		
+		if ($.inArray('all', target) >= 0 || $.inArray(shapeName, target) >= 0)
+			return style;
+		return 'path';
+	},
+	
+	//-----------------------------------------------------------
+	
+	isVisibleShapeType: function (type){
+		if (!this.showingShapes) return false;
+		
+		var showing = true;
+		
+		if (type && this.showingShapeTypeMap[type] === false) showing = false;
+		
+		return showing;
+	},
 
 	showShapes: function(){
-		if (arguments.length && AbCommon.isBool(arguments[0]) && this.$displayShapes != arguments[0]){
-			this.$showShapes = arguments[0];
-			this.render();
+		if (arguments.length){
+			if (AbCommon.isBool(arguments[0])){
+				this.showingShapes = arguments[0];
+				this.render();
 
-			this.notifyObservers('shapes', this.$showShapes ? 'show' : 'hide');
+				this.notifyObservers('show', { type: 'all', show: this.showingShapes });
+			}else if (AbCommon.isString(arguments[0])){
+				var type = $.trim(arguments[0]);
+				
+				if (arguments.length >= 2 && AbCommon.isBool(arguments[1])){
+					this.showingShapeTypeMap[type] = arguments[1];
+					this.render();
+
+					this.notifyObservers('show', { type: type, show: this.showingShapeTypeMap[type] });
+				}else{
+					return this.showingShapeTypeMap[type];
+				}
+			}
 		}
-		return this.$showShapes;
+		return this.showingShapes;
 	},
+	
+	showShapeTypeMap: function(){ return this.showingShapeTypeMap; },
 
 	editable: function(){
 		return this.pages.length() > 0 && this.currentPage && !this.currentPage.error && this.maniplatable();
@@ -1110,6 +1186,7 @@ AbViewerEngine.prototype = {
 		var x = states.x, y = states.y;
 		for (var i = this.selectedShapes.length - 1; i >= 0; i--){
 			var s = this.selectedShapes[i];
+
 			if ((edit = s.editable(x, y, this.viewContext)) != null){
 				sel = s;
 				break;
@@ -2365,6 +2442,10 @@ AbViewerEngine.prototype = {
 	getShape: function(x, y){
 		for (var i = this.currentPage.shapes.length - 1; i >= 0; i--){
 			var s = this.currentPage.shapes[i];
+
+			if (!this.isVisibleShapeType(s.type))
+				continue;
+
 			if (s.contains(x, y, this.viewContext))
 				return s;
 		}
@@ -2537,6 +2618,10 @@ AbViewerEngine.prototype = {
 			var box = this.selection.box();
 			for (var i=this.currentPage.shapes.length - 1; i >= 0; i--){
 				var s = this.currentPage.shapes[i];
+
+				if (!this.isVisibleShapeType(s.type))
+					continue;
+
 				if (s.contains(box.x, box.y, box.width, box.height, this.viewContext)){
 					s.selected = true;
 					this.selectedShapes.push(s);
@@ -2565,6 +2650,10 @@ AbViewerEngine.prototype = {
 
 			for (var i=this.currentPage.shapes.length - 1; i >= 0; i--){
 				var s = this.currentPage.shapes[i];
+
+				if (!this.isVisibleShapeType(s.type))
+					continue;
+
 				if (!sel && s.contains(x, y, this.viewContext)){
 					s.selected = true;
 					this.selectedShapes.push(s);
@@ -2663,6 +2752,9 @@ AbViewerEngine.prototype = {
 
 		for (var i=this.currentPage.shapes.length - 1; i >= 0; i--){
 			var s = this.currentPage.shapes[i];
+
+			if (!this.isVisibleShapeType(s.type))
+				continue;
 
 			s.selected = true;
 			s.focused = false;
@@ -3253,9 +3345,12 @@ AbViewerEngine.prototype = {
 
 			ctx.restore();
 	
-			if (this.$showShapes)
-				page.drawOrigin(ctx, gen.ratio);				
-
+			if (this.isVisibleShapeType())
+				page.drawOrigin(ctx, {
+					scale: gen.ratio,
+					showingShapeTypeMap: this.showingShapeTypeMap
+				});
+			
 			// this.margin.left = marginLeft;
 			// this.margin.top = marginTop;
 			// this.margin.right = marginRight;
@@ -3265,9 +3360,10 @@ AbViewerEngine.prototype = {
 		}
 	},
 
-	renderImage: function (ctx, page, drawShapes){
+	renderImage: function (ctx, page, drawShapes, showingShapeTypeMap){
 		if (arguments.length <= 1) page = this.currentPage;
-		if (arguments.length <= 2) drawShapes = this.$showShapes;
+		if (arguments.length <= 2) drawShapes = this.showingShapes;
+		if (arguments.length <= 3) showingShapeTypeMap = this.showingShapeTypeMap;
 
 		if (AbCommon.isNumber(page)){
 			if (page < 0 || page >= this.pages.length()) return;
@@ -3324,7 +3420,9 @@ AbViewerEngine.prototype = {
 			//-----------------------------------------------------------
 
 			if (drawShapes)
-				page.drawOrigin(ctx, 1);
+				page.drawOrigin(ctx, {
+					showingShapeTypeMap: showingShapeTypeMap
+				});
 
 			// this.margin.left = marginLeft;
 			// this.margin.top = marginTop;
@@ -3512,9 +3610,10 @@ AbViewerEngine.prototype = {
 
 				//-----------------------------------------------------------
 	
-				if (this.$showShapes){
-					page.drawShapes(ctx);
-				}
+				if (this.isVisibleShapeType())
+					page.drawShapes(ctx, {
+						showingShapeTypeMap: this.showingShapeTypeMap
+					});
 
 				ctx.restore();
 
