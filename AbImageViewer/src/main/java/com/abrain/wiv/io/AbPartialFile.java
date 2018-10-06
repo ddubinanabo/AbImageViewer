@@ -87,12 +87,12 @@ public class AbPartialFile {
 		
 		UUID uid = UUID.randomUUID();
 		String id = uid.toString().replaceAll("-", "").toUpperCase();
-		File target = new File(basePath + "/" + id);
+		File target = new File(FileUtil.combinePath(basePath, id));
 		
 		while(target.exists()){
 			uid = UUID.randomUUID();
 			id = uid.toString().replaceAll("-", "").toUpperCase();
-			target = new File(basePath + "/" + id);
+			target = new File(FileUtil.combinePath(basePath, id));
 		}
 		
 		target.mkdir();
@@ -103,7 +103,7 @@ public class AbPartialFile {
 		
 		AllocResult r = new AllocResult();
 		r.id = id;
-		r.path = basePath + "/" + id;
+		r.path = FileUtil.combinePath(basePath, id);
 		
 		return r;
 	}
@@ -510,7 +510,7 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	private static boolean tryRemoveDirectory(String basePath, String id){
-		String tmpPath = basePath + "/" + id;
+		String tmpPath = FileUtil.combinePath(basePath, id);
 		File tmpPathFile = new File(tmpPath);
 		
 		File[] files = tmpPathFile.listFiles();
@@ -543,14 +543,14 @@ public class AbPartialFile {
 
 		//-----------------------------------------------------------------------------------
 	
-		String path = context.getRealPath(DIR_FILES + "tmp/" + sessionId);
+		String path = FileUtil.combinePath(context.getRealPath(DIR_FILES), "tmp", sessionId);
 		File pathFile = new File(path);
 		if (!pathFile.exists())
-			pathFile.mkdir();
+			return;
 
 		//-----------------------------------------------------------------------------------
 		
-		String tmpPath = path + "/" + middleName + "/" + id;
+		String tmpPath = FileUtil.combinePath(path, middleName, id);
 		
 		File tmpPathFile = new File(tmpPath);
 		if (tmpPathFile.exists()){
@@ -579,7 +579,19 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
+		
+	public static String rootFolder(ServletContext context, String sessionId) {
+		String rootDirPath = context.getRealPath(DIR_FILES);
+		
+		File rootDir = new File(rootDirPath);
+		if (!rootDir.exists())
+			rootDir.mkdir();
+		
+		return FileUtil.combinePath(rootDirPath, sessionId);
+	}
 	
+	//-----------------------------------------------------------------------------------
+
 	private static boolean debugFirstCalled = false;
 	private static Object debugLock = new Object();
 	
@@ -596,22 +608,26 @@ public class AbPartialFile {
 			sessionId = session.getId();
 
 		//-----------------------------------------------------------------------------------
+		
+		String path = rootFolder(context, "tmp");
+
+		//-----------------------------------------------------------------------------------
 	
-		String path = context.getRealPath(DIR_FILES + "/tmp");
+		//String path = context.getRealPath(DIR_FILES + "/tmp");
 		File pathFile = new File(path);
 		if (!pathFile.exists())
 			pathFile.mkdir();
 
 		//-----------------------------------------------------------------------------------
 	
-		String tmpPath = path + "/" + sessionId;
+		String tmpPath = FileUtil.combinePath(path, sessionId);
 		File tmpPathFile = new File(tmpPath);
 		if (!tmpPathFile.exists())
 			tmpPathFile.mkdir();
 
 		//-----------------------------------------------------------------------------------
 		
-		String tmpMidPath = tmpPath + "/" + middleName;
+		String tmpMidPath = FileUtil.combinePath(tmpPath, middleName);
 		File tmpMidPathFile = new File(tmpMidPath);
 		if (!tmpMidPathFile.exists())
 			tmpMidPathFile.mkdir();
@@ -641,14 +657,14 @@ public class AbPartialFile {
 
 		//-----------------------------------------------------------------------------------
 		
-		String tmpPath = basePath + "/" + id;
+		String tmpPath = FileUtil.combinePath(basePath, id);
 		File tmpPathFile = new File(tmpPath);
 		if (!tmpPathFile.exists())
 			tmpPathFile.mkdir();
 
 		//-----------------------------------------------------------------------------------
 		
-		String filepath = tmpPath + "/" + filename;
+		String filepath = FileUtil.combinePath(tmpPath, filename);
 	
 		return filepath;
 	}

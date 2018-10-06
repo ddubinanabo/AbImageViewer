@@ -43,6 +43,73 @@ public class FileUtil {
 //	}
 
 	//-----------------------------------------------------------------------------------
+	
+	public static String combinePath(String path, String ...arg) {
+		java.nio.file.Path oPath = java.nio.file.Paths.get(path, arg);
+		return oPath.toString();
+	}
+
+	//-----------------------------------------------------------------------------------
+	
+//	public static String path(String path) {
+//		return path.replaceAll("\\\\", "/");
+//	}
+
+//	public static String combine2(String path1, String path2) {
+//		if (path1 == null && path2 == null)
+//			return null;
+//		
+//		String cpath1 = null, cpath2 = null;
+//		if (path1 != null) {
+//			cpath1 = path(path1);
+//			if (cpath1.charAt(cpath1.length() - 1) == '/')
+//				cpath1 = cpath1.substring(0, cpath1.length() - 1);
+//		}
+//		if (path2 != null) {
+//			cpath2 = path(path2);
+//			if (cpath2.charAt(cpath2.length() - 1) == '/')
+//				cpath2 = cpath2.substring(0, cpath2.length() - 1);
+//		}
+//		
+//		boolean existCPath1 = cpath1 != null && cpath1.isEmpty();
+//		boolean existCPath2 = cpath2 != null && cpath2.isEmpty();
+//		
+//		return cpath1 + (existCPath1 && existCPath2 ? "/" : "") + cpath2;
+//	}
+
+	//-----------------------------------------------------------------------------------
+
+//	public static String combineDir(boolean mkdir, String path, String ...arg) {
+//		File dir = null;
+//		java.nio.file.Path oPath = null;
+//		
+//		if (mkdir) {	
+//			dir = new File(path);
+//			if (!dir.exists()) {
+//				dir.mkdir();
+//			}
+//		}
+//		
+//		if (arg != null) {
+//			for (int i=0; i < arg.length; i++) {
+//				String s = arg[i];
+//				
+//				oPath = java.nio.file.Paths.get(path, s);
+//				dir = oPath.toFile();
+//				
+//				if (mkdir) {
+//					if (!dir.exists()) {
+//						dir.mkdir();
+//					}
+//				}
+//				
+//				path = oPath.toString();
+//			}
+//		}
+//		return path;
+//	}
+	
+	//-----------------------------------------------------------------------------------
 
 	public static String safeBaseName(String basename){
 		return basename.replace("\\", "").replace("/", "").replace(":", "").replace("*", "").replace("?", "")
@@ -62,12 +129,13 @@ public class FileUtil {
 
 	public static String unique (String dir, boolean mkdir){
 		UUID uid = UUID.randomUUID();
-		String path = dir + "/" + uid;
+		//String id = uid.toString().replaceAll("-", "").toUpperCase();
+		String path = combinePath(dir, uid.toString());
 		File file = new File(path);
 		
 		while (file.exists()){
 			uid = UUID.randomUUID();
-			path = dir + "/" + uid;
+			path = combinePath(dir, uid.toString());
 			file = new File(path);
 		}
 		

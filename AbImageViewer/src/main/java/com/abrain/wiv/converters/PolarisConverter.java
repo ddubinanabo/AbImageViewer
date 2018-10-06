@@ -60,6 +60,18 @@ public class PolarisConverter {
 	
 	//-----------------------------------------------------------------------------------
 	
+	public static String rootFolder(ServletContext context, String sessionId) {
+		String rootDirPath = context.getRealPath(DIR_DOC);
+		
+		File rootDir = new File(rootDirPath);
+		if (!rootDir.exists())
+			rootDir.mkdir();
+		
+		return FileUtil.combinePath(rootDirPath, sessionId);
+	}
+	
+	//-----------------------------------------------------------------------------------
+	
 	public static List<AbImageData> convert (HttpServletRequest request, String name, String content)
 			throws Exception{
 		if (name == null || name.isEmpty()){
@@ -77,7 +89,8 @@ public class PolarisConverter {
 		ServletContext context = session.getServletContext();
 		String sessionId = session.getId();
 		
-		String docDirPath = context.getRealPath(DIR_DOC + sessionId);
+		//String docDirPath = context.getRealPath(DIR_DOC + sessionId);
+		String docDirPath = rootFolder(context, sessionId);
 
 		//-----------------------------------------------------------------------------------
 	
@@ -88,18 +101,18 @@ public class PolarisConverter {
 		String userDocDirPath = FileUtil.unique(docDirPath);
 
 		//-----------------------------------------------------------------------------------
-	
-		String resultDirPath = userDocDirPath + "/result";
+		
+		String resultDirPath = FileUtil.combinePath(userDocDirPath, "result");
 		File resultDir = new File(resultDirPath);
 		if (!resultDir.exists())
 			resultDir.mkdir();
 		
-		String thumbDirPath = resultDirPath + "/thumbnail";
+		String thumbDirPath = FileUtil.combinePath(resultDirPath, "thumbnail");
 		File thumbDir = new File(thumbDirPath);
 		if (!thumbDir.exists())
 			thumbDir.mkdir();
 	
-		String tempDirPath = userDocDirPath + "/temp";
+		String tempDirPath = FileUtil.combinePath(userDocDirPath, "temp");
 		File tempDir = new File(tempDirPath);
 		if (!tempDir.exists())
 			tempDir.mkdir();
@@ -108,7 +121,7 @@ public class PolarisConverter {
 		
 		String ext = FilenameUtils.getExtension(name);
 	
-		String docPath = userDocDirPath + "/src." + ext;
+		String docPath = FileUtil.combinePath(userDocDirPath, "src." + ext);
 		
 		FileUtil.write(docPath, bytes);
 

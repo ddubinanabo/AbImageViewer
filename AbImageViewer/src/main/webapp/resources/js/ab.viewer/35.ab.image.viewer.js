@@ -1821,8 +1821,13 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	sendToServer: function (){
+		var configSave = this.config('image.save') || 'all';
+		
+		var collectOptinos = null;
+		if (configSave === 'current') collectOptinos = { current: true };
+		
 		// 체크된 페이지 또는 전체 페이지 수집
-		var collect = this.collectSelectedOrAllPages();
+		var collect = this.collectSelectedOrAllPages(collectOptinos);
 		var msg = null, isAll = false;
 		if (collect.type == 'all'){
 			msg = '모든 이미지를 서버로 전송하시겠습니까?';
@@ -2232,6 +2237,14 @@ AbImageViewer.prototype = {
 
 	// 체크된 페이지 또는 전체 페이지 수집
 	collectSelectedOrAllPages: function (options){
+		// 현재 페이지만
+		if (options && options.current === true){
+			if (!this.engine.currentPage)
+				return null;
+			
+			return { type: 'single', pages: [ this.engine.currentPage ] };
+		}
+		
 		// 체크된 페이지가 있는 경우
 		var a = this.selectedPages();
 		if (a.length)
