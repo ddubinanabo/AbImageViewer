@@ -10,6 +10,9 @@ import com.abrain.wiv.utils.ArrayUtil;
 @Component
 public class AbImageViewerConfig {
 	
+	@Value("${viewer.mode}")
+	public String mode;
+	
 	@Autowired
 	public WaterMark waterMark;
 	
@@ -24,10 +27,36 @@ public class AbImageViewerConfig {
 
 	//-----------------------------------------------------------------------------------
 	
+	public String getMode() { return mode; }
+
+	//-----------------------------------------------------------------------------------
+	
 	public WaterMark getWaterMark() { return waterMark; }
 	public Image getImage() { return image; }
 	public Toolbar getToolbar() { return toolbar; }
 	public Shape getShape() { return shape; }
+
+	//-----------------------------------------------------------------------------------
+
+	public String decodeMode(String...args) {
+		if (args == null)
+			return "";
+		if (mode == null)
+			return args.length > 0 ? args[0] : "";
+
+		int len = args.length, idx = 0;
+		for (int i=0; i+1 < len; i+=2) {
+			String c = args[i];
+			String r = args[i + 1];
+			
+			if (mode.equalsIgnoreCase(c)) {
+				return r;
+			}
+			
+			idx += 2;
+		}
+		return idx + 1 <= len ? args[idx] : "";
+	}
 
 	//-----------------------------------------------------------------------------------
 	
@@ -63,10 +92,38 @@ public class AbImageViewerConfig {
 		
 		@Value("${viewer.image.save}")
 		public String save;
+		
+		@Autowired
+		public ImageStorage storage;
 
 		//-----------------------------------------------------------------------------------
 		
 		public String getSave() { return save; }
+		public ImageStorage getStorage() { return storage; }
+	}
+
+	@Component
+	public static class ImageStorage {
+		
+		@Value("${viewer.image.storage.type}")
+		public String type;
+
+		@Value("${viewer.image.storage.path}")
+		public String path;
+
+		//-----------------------------------------------------------------------------------
+		
+		public String getType() { return type; }
+		public String getPath() { return path; }
+
+		//-----------------------------------------------------------------------------------
+		
+		public boolean equalsType(String type) {
+			if (this.type == null && type == null)
+				return true;
+			
+			return this.type != null ? this.type.equalsIgnoreCase(type) : false;
+		}
 	}
 
 	@Component
@@ -81,8 +138,39 @@ public class AbImageViewerConfig {
 
 		//-----------------------------------------------------------------------------------
 	
-		public boolean hasLayout(String name) {
-			return layout != null && ArrayUtil.indexOf(layout, name) >= 0;
+		public boolean hasLayout(String...name) {
+			if (name == null) {
+				if (layout == null) return true;
+				return false;
+			}
+			if (layout == null) return false;
+			
+			int len = name.length;
+			for (int i=0; i < len; i++) {
+				if (ArrayUtil.indexOf(layout, name[i]) >= 0)
+					return true;
+			}
+			return false;
+		}
+		
+		public String decodeLayout(String...args) {
+			if (args == null)
+				return "";
+			if (layout == null)
+				return args.length > 0 ? args[0] : "";
+
+			int len = args.length, idx = 0;
+			for (int i=0; i+1 < len; i+=2) {
+				String c = args[i];
+				String r = args[i + 1];
+				
+				if (ArrayUtil.indexOf(layout, c) >= 0) {
+					return r;
+				}
+				
+				idx += 2;
+			}
+			return idx + 1 <= len ? args[idx] : "";
 		}
 	}
 

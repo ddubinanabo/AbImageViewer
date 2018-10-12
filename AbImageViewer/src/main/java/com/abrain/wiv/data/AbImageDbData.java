@@ -65,7 +65,7 @@ public class AbImageDbData {
 	public float exifGpsLngS;
 	public int exifGpsAltref;
 	public float exifGpsAlt;
-	
+
 	public String regSts;
 	public String regDt;
 

@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import com.abrain.wiv.dao.DocDao;
 import com.abrain.wiv.data.AbAllocKeyData;
 import com.abrain.wiv.data.AbBinaryData;
+import com.abrain.wiv.data.AbBookmarkDbData;
 import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImagePack;
-import com.abrain.wiv.data.AbImageType;
-import com.abrain.wiv.transactions.DbTransaction;
+import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.utils.DebugUtil;
 
 @Service
@@ -22,6 +22,12 @@ public class DocService {
 
 	@Autowired
 	private DocDao dao;
+	
+	//-----------------------------------------------------------
+	
+	public Integer test(){
+		return dao.test();
+	}
 	
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
@@ -66,11 +72,12 @@ public class DocService {
 			byte[] imageSource,
 			byte[] imageResult,
 			AbImagePack.ThumbnailInfo thumbInfo,
-			byte[] thumbSource){
+			byte[] thumbSource,
+			AbImagePack.Bookmark bookmark){
 		
 		try
 		{
-			dao.record(id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource);
+			dao.record(id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource, bookmark);
 			return null;
 		}
 		catch (Exception e)
@@ -112,6 +119,10 @@ public class DocService {
 	}
 	
 	//-----------------------------------------------------------
+
+	public List<AbBookmarkDbData> selectBookmark (String id){
+		return dao.selectBookmark(id);
+	}
 
 	public List<AbImageDbData> select (String id){
 		return dao.select(id);

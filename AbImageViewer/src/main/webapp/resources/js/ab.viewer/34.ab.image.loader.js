@@ -140,8 +140,8 @@ var AbImageLoader = {
 					AbVendor.exif('file', data, function(pictureMetaData, instance){
 						meta.exif = AbExifMetaReader.read(pictureMetaData);
 						
-						console.log(pictureMetaData);
-						console.log(meta.exif);
+						//console.log(pictureMetaData);
+						//console.log(meta.exif);
 						
 						resolve(meta);
 					});

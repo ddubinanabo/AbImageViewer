@@ -4,10 +4,12 @@
 
 <style>
 #test-panel {
-	position: absolute;
+	width: 600px;
+
+	position: fixed;
 	left: 50%;
-	margin-left: -100px;
-	margin-top: 50px;
+	margin-left: -300px;
+	margin-top: 90px;
 	
 	padding: 10px 20px;
 	z-index: 100;
@@ -19,6 +21,13 @@
 <div id="test-panel">
 	<input type="button" test-topic="remote-folder" value="원격 폴더"/>
 	<input type="button" test-topic="change-image" value="2번 이미지 교체"/>
+	
+	<input type="text" test-topic="authname" value="ab_usr_id" style="width: 50px;"/>
+	<input type="text" test-topic="authval" value="dev" style="width: 50px;"/>
+	
+	<input type="button" test-topic="cookie" value="cookie"/>
+	<input type="button" test-topic="localStorage" value="localStorage"/>
+	<input type="button" test-topic="sessionStorage" value="sessionStorage"/>
 </div>
 
 <script>
@@ -37,6 +46,27 @@ $(function(){
 			'C:/Users/Administrator/Desktop/닭/c1.jpg',
 			'C:/Users/Administrator/Desktop/닭/c1.xml'
 		)
+	});
+	
+	$te('cookie').click(function(){
+		var name = $te('authname').val();
+		var value = $te('authval').val();
+		
+		AbCommon.cookie.setAlways(name, value);
+	});
+	
+	$te('localStorage').click(function(){
+		var name = $te('authname').val();
+		var value = $te('authval').val();
+
+		localStorage.setItem(name, value);
+	});
+	
+	$te('sessionStorage').click(function(){
+		var name = $te('authname').val();
+		var value = $te('authval').val();
+
+		sessionStorage.setItem(name, value);
 	});
 
 	iAbViewer.attachEvent('select', function (name, data){

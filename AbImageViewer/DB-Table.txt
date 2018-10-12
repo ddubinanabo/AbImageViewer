@@ -121,3 +121,217 @@ FROM (
 WHERE A.ID=B.ID
 ORDER BY RNK, B.ID, SEQ
 */
+
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+/*
+북마크 테이블
+*/
+CREATE TABLE AB_BOOKMARK
+(
+	ID VARCHAR(32),					-- 이미지 목록 ID
+	SEQ NUMBER,						-- 이미지 목록의 인덱스
+	BM_SEQ NUMBER,					-- 북마크 번호
+	REG_STS CHAR(1) DEFAULT 'R',	-- 등록 상태 (R=RECORDING, C=COMPLETE)
+	REG_DT VARCHAR(14)	 			-- 이미지 등록 일시
+);
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+/*
+사용자 테이블
+*/
+CREATE TABLE AB_USR
+(
+	USR_ID VARCHAR(250),
+	USR_LVL NUMBER					-- 0=super admin(모든 기능 활성화, 권한 체크를 안함)
+);
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+INSERT INTO AB_USR(USR_ID, USR_LVL) VALUES('admin', 0);
+INSERT INTO AB_USR(USR_ID, USR_LVL) VALUES('dev', 1);
+INSERT INTO AB_USR(USR_ID, USR_LVL) VALUES('editor', 2);
+INSERT INTO AB_USR(USR_ID, USR_LVL) VALUES('guest', 3);
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+/*
+	사용자 레벨별 권한 목록
+	USR_LVL가 0이면 super admin로 AB_PERMISSION 데이터와 상관없이 무조건 참입니다.
+	USR_LVL가 -99는 샘플 데이터로, 전체 권한 목록이 기록되어 있으니 이 자료를 참고하세요
+*/
+CREATE TABLE AB_PERMISSION
+(
+	USR_LVL NUMBER,
+	ITM_TP CHAR(1) DEFAULT '',		-- L=layout, T=toolbar topic
+	ITM VARCHAR(80),
+	USE_YN CHAR(1) DEFAULT 'N',
+	DSC VARCHAR2(250)
+);
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'L', 'layout.main', 'Y', '상단 툴바');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'L', 'layout.right', 'Y', '오른쪽 툴바');
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'file.open', 'Y', '이미지 열기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'file.save.image', 'Y', '이미지 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'file.save.annotation', 'Y', '주석/마스킹 정보 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'send.server', 'Y', '서버 전송');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.remove', 'Y', '현재 이미지 삭제');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.print', 'Y', '현재 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'print', 'Y', '전체 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zoom.in', 'Y', '확대');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zoom.out', 'Y', '축소');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zindex.front', 'Y', '맨 앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zindex.forward', 'Y', '앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zindex.backward', 'Y', '뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'zindex.back', 'Y', '맨 뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'fit.horiz', 'Y', '너비 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'fit.vert', 'Y', '높이 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'fit.in', 'Y', '화면 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.rotate.ccw', 'Y', '화면 회전 (반시계)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.rotate.cw', 'Y', '화면 회전');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.rotate.180', 'Y', '화면 회전 (180º)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'mode', 'Y', '편집/보기 모드');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'show.annotation', 'Y', '주석 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'show.masking', 'Y', '마스킹 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'clear.shapes', 'Y', '주석/마스킹 초기화');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.prev', 'Y', '이전 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.no', 'Y', '이미지 위치');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.next', 'Y', '다음 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'page.scale', 'Y', '화면 비율');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.rectangle', 'Y', '사각형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.ellipse', 'Y', '원형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.line', 'Y', '선 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.arrow', 'Y', '화살표 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.pen', 'Y', '펜으로 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.highlightpen', 'Y', '형판펜으로 칠하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.textbox', 'Y', '메모하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.checker', 'Y', '체크');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'annotation.stamp', 'Y', '스탬프');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'masking.rectangle', 'Y', '사각형으로 마스킹');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(-99, 'T', 'masking.ellipse', 'Y', '원형으로 마스킹');
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'L', 'layout.main', 'Y', '상단 툴바');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'L', 'layout.right', 'Y', '오른쪽 툴바');
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'file.open', 'Y', '이미지 열기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'file.save.image', 'Y', '이미지 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'file.save.annotation', 'Y', '주석/마스킹 정보 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'send.server', 'Y', '서버 전송');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.remove', 'Y', '현재 이미지 삭제');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.print', 'Y', '현재 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'print', 'Y', '전체 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zoom.in', 'Y', '확대');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zoom.out', 'Y', '축소');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zindex.front', 'Y', '맨 앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zindex.forward', 'Y', '앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zindex.backward', 'Y', '뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'zindex.back', 'Y', '맨 뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'fit.horiz', 'Y', '너비 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'fit.vert', 'Y', '높이 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'fit.in', 'Y', '화면 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.rotate.ccw', 'Y', '화면 회전 (반시계)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.rotate.cw', 'Y', '화면 회전');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.rotate.180', 'Y', '화면 회전 (180º)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'mode', 'Y', '편집/보기 모드');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'show.annotation', 'Y', '주석 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'show.masking', 'Y', '마스킹 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'clear.shapes', 'Y', '주석/마스킹 초기화');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.prev', 'Y', '이전 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.no', 'Y', '이미지 위치');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.next', 'Y', '다음 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'page.scale', 'Y', '화면 비율');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.rectangle', 'Y', '사각형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.ellipse', 'Y', '원형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.line', 'Y', '선 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.arrow', 'Y', '화살표 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.pen', 'Y', '펜으로 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.highlightpen', 'Y', '형판펜으로 칠하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.textbox', 'Y', '메모하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.checker', 'Y', '체크');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'annotation.stamp', 'Y', '스탬프');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'masking.rectangle', 'Y', '사각형으로 마스킹');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(1, 'T', 'masking.ellipse', 'Y', '원형으로 마스킹');
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'L', 'layout.main', 'Y', '상단 툴바');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'L', 'layout.right', 'Y', '오른쪽 툴바');
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'file.open', 'Y', '이미지 열기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'file.save.image', 'Y', '이미지 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'file.save.annotation', 'Y', '주석/마스킹 정보 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'send.server', 'Y', '서버 전송');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.remove', 'Y', '현재 이미지 삭제');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.print', 'Y', '현재 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'print', 'Y', '전체 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zoom.in', 'Y', '확대');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zoom.out', 'Y', '축소');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zindex.front', 'Y', '맨 앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zindex.forward', 'Y', '앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zindex.backward', 'Y', '뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'zindex.back', 'Y', '맨 뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'fit.horiz', 'Y', '너비 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'fit.vert', 'Y', '높이 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'fit.in', 'Y', '화면 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.rotate.ccw', 'Y', '화면 회전 (반시계)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.rotate.cw', 'Y', '화면 회전');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.rotate.180', 'Y', '화면 회전 (180º)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'mode', 'Y', '편집/보기 모드');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'show.annotation', 'Y', '주석 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'show.masking', 'Y', '마스킹 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'clear.shapes', 'Y', '주석/마스킹 초기화');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.prev', 'Y', '이전 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.no', 'Y', '이미지 위치');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.next', 'Y', '다음 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'page.scale', 'Y', '화면 비율');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.rectangle', 'N', '사각형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.ellipse', 'N', '원형 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.line', 'N', '선 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.arrow', 'N', '화살표 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.pen', 'N', '펜으로 그리기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.highlightpen', 'N', '형판펜으로 칠하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.textbox', 'N', '메모하기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.checker', 'N', '체크');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'annotation.stamp', 'N', '스탬프');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'masking.rectangle', 'Y', '사각형으로 마스킹');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(2, 'T', 'masking.ellipse', 'Y', '원형으로 마스킹');
+
+-- -----------------------------------------------------------------------------------------------------------------
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'L', 'layout.main', 'Y', '상단 툴바');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'L', 'layout.right', 'N', '오른쪽 툴바');
+
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'file.open', 'Y', '이미지 열기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'file.save.image', 'Y', '이미지 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'file.save.annotation', 'Y', '주석/마스킹 정보 저장');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'send.server', 'N', '서버 전송');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.remove', 'Y', '현재 이미지 삭제');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.print', 'Y', '현재 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'print', 'Y', '전체 이미지 인쇄');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zoom.in', 'Y', '확대');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zoom.out', 'Y', '축소');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zindex.front', 'Y', '맨 앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zindex.forward', 'Y', '앞으로 가져오기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zindex.backward', 'Y', '뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'zindex.back', 'Y', '맨 뒤로 보내기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'fit.horiz', 'Y', '너비 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'fit.vert', 'Y', '높이 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'fit.in', 'Y', '화면 맞춤');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.rotate.ccw', 'Y', '화면 회전 (반시계)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.rotate.cw', 'Y', '화면 회전');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.rotate.180', 'Y', '화면 회전 (180º)');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'mode', 'Y', '편집/보기 모드');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'show.annotation', 'Y', '주석 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'show.masking', 'Y', '마스킹 보기/감추기');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'clear.shapes', 'Y', '주석/마스킹 초기화');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.prev', 'Y', '이전 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.no', 'Y', '이미지 위치');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.next', 'Y', '다음 이미지');
+INSERT INTO AB_PERMISSION(USR_LVL, ITM_TP, ITM, USE_YN, DSC) VALUES(3, 'T', 'page.scale', 'Y', '화면 비율');

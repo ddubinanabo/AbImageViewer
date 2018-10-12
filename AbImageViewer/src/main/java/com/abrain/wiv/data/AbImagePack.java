@@ -46,4 +46,18 @@ public class AbImagePack {
 		}		
 	}	
 
+	/**
+	 * 이미지 전송 정보 중 북마크 정보
+	 * @author Administrator
+	 *
+	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	public static class Bookmark {
+		public int index, vindex;
+		
+		public static Bookmark fromJSON (String jsonData) throws Exception {
+			ObjectMapper om = new ObjectMapper();
+			return om.readValue(jsonData, Bookmark.class);
+		}		
+	}
 }

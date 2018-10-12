@@ -7,16 +7,25 @@ import org.springframework.stereotype.Repository;
 
 import com.abrain.wiv.abstracts.AbstractDao;
 import com.abrain.wiv.data.AbBinaryData;
+import com.abrain.wiv.data.AbBookmarkDbData;
 import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.AbImagePack;
-import com.abrain.wiv.data.AbImageType;
 import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.data.exif.AbExifGPS;
+import com.abrain.wiv.enums.AbImageType;
+import com.abrain.wiv.utils.DateUtil;
 
 @SuppressWarnings("unchecked")
 @Repository
 public class DocDao extends AbstractDao {
+
+	//-----------------------------------------------------------
+	
+	public Integer test(){
+		int value = (int)sqlSession.selectOne("doc-test");
+		return value;
+	}
 
 	//-----------------------------------------------------------
 	
@@ -30,6 +39,7 @@ public class DocDao extends AbstractDao {
 	 * @param imageResult
 	 * @param thumbInfo
 	 * @param thumbSource
+	 * @param bookmark
 	 */
 	public void record(
 			String id,
@@ -39,7 +49,8 @@ public class DocDao extends AbstractDao {
 			byte[] imageSource,
 			byte[] imageResult,
 			AbImagePack.ThumbnailInfo thumbInfo,
-			byte[] thumbSource){
+			byte[] thumbSource,
+			AbImagePack.Bookmark bookmark){
 		HashMap<String, Object> param = new HashMap<String, Object>();
 		
 		param.put("ID", id);
@@ -117,9 +128,25 @@ public class DocDao extends AbstractDao {
 			param.put("EXIF_GPS_YN", "N");
 		}
 		
+		String dt = DateUtil.YMDHIS();	
+		param.put("REG_DT", dt);
+		
 		//-----------------------------------------------------------		
 			
 		sqlSession.insert("doc-regist", param);
+		
+		//-----------------------------------------------------------
+		
+		if (bookmark != null) {
+			param.clear();
+			
+			param.put("ID", id);
+			param.put("SEQ", seq);
+			param.put("BM_SEQ", bookmark.vindex);		
+			param.put("REG_DT", dt);
+			
+			sqlSession.insert("doc-regist-bookmark", param);
+		}
 	}
 
 	//-----------------------------------------------------------
@@ -136,6 +163,7 @@ public class DocDao extends AbstractDao {
 		//-----------------------------------------------------------
 		
 		sqlSession.delete("doc-delete", param);
+		sqlSession.delete("doc-delete-bookmark", param);
 	}
 
 	//-----------------------------------------------------------
@@ -154,8 +182,14 @@ public class DocDao extends AbstractDao {
 		// 기존 등록 완료 이미지 목록 삭제
 		sqlSession.delete("doc-delete-previous", param);
 		
+		// 기존 등록 완료 이미지 목록 삭제
+		sqlSession.delete("doc-delete-previous-bookmark", param);
+		
 		// 임시 등록된 이미지 목록을 등록 완료 처리
 		sqlSession.insert("doc-approval", param);
+		
+		// 임시 등록된 이미지 목록을 등록 완료 처리
+		sqlSession.insert("doc-approval-bookmark", param);
 	}
 	
 	//-----------------------------------------------------------
@@ -170,6 +204,18 @@ public class DocDao extends AbstractDao {
 		param.put("ID", id);
 		
 		return sqlSession.selectList("doc-select", param);
+	}
+	
+	/**
+	 * 등록완료된 이미지 북마크 목록 조회
+	 * @param id
+	 * @return
+	 */
+	public List<AbBookmarkDbData> selectBookmark (String id){
+		HashMap<String, Object> param = new HashMap<String, Object>();
+		param.put("ID", id);
+		
+		return sqlSession.selectList("doc-select-bookmark", param);
 	}
 	
 	/**

@@ -1,5 +1,5 @@
 <%@page import="com.abrain.wiv.utils.WebUtil"%>
-<%@page import="com.abrain.wiv.data.AbBrowserKind"%>
+<%@page import="com.abrain.wiv.enums.AbBrowserKind"%>
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ page session="false" %>
@@ -13,13 +13,13 @@
 
 	<script type="text/javascript" src="resources/js/es6-promise.auto.js"></script>
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.min.js"></script>
-
-	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>
 	
 	<%/*
-	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
+	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>
 	*/%>
+	
 	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
+	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
 	
 	<script>
 	$(function(){

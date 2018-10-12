@@ -14,7 +14,7 @@ import javax.swing.ImageIcon;
 
 import org.apache.commons.io.FilenameUtils;
 
-import com.abrain.wiv.data.AbImageDecoder;
+import com.abrain.wiv.enums.AbImageDecoder;
 
 public class GraphicsUtil {
 	private static final String PREFIX = "thumb_";

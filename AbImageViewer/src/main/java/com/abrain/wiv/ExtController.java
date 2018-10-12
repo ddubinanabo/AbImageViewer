@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.abrain.wiv.config.AbImageConfig;
-import com.abrain.wiv.data.AbImageType;
 import com.abrain.wiv.data.externals.AbExtImages;
+import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.NotFoundFileException;
 import com.abrain.wiv.utils.WebUtil;

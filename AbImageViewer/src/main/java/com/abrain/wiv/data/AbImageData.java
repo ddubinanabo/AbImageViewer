@@ -49,6 +49,7 @@ public class AbImageData {
 	private String image;
 	private String thumbnail;
 	private String shapes;
+	private int bookmark;
 	
 	//-----------------------------------------------------------
 	
@@ -93,5 +94,10 @@ public class AbImageData {
 
 	public AbImageInfo getInfo() { return info; }
 	public void setInfo(AbImageInfo value) { info = value; }
+
+	//-----------------------------------------------------------
+
+	public int getBookmark() { return bookmark; }
+	public void setBookmark(int value) { bookmark = value; }
 
 }

@@ -13,17 +13,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.abrain.wiv.abstracts.AbstractApiController;
-import com.abrain.wiv.config.AbImageViewerConfig;
+import com.abrain.wiv.config.AbImageConfig;
+import com.abrain.wiv.config.AbViewerConfigPack;
 import com.abrain.wiv.converters.PolarisConverter;
 import com.abrain.wiv.data.AbAllocKeyData;
+import com.abrain.wiv.data.AbBookmarkDbData;
 import com.abrain.wiv.data.AbImageData;
+import com.abrain.wiv.data.AbImageDataList;
 import com.abrain.wiv.data.AbImageDbData;
 import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbPlainText;
+import com.abrain.wiv.data.externals.AbExtImages;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.io.AbPartialFile;
 import com.abrain.wiv.services.DocService;
+import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.WebUtil;
 
 @Controller
@@ -36,14 +41,27 @@ public class ApiController extends AbstractApiController {
 	private DocService svc;
 	
 	@Autowired
-	private AbImageViewerConfig viewerConfig;
+	private AbViewerConfigPack config;
 
+	@Autowired
+	private AbImageConfig imageConfig;
+	
 	//-----------------------------------------------------------
 
 	@RequestMapping(value="/api/config", method=RequestMethod.POST)
 	@ResponseBody
 	public Object config () throws Exception{
-		return viewerConfig;
+		return config;
+	}
+	
+	//-----------------------------------------------------------
+
+	@RequestMapping(value="/api/permission", method=RequestMethod.POST)
+	@ResponseBody
+	public Object permission (String value) throws Exception{
+		if (config.auth.get(value))
+			return config.auth.getPermission();
+		return null;
 	}
 	
 	/**
@@ -308,12 +326,16 @@ public class ApiController extends AbstractApiController {
 			
 			AbImagePack.ImageInfo imgDec = AbImagePack.ImageInfo.fromJSON(imageInfo);
 			AbImagePack.ThumbnailInfo thumbDec = AbImagePack.ThumbnailInfo.fromJSON(thumbInfo);
+			AbImagePack.Bookmark bookmark = null;
+			
+			if (info != null && !info.isEmpty())
+				bookmark = AbImagePack.Bookmark.fromJSON(info);
 			
 			//-----------------------------------------------------------
 			// modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미일 뿐,
 			// DB 작업에 영향이 있는 것은 아니다.
 			
-			r = svc.record(id, index, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource);
+			r = svc.record(id, index, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource, bookmark);
 			
 			//-----------------------------------------------------------
 	
@@ -372,13 +394,25 @@ public class ApiController extends AbstractApiController {
 	@RequestMapping(value="/api/images", method=RequestMethod.POST)
 	@ResponseBody
 	public Object images (String id) throws Exception{
+		if (config.viewer.image.storage.equalsType("folder")) {
+			return folderImages(id);
+		}
+		return dbImages(id);
+	}
+	
+	//-----------------------------------------------------------
+	
+	private Object dbImages (String id) throws Exception {
 		if (id == null || id.isEmpty())
 			throw new ArgumentException();
 		
 		List<AbImageDbData> datas = svc.select(id);
+		List<AbBookmarkDbData> bookmarks = svc.selectBookmark(id);
 		List<AbImageData> rs = new ArrayList<>();
 		
-		if (datas != null && datas.size() > 0){
+		List<Integer> bs = new ArrayList<>();
+		
+		if (datas != null && !datas.isEmpty()){
 			int siz = datas.size();
 			for (int i=0; i < siz; i++){
 				AbImageDbData data = datas.get(i);
@@ -401,10 +435,23 @@ public class ApiController extends AbstractApiController {
 			}
 		}
 		
-		return rs;
+		if (bookmarks != null && !bookmarks.isEmpty()){
+			int siz = bookmarks.size();
+			for (int i=0; i < siz; i++){
+				AbBookmarkDbData data = bookmarks.get(i);
+				bs.add(data.getSeq());
+			}
+		}
+		
+		return new AbImageDataList(rs, bs);
 	}
 	
-	//-----------------------------------------------------------
-	//-----------------------------------------------------------
-	//-----------------------------------------------------------
+	private Object folderImages (String id) throws Exception {
+		String path = FileUtil.combinePath(config.viewer.image.storage.path, id);
+		
+		AbExtImages eximg = new AbExtImages(imageConfig, path);
+		List<AbImageData> imgs = eximg.collect();
+		
+		return new AbImageDataList(imgs);
+	}
 }

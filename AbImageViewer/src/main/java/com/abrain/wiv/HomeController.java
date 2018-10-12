@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.abrain.wiv.config.AbImageViewerConfig;
+import com.abrain.wiv.config.AbViewerConfigPack;
 import com.abrain.wiv.converters.PolarisConverter;
 import com.abrain.wiv.data.AbBinaryData;
-import com.abrain.wiv.data.AbImageType;
+import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.EmptyDataException;
 import com.abrain.wiv.io.AbPartialFile;
@@ -31,10 +31,13 @@ import com.abrain.wiv.utils.WebUtil;
 public class HomeController {
 	
 	@Autowired
+	private HttpServletRequest request;
+
+	@Autowired
 	private DocService svc;
 	
 	@Autowired
-	private AbImageViewerConfig viewerConfig;
+	private AbViewerConfigPack config;
 
 	//-----------------------------------------------------------
 	
@@ -47,7 +50,19 @@ public class HomeController {
 		else if (q != null && !q.isEmpty())
 			model.addAttribute("q", q);
 		
-		model.addAttribute("config", viewerConfig);
+		String a = request.getParameter("a");
+	
+		if (a != null && !a.isEmpty())
+			model.addAttribute("a", a);
+		
+		// 샘플 모드 (CGI에 sample=Y를 붙이면 샘플용 UI 바가 표시됩니다
+		String sample = request.getParameter("sample");
+		if (sample != null && sample.equalsIgnoreCase("Y"))
+			model.addAttribute("sample", true);
+
+		config.auth.read();
+		
+		model.addAttribute("config", config);
 	}
 
 	//-----------------------------------------------------------

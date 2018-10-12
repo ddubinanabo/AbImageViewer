@@ -3,6 +3,30 @@
 
 <mapper namespace="DocDao">
 
+	<select id="doc-test" parameterType="map" resultType="int">
+		SELECT COUNT(*)
+		FROM AB_DOC
+	</select>
+	
+	<insert id="doc-regist-bookmark" parameterType="map">
+	<![CDATA[
+		INSERT INTO AB_BOOKMARK
+			(
+				ID, SEQ,
+				BM_SEQ,
+				REG_STS,
+				REG_DT
+			)
+		VALUES
+			(
+				#{ID, jdbcType=VARCHAR}, #{SEQ},
+				#{BM_SEQ},
+				'R',
+				#{REG_DT}
+			)
+	]]>
+	</insert>
+
 	<insert id="doc-regist" parameterType="map">
 	<![CDATA[
 		INSERT INTO AB_DOC
@@ -65,10 +89,23 @@
 				#{EXIF_GPS_LNG_D, jdbcType=DOUBLE}, #{EXIF_GPS_LNG_M, jdbcType=DOUBLE}, #{EXIF_GPS_LNG_S, jdbcType=DOUBLE},
 				#{EXIF_GPS_ALTREF, jdbcType=INTEGER}, #{EXIF_GPS_ALT, jdbcType=DOUBLE},
 				'R',
-				TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+				--TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+				#{REG_DT}
 			)
 	]]>
 	</insert>
+	
+	<select id="doc-select-bookmark" parameterType="map" resultType="com.abrain.wiv.data.AbBookmarkDbData">
+	<![CDATA[
+		SELECT
+			ID,
+			SEQ,
+			BM_SEQ
+		FROM AB_BOOKMARK
+		WHERE ID=#{ID} AND REG_STS='C'
+		ORDER BY BM_SEQ
+	]]>
+	</select>
 	
 	<select id="doc-select" parameterType="map" resultType="com.abrain.wiv.data.AbImageDbData">
 	<![CDATA[
@@ -119,7 +156,7 @@
 			EXIF_GPS_LNG_M,
 			EXIF_GPS_LNG_S,
 			EXIF_GPS_ALTREF,
-			EXIF_GPS_ALT,
+			EXIF_GPS_ALT
 			REG_STS,
 			REG_DT
 		FROM AB_DOC
@@ -159,6 +196,13 @@
 	]]>
 	</delete>
 
+	<delete id="doc-delete-bookmark" parameterType="map">
+	<![CDATA[
+		DELETE FROM AB_BOOKMARK
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='R'
+	]]>
+	</delete>
+
 	<delete id="doc-delete-previous" parameterType="map">
 	<![CDATA[
 		DELETE FROM AB_DOC
@@ -166,9 +210,23 @@
 	]]>
 	</delete>
 
+	<delete id="doc-delete-previous-bookmark" parameterType="map">
+	<![CDATA[
+		DELETE FROM AB_BOOKMARK
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='C'
+	]]>
+	</delete>
+
 	<update id="doc-approval" parameterType="map">
 	<![CDATA[
 		UPDATE AB_DOC SET REG_STS='C'
+		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='R'
+	]]>
+	</update>
+
+	<update id="doc-approval-bookmark" parameterType="map">
+	<![CDATA[
+		UPDATE AB_BOOKMARK SET REG_STS='C'
 		WHERE ID=#{ID, jdbcType=VARCHAR} AND REG_STS='R'
 	]]>
 	</update>

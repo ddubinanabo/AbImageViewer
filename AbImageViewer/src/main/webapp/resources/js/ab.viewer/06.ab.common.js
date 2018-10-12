@@ -1,6 +1,62 @@
 var AbCommon = {
 
 	//-----------------------------------------------------------
+	// 쿠키
+	//-----------------------------------------------------------
+		
+	cookie: {
+		get : function (name){
+			var flag = document.cookie.indexOf(name+'=');
+			if (flag != -1){
+				flag += name.length + 1;
+				end = document.cookie.indexOf(';', flag);
+
+				if (end == -1) end = document.cookie.length;
+				return unescape(document.cookie.substring(flag, end));
+			}
+			return null;
+		},
+
+		setAlways : function (name,value){ this.set (name,value,31536000); },
+
+		set: function (name, value, expiredays, opt) {
+			var today = new Date();
+			if (expiredays == null)
+				document.cookie = name + "=" + escape(value) + "; path=/;";
+			else {
+				switch(opt){
+				case 'y': case 'Y':
+					today.setFullYear(today.getFullYear() + expiredays);
+					break;
+				case 'm': case 'M':
+					today.setMonth(today.getMonth() + expiredays);
+					break;
+				case 'h': case 'H':
+					today.setHours(today.getHours() + expiredays);
+					break;
+				case 'i': case 'I':
+					today.setMinutes(today.getMinutes() + expiredays);
+					break;
+				case 's': case 'S':
+					today.setSeconds(today.getSeconds() + expiredays);
+					break;
+				default:
+					today.setDate(today.getDate() + expiredays);
+					break;
+				}
+				
+				document.cookie = name + "=" + value + "; path=/; expires=" + today.toGMTString() + ";";
+			}
+		},
+
+		remove: function (name) {
+			var expireDate = new Date();
+			expireDate.setDate(expireDate.getDate() - 1);
+			document.cookie = name + "= " + "; expires=" + expireDate.toGMTString() + "; path=/";
+		}
+	},
+
+	//-----------------------------------------------------------
 	// 마우스 훨 처리
 	//-----------------------------------------------------------
 

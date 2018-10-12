@@ -11,6 +11,7 @@ var AbImageTransferProcessHelper = function(options){
 	
 	this.viewer = options.viewer;
 	this.images = this.viewer.images;
+	this.bookmarks = this.viewer.bookmarks;
 
 	//-----------------------------------------------------------
 
@@ -168,12 +169,17 @@ AbImageTransferProcessHelper.prototype = {
 	collect: function (pages){
 		var viewer = this.viewer;
 		var images = this.images;
+		var bookmarks = this.bookmarks;
 		var handlers = this.handlers;
 		
 		var printShapes = this.printShapes === true;
 
 		var src = null, pageLength = pages.length;
 		var source = [], pageInfos = [], imgInfos = [], map = {};
+		var bookmark = null, bookmarkIdx = -1;
+		
+		var collectedBookmarks = []; // 수집된 북마크 목록
+		
 		for (var i=0; i < pageLength; i++){
 			var page = pages[i];
 
@@ -192,6 +198,21 @@ AbImageTransferProcessHelper.prototype = {
 			if (page.angle || viewer.drawableWaterMark() || (page.hasShapes() && printShapes) ){
 				type |= 2;
 			}
+			
+			bookmarkIdx = bookmarks.indexOf(page.uid);
+			bookmark = null;
+			
+			if (bookmarkIdx >= 0){
+				bookmark = {
+					index: bookmarkIdx,		// viewer.bookmarks 컬렉션의 인덱스
+					vindex: bookmarkIdx,	// 수집된 이미지 내에서의 인덱스
+				};
+				
+				collectedBookmarks.push({
+					bookmark: bookmark,
+					page: page
+				});
+			}
 
 			map[page.uid] = imgInfos.length;
 			
@@ -201,7 +222,7 @@ AbImageTransferProcessHelper.prototype = {
 				url: type ? null : page.source.imgInfo.url
 			});
 
-			var dat = { type: type, index: i, page: page };
+			var dat = { type: type, index: i, page: page, bookmark: bookmark };
 
 			if (type)
 				pageInfos.push(dat);
@@ -209,6 +230,18 @@ AbImageTransferProcessHelper.prototype = {
 			source.push(dat);
 		}
 		
+		// 북마크 수집된 목록 내 인덱스 재부여 처리
+		collectedBookmarks.sort(function(a, b){
+			return a.bookmark.index - b.bookmark.index;
+		});
+		
+		var bmLen = collectedBookmarks.length;
+		for (var i=0; i < bmLen; i++){
+			var bm = collectedBookmarks[i];
+			bm.bookmark.vindex = i;
+		}
+		
+		// 결과 저장
 		this.data = {
 			length: pageInfos.length,
 			pageInfos: pageInfos,
@@ -253,7 +286,7 @@ AbImageTransferProcessHelper.prototype = {
 							pages: self.length
 						},
 						success: function(r){
-							console.log('[SEND-SERVER] update prepare !!!');
+							//console.log('[SEND-SERVER] update prepare !!!');
 							
 							resolve(true);
 						},
@@ -274,7 +307,7 @@ AbImageTransferProcessHelper.prototype = {
 						pages: self.length
 					},
 					success: function(r){
-						console.log('[SEND-SERVER] allocated (' + r.key + ') ' + (r.time ? r.time : ''));
+						//console.log('[SEND-SERVER] allocated (' + r.key + ') ' + (r.time ? r.time : ''));
 						
 						self.transferID = r.key;
 						
@@ -324,28 +357,46 @@ AbImageTransferProcessHelper.prototype = {
 			promise = Promise.resolve();
 		}
 
+		// collect()는 로드된 이미지들 내에서만 체크한다.
+		// 로드되지 않은 이미지들의 오류 여부는 렌더링 후에나 알 수 있다.
 		return promise
 			.then(function(d){
-				if (pageInfo.page.isReadyImage()){
+				if (!pageInfo.page.isError() && pageInfo.page.isReadyImage()){
 					return pageInfo.page.source.image();
 				}
 			})
 			.then(function(d){
-				if (AbCommon.flag(pageInfo.type, 2)){
+				if (!pageInfo.page.isError() && AbCommon.flag(pageInfo.type, 2)){
 					var decoder = pageInfo.page.decoder();
 
 					var ctx = AbGraphics.canvas.createContext();
 					engine.renderImage(ctx, pageInfo.page, printShapes, printShapeTypeMap);
 					var src = AbGraphics.canvas.toImage(ctx, decoder);
-
-					current.imgInfo.width = pageInfo.page.source.width;
-					current.imgInfo.height = pageInfo.page.source.height;
-					current.imgInfo.url = src;
+					
+					try
+					{
+						current.imgInfo.width = pageInfo.page.source.width;
+						current.imgInfo.height = pageInfo.page.source.height;
+						current.imgInfo.url = src;
+					}
+					catch (e)
+					{
+						console.log(e);
+						throw e;
+					}
 				}
 			})
 			.then(function(d){
 				return handlers.chain(this, current, data);
 			}.bind(this))
+	},
+
+	//-----------------------------------------------------------
+	
+	isError: function (index){
+		var data = this.data;
+		var pageInfo = data.source[index];
+		return pageInfo.page.isError();
 	},
 
 	//-----------------------------------------------------------
@@ -457,9 +508,13 @@ AbImageTransferProcessHelper.prototype = {
 				this.progress(this.index, this.length);
 				
 				// 프로세스 시작
+				// collect()는 로드된 이미지들 내에서만 체크한다.
+				// 로드되지 않은 이미지들의 오류 여부는 렌더링 후에나 알 수 있다.
 				this.render(index)
 					.then(function(){
-						return this.submit(index);
+						if (!this.isError(index))
+							return this.submit(index);
+						return false;
 					}.bind(this))
 					.then(function(){
 						this.endCount++;

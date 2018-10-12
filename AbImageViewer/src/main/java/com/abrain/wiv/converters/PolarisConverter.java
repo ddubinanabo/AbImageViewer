@@ -23,9 +23,9 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.data.AbImageData;
-import com.abrain.wiv.data.AbImageDecoder;
 import com.abrain.wiv.data.AbImageInfo;
 import com.abrain.wiv.data.exif.AbExif;
+import com.abrain.wiv.enums.AbImageDecoder;
 import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.DocConverterException;
 import com.abrain.wiv.readers.AbExifReader;
@@ -119,6 +119,7 @@ public class PolarisConverter {
 
 		//-----------------------------------------------------------------------------------
 		
+		String basename = FilenameUtils.getBaseName(name);
 		String ext = FilenameUtils.getExtension(name);
 	
 		String docPath = FileUtil.combinePath(userDocDirPath, "src." + ext);
@@ -137,28 +138,31 @@ public class PolarisConverter {
 		File[] files = resultDir.listFiles();
 		int numFiles = files.length;
 		
-		// 실제 파일 카운팅
-		int numDocFiles = 0;
+		// 이미지 파일 추출 및 파일명 변경
+		ArrayList<File> imgFiles = new ArrayList<>();
 		for (int i=0; i < numFiles; i++){
 			File file = files[i]; 
 			
 			if (!file.isFile())
 				continue;
 			
-			numDocFiles++;
+			// 이름 변경
+			File newNameFile = new File(FileUtil.combinePath(resultDirPath, basename + "_" + file.getName()));
+			file.renameTo(newNameFile);
+			
+			imgFiles.add(newNameFile);
 		}
 		
-		
-		for (int i=0; i < numFiles; i++){
-			File file = files[i]; 
-			
-			if (!file.isFile())
-				continue;
+		int numImgFiles = imgFiles.size();
+		for (int i=0; i < numImgFiles; i++){
+			File file = imgFiles.get(i);
 
 			String filename = file.getName();
 //			String extension = FilenameUtils.getExtension(filename);
 //			String mimeType = FileUtil.contentType(file);
 //			String decoder = AbImageDecoder.renderingHint(extension, mimeType);
+			
+			System.out.println("filename=" + filename);
 			
 			GraphicsUtil.ThumbnailResult r = GraphicsUtil.thumbnail(file, thumbDirPath + "/" + file.getName(), IMG_DECODER);
 			if (r.e != null){
@@ -193,7 +197,7 @@ public class PolarisConverter {
 			
 			info.setOriginName(name);
 			info.setOriginIndex(i);
-			info.setOriginPages(numDocFiles);
+			info.setOriginPages(numImgFiles);
 			info.setOriginSize((long)bytes.length);
 			
 			//if (exif != null) info.setExif(exif);

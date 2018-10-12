@@ -13,6 +13,7 @@
 				<beans:value>classpath:/META-INF/config/jdbc.properties</beans:value>
 				<beans:value>classpath:/META-INF/config/image.properties</beans:value>
 				<beans:value>classpath:/META-INF/config/image.viewer.properties</beans:value>
+				<beans:value>classpath:/META-INF/config/auth.properties</beans:value>
 			</beans:list>
 		</beans:property>
 	</beans:bean>

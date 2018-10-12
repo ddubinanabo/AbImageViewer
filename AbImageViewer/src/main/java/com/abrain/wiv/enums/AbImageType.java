@@ -1,4 +1,4 @@
-package com.abrain.wiv.data;
+package com.abrain.wiv.enums;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -45,6 +45,9 @@ var AbViewController = {
 		
 		return this.loadConfig()
 			.then(function(r){
+				return this.prepare(r);				
+			}.bind(this))
+			.then(function(r){
 				// 이미지 뷰어 초기화
 				return this.initImageViewer(r)
 					.then(function(){
@@ -76,6 +79,8 @@ var AbViewController = {
 		// WAS 이미지 저장 웹메서드 URL 정보
 
 		AbImageViewer.prototype.URLS.CONFIG = 'api/config';
+		AbImageViewer.prototype.URLS.PERMISSION = 'api/permission';
+		
 		AbImageViewer.prototype.URLS.OPEN = 'api/images';
 		
 		AbImageViewer.prototype.URLS.SAVE.ALLOC = 'api/alloc'; // 신규 등록 아이디 할당
@@ -148,6 +153,8 @@ var AbViewController = {
 		});
 		loader.show();
 		
+		var paramA = $('#param-a').val();
+		
 		var self = this;
 		
 		return new Promise(function(resolve, reject){
@@ -155,6 +162,130 @@ var AbViewController = {
 				caller: self,
 				title: '서버 옵션 로드',
 				url: AbImageViewer.prototype.URLS.CONFIG,
+				data: {
+					a: paramA
+				},
+				
+				success: function (r){
+					loader.hide();
+					resolve(r);
+				},
+
+				error: function (r){
+					loader.hide();
+					reject(r);
+				},
+			});
+		});
+	},
+	
+	/**
+	 * 이미지 뷰어 레이아웃 설정 등의 준비 작업
+	 */
+	prepare: function (config){
+		var promise = null;
+		
+		if (config && config.auth && config.auth.config.enabled === true){
+			var local = config.auth.config.account.source === 'local-storage';
+			var session = config.auth.config.account.source === 'session-storage';
+			
+			if (local || session){
+				var value = null;
+				
+				if (session)
+					value = sessionStorage.getItem(config.auth.config.account.field);
+				else if (local)
+					value = localStorage.getItem(config.auth.config.account.field);
+				
+				promise = this.loadPermissions(value)
+					.then(function(r){
+						config.auth.permission = r;
+						config.auth.permission.map = this.permissionMap(config.auth.permission);
+						
+						this.setLayout(config.auth.permission);						
+						return config;
+					}.bind(this));
+			}else{
+				config.auth.permission.map = this.permissionMap(config.auth.permission);
+			}
+		}
+		
+		if (!promise)
+			promise = Promise.resolve(config);
+		
+		return promise;
+	},
+	
+	permissionMap: function(permission){
+		var numPermission = permission && permission.permissions ? permission.permissions.length : 0;
+		if (!numPermission)
+			return null;
+		
+		var map = {};
+		for (var i=0; i < numPermission; i++){
+			var p = permission.permissions[i];
+			map[p.itm] = p.useYn === 'Y';
+		}
+		return map;
+	},
+	
+	setLayout: function (permission){
+		var level = permission ? permission.level : -1;
+		var map = permission && permission.map ? permission.map : {};
+		
+		if (level == 0)
+			return;
+		
+		var perms = $('[ab-perm],[tb-topic]');
+		var numPerms = perms.length;
+		for (var i=0; i < numPerms; i++){
+			var he = perms.get(i);
+			var e = $(he);
+			
+			var topic = e.attr('tb-topic');
+			var perm = e.attr('ab-perm');
+			
+			var accept = false;
+			
+			if (topic){
+				accept = map[topic] === true;
+			}else if (perm){
+				var topics = perm.trim().split(/\s*,\s*/g);
+				var numTopics = topics.length;
+				for (var j=0; j < numTopics; j++){
+					var topic = topics[j];
+					
+					if (map[topic] === true){
+						accept = true;
+						break;
+					}
+				}
+			}
+			
+			if (!accept)
+				e.detach();
+		}
+	},
+	
+	loadPermissions: function(value){
+		if (!value)
+			return Promise.resolve();
+		
+		var loader = AbLoading.get({
+			text: '권한 정보를 불러오는 중입니다...',
+		});
+		loader.show();
+		
+		var self = this;
+		
+		return new Promise(function(resolve, reject){
+			AbCommon.ajax({
+				caller: self,
+				title: '권한 정보 로드',
+				url: AbImageViewer.prototype.URLS.PERMISSION,
+				data: {
+					value: value,
+				},
 				
 				success: function (r){
 					loader.hide();
@@ -172,13 +303,31 @@ var AbViewController = {
 	/**
 	 * 이미지 뷰어 초기화
 	 */
-	initImageViewer: function (viewerConfig){
-		var config = viewerConfig || {};
+	initImageViewer: function (config){
 		var GAP = 2;
 
 		var imageViewer = new AbImageViewer({
 			margin: { left: GAP, top: GAP, right: GAP, bottom: GAP },
-			config: viewerConfig,
+			config: config ? config.viewer : null,
+			permission: {
+				auth: config ? config.auth : null,
+				
+				check: function (topic){
+					var config = this.auth ? this.auth.config : null;
+					
+					if (config.enabled !== true)
+						return true;
+					
+					var permission = this.auth ? this.auth.permission : null;
+					var level = permission ? permission.level : -1;
+					var map = permission && permission.map ? permission.map : {};
+
+					if (level === 0)
+						return true;
+					
+					return map.hasOwnProperty(topic) && map[topic] === true;
+				},
+			},
 			//animate: false,
 			//notifySelectPage: true,
 		});
@@ -188,7 +337,9 @@ var AbViewController = {
 		
 		this.imageViewer = imageViewer;
 		
-		var waterMarkImageUrl = config && config.waterMark && config.waterMark.image ? $.trim(config.waterMark.image) : null;
+		var waterMarkImageUrl =
+			config && config.viewer && config.viewer.waterMark && config.viewer.waterMark.image ?
+					$.trim(config.viewer.waterMark.image) : null;
 		
 		var promise = null;
 		if (waterMarkImageUrl)

@@ -1,5 +1,5 @@
 <%@page import="com.abrain.wiv.utils.WebUtil"%>
-<%@page import="com.abrain.wiv.data.AbBrowserKind"%>
+<%@page import="com.abrain.wiv.enums.AbBrowserKind"%>
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ page session="false" %>
@@ -32,15 +32,16 @@
 	<script type="text/javascript" src="resources/js/vendor/FileSaver.min.js"></script>
 	<script type="text/javascript" src="resources/js/vendor/exif.min.js"></script>
 
+	<%/*
 	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
 	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>
-	
-	<%/*
-	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
-	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
+	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
 	*/%>
 	
-	<script type="text/javascript" src="resources/js/ab.view.controller.js"></script>
+	<script type="text/javascript" src="resources/js/ab.viewer.min.js"></script>
+	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
+	<script type="text/javascript" src="resources/js/ab.view.controller.min.js"></script>
+	
 	<script>
 	AbViewController.onInitailize = function(viewer){
 		//AbMsgBox.show('오케이');
@@ -57,11 +58,14 @@
 	<c:if test="${not empty q}">
 		<input type="hidden" id="param-q" value="${q}"/>
 	</c:if>
+	<c:if test="${not empty a}">
+		<input type="hidden" id="param-a" value="${a}"/>
+	</c:if>
 	<!-- 인자 전달 (끝) -->
 
 	<!-- 테스트	
 	<div style="position: absolute; left: 0; top: 0; z-index: 200; background-color: white; padding: 10px;">
-		${config.shape.save}
+		${config.viewer.shape.save}
 	</div>
 	-->
 
@@ -105,39 +109,97 @@
 	<header class="abv-header">
 		<!--<div>뷰어헤더</div>-->
 	</header>
-	<nav class="abv-nav noselection">
+	<c:if test="${config.viewer.toolbar.hasLayout('all','main') && config.auth.permission('layout.main')}">
+	<nav class="abv-nav noselection" ab-perm="layout.main">
 		<div class="abv-toolbar tb-toolbar main-toolbar hide" id="tb-main">
 			<!--툴바-->
 			<ul class="horiz tb-main">
+				<c:if test="${config.auth.permission('file.open')}">
 				<li tb-topic="file.open" title="이미지 열기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_01.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('file.save.image')}">
 				<li tb-topic="file.save.image" title="이미지 저장" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_02.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('file.save.annotation')}">
 				<li class="sep" tb-topic="file.save.annotation" title="주석/마스킹 정보 저장" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_03.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('send.server')}">
 				<li class="sep" tb-topic="send.server" title="서버 전송" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_03-01.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.remove')}">
 				<li class="sep" tb-topic="page.remove" title="현재 이미지 삭제" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_04.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.print')}">
 				<li tb-topic="page.print" title="현재 이미지 인쇄" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_05.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('print')}">
 				<li class="sep" tb-topic="print" title="전체 이미지 인쇄" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_06.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zoom.in')}">
 				<li tb-topic="zoom.in" title="확대" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_07.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zoom.out')}">
 				<li class="sep" tb-topic="zoom.out" title="축소" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_08.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zindex.front')}">
 				<li tb-topic="zindex.front" title="맨 앞으로 가져오기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_09.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zindex.forward')}">
 				<li tb-topic="zindex.forward" title="앞으로 가져오기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_10.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zindex.backward')}">
 				<li tb-topic="zindex.backward" title="뒤로 보내기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_11.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('zindex.back')}">
 				<li class="sep" tb-topic="zindex.back" title="맨 뒤로 보내기" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_12.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('fit.horiz')}">
 				<li tb-topic="fit.horiz" title="너비 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_13.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('fit.vert')}">
 				<li tb-topic="fit.vert" title="높이 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck"><img class="tb-btn" src="resources/icon/tbm_14.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('fit.in')}">
 				<li class="sep" tb-topic="fit.in" title="화면 맞춤" tb-type="radio" tb-group="fit" tb-user-lock="uncheck" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_15.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.rotate.ccw')}">
 				<li tb-topic="page.rotate.ccw" title="화면 회전 (반시계)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_16.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.rotate.cw')}">
 				<li tb-topic="page.rotate.cw" title="화면 회전" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_17.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.rotate.180')}">
 				<li class="sep" tb-topic="page.rotate.180" title="화면 회전 (180º)" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_18.png"/></li>
-				<li class="sep" tb-topic="mode" title="편집/보기 모드" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_19.png" ></li>
+				</c:if>
+				<c:if test="${config.auth.permission('mode')}">
+				<li class="sep" tb-topic="mode" title="편집/보기 모드" tb-type="check" ${config.viewer.decodeMode('edit','tb-status="checked"','')}><img class="tb-btn" src="resources/icon/tbm_19.png" ></li>
+				</c:if>
+				<c:if test="${config.auth.permission('show.annotation')}">
 				<li tb-topic="show.annotation" title="주석 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_20.png"></li>
+				</c:if>
+				<c:if test="${config.auth.permission('show.masking')}">
 				<li class="sep" tb-topic="show.masking" title="마스킹 보기/감추기" tb-type="check" tb-status="checked"><img class="tb-btn" src="resources/icon/tbm_21.png"></li>
+				</c:if>
+				<c:if test="${config.auth.permission('clear.shapes')}">
 				<li class="sep" tb-topic="clear.shapes" title="주석/마스킹 초기화" tb-type="click"><img class="tb-btn" src="resources/icon/tbm_22.png"></li>
-				<li class="sep nowrap">
+				</c:if>
+				<c:if test="${config.auth.permission('page.prev', 'page.no', 'page.next')}">
+				<li class="sep nowrap" ab-perm="page.prev, page.no, page.next">
+					<c:if test="${config.auth.permission('page.prev')}">
 					<img src="resources/icon/tbm_23-01.png" class="tb-lmar" tb-topic="page.prev" title="이전 이미지" tb-type="click"/>
-					<input type="text" class="center" tb-topic="page.no" tb-type="text" size="1" value="0" disabled="disabled"/> / <span tb-topic="page.total" tb-type="label">0</span>
+					</c:if>
+					<c:if test="${config.auth.permission('page.no')}">
+					<span ab-perm="page.no">
+						<input type="text" class="center" tb-topic="page.no" tb-type="text" size="1" value="0" disabled="disabled"/> / <span tb-topic="page.total" tb-type="label">0</span>
+					</span>
+					</c:if>
+					<c:if test="${config.auth.permission('page.next')}">
 					<img src="resources/icon/tbm_23-02.png" class="tb-rmar" tb-topic="page.next" title="다음 이미지" tb-type="click"/>
+					</c:if>
 				</li>
-				<li>
+				</c:if>
+				<c:if test="${config.auth.permission('page.scale')}">
+				<li ab-perm="page.scale">
 					<div class="custom-select">
 					<select tb-topic="page.scale" tb-type="select" title="화면 비율">
 						<option>비율</option>
@@ -165,9 +227,11 @@
 					</select>
 					</div>
 				</li>
+				</c:if>
 			</ul>
 		</div>
 	</nav>
+	</c:if>
 	<section class="abv-body">
 		<aside class="abv-left-side tb-toolbar noselection" id="tb-left">
 			<!--툴바-->
@@ -181,7 +245,7 @@
 				<li tb-topic="thumb-popup.open" title="모아보기" tb-type="click"><img class="tb-btn" src="resources/icon/tbl_03.png"></li>
 			</ul>
 		</aside>
-		<aside class="abv-thumbnails noselection">
+		<aside class="abv-thumbnails noselection abv-thumbnails-closable">
 			<section id="thumbnails">
 				<nav class="head">
 					<label class="checkbox" title="전체 선택">
@@ -246,34 +310,60 @@
 				<!-- 도형 스타일 끝 -->
 			</nav>
 			
-			<div class="abv-canvas">
+			<div class="abv-canvas" style="${config.viewer.toolbar.decodeLayout('all','','right','','padding-right: 0;')} ${config.auth.decode('layout.right','','padding-right: 0;')}">
 				<div class="abv-canvas-wrap">
 					<div class="abv-canvas-inwrap">
 						<div id="engine" class="canvas"><!--<div style="position: absolute;">캔버스</div>--></div>
 					</div>
 				</div>
 			</div>
-		</section>	
+		</section>
+		<c:if test="${config.viewer.toolbar.hasLayout('all','right') && config.auth.permission('layout.right')}">	
 		<aside class="abv-right-side noselection tb-toolbar" id="rb-right">
 			<div class="vblock" title="주석"></div>
 			<ul class="vert">
 				<li tb-topic="annotation.cursor" title="선택하기" tb-type="radio" tb-group="draw" tb-status="checked"><img class="tb-btn" src="resources/icon/cursor.png"/></li>
+				<c:if test="${config.auth.permission('annotation.rectangle')}">
 				<li ve-type="creation" tb-topic="annotation.rectangle" title="사각형 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_01.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.ellipse')}">
 				<li ve-type="creation" tb-topic="annotation.ellipse" title="원형 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_02.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.line')}">
 				<li ve-type="creation" tb-topic="annotation.line" title="선 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_03.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.arrow')}">
 				<li ve-type="creation" tb-topic="annotation.arrow" title="화살표 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_04.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.pen')}">
 				<li ve-type="creation" tb-topic="annotation.pen" title="펜으로 그리기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_05.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.highlightpen')}">
 				<li ve-type="creation" tb-topic="annotation.highlightpen" title="형판펜으로 칠하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_06.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.textbox')}">
 				<li ve-type="creation" tb-topic="annotation.textbox" title="메모하기" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_07.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.checker')}">
 				<li ve-type="creation" tb-topic="annotation.checker" title="체크" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_08.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('annotation.stamp')}">
 				<li ve-type="creation" tb-topic="annotation.stamp" title="스탬프" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_09.png"/></li>
+				</c:if>
 			</ul>
-			<div class="vhblock" title="마스킹"></div>
-			<ul class="vert">
+			<c:if test="${config.auth.permission('masking.rectangle', 'masking.ellipse')}">
+			<div class="vhblock" title="마스킹" ab-perm="masking.rectangle, masking.ellipse"></div>
+			<ul class="vert" ab-perm="masking.rectangle, masking.ellipse">
+				<c:if test="${config.auth.permission('masking.rectangle')}">
 				<li ve-type="creation" tb-topic="masking.rectangle" title="사각형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_m_01.png"/></li>
+				</c:if>
+				<c:if test="${config.auth.permission('masking.ellipse')}">
 				<li ve-type="creation" tb-topic="masking.ellipse" title="원형으로 마스킹" tb-type="radio" tb-group="draw"><img class="tb-btn" src="resources/icon/tbr_m_02.png"/></li>
+				</c:if>
 			</ul>
+			</c:if>
 		</aside>
+		</c:if>
 		<!-- 섬네일 모아보기 시작 -->
 		<div class="abv-thumb-popup abv-hide-thumbnails-popup-layer noselection" id="thumbnails-popup-layer">
 			<section>
@@ -502,6 +592,92 @@
 	<!-- 도형 스타일러 창 끝 -->
 	
 	<!-- 테스트 패널 -->
+	<%/*
 	<jsp:include page="/WEB-INF/debug/view-home.jsp"></jsp:include>
+	*/%>
+	
+	<c:if test="${sample}">
+	<%/*
+	<c:import url="/WEB-INF/debug/view-home.jsp"></c:import>
+	*/%>
+	
+	<style>
+	#test-panel {
+		width: 600px;
+	
+		position: fixed;
+		left: 50%;
+		margin-left: -300px;
+		margin-top: 90px;
+		
+		padding: 10px 20px;
+		z-index: 100;
+		
+		background-color: #FAFAFA;
+	}
+	</style>
+	
+	<div id="test-panel">
+		<input type="button" test-topic="remote-folder" value="원격 폴더"/>
+		<input type="button" test-topic="change-image" value="2번 이미지 교체"/>
+		
+		<input type="text" test-topic="authname" value="ab_usr_id" style="width: 50px;"/>
+		<input type="text" test-topic="authval" value="dev" style="width: 50px;"/>
+		
+		<input type="button" test-topic="cookie" value="cookie"/>
+		<input type="button" test-topic="localStorage" value="localStorage"/>
+		<input type="button" test-topic="sessionStorage" value="sessionStorage"/>
+	</div>
+	
+	<script>
+	$(function(){
+		// 인터페이스 사용
+		$te('remote-folder').click(function(){
+			iAbViewer.view(
+				'C:/Users/Administrator/Desktop/원앙',
+				'테스트|천사|좋은일|행복|도사'
+			)
+		});
+		
+		$te('change-image').click(function(){
+			iAbViewer.viewMain(
+				1,
+				'C:/Users/Administrator/Desktop/닭/c1.jpg',
+				'C:/Users/Administrator/Desktop/닭/c1.xml'
+			)
+		});
+		
+		$te('cookie').click(function(){
+			var name = $te('authname').val();
+			var value = $te('authval').val();
+			
+			AbCommon.cookie.setAlways(name, value);
+		});
+		
+		$te('localStorage').click(function(){
+			var name = $te('authname').val();
+			var value = $te('authval').val();
+	
+			localStorage.setItem(name, value);
+		});
+		
+		$te('sessionStorage').click(function(){
+			var name = $te('authname').val();
+			var value = $te('authval').val();
+	
+			sessionStorage.setItem(name, value);
+		});
+	
+		iAbViewer.attachEvent('select', function (name, data){
+			var flags = []; flags.push(data.name?'('+data.name+') ':''); flags.push(data.token?'('+data.token+') ':'');
+			console.log('  :: DIRECT :: [EVENT]['+name+'] '+flags.join('')+'' + data.index + ', uid=' + data.uid);
+		});
+	});
+	
+	function $te(topic){
+		return $('#test-panel [test-topic="'+topic+'"]');
+	}
+	</script>
+	</c:if>
 </body>
 </html>

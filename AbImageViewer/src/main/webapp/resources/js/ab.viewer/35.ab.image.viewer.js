@@ -48,6 +48,7 @@ function AbImageViewer(options){
 	//-----------------------------------------------------------
 	
 	this.$config = options.config || {};
+	this.$permission = options.permission;
 
 	//-----------------------------------------------------------
 
@@ -95,8 +96,13 @@ function AbImageViewer(options){
 	//-----------------------------------------------------------
 	
 	// 툴바가 없을 시 기본 모드 설정 (edit/view) view가 디폴트
-	this.defaultMode = options.mode || 'view';
-
+	//this.defaultMode = options.mode || 'view';
+	this.defaultMode = 'view';
+	if (options.mode)
+		this.defaultMode = options.mode;
+	else if (options.config && options.config.mode)
+		this.defaultMode = options.config.mode;
+	
 	//-----------------------------------------------------------
 
 	this.thumbnailGenerator = new AbThumbnailGenerator();
@@ -149,6 +155,7 @@ AbImageViewer.prototype = {
 	
 	URLS: {
 		CONFIG: 'api/config',
+		PERMISSION: 'api/permission',
 		
 		OPEN: 'api/images',
 		
@@ -199,6 +206,15 @@ AbImageViewer.prototype = {
 			return null;
 		
 		return r.config[r.leap];
+	},
+
+	//-----------------------------------------------------------
+	
+	permission: function(topic){
+		if (this.$permission && AbCommon.isFunction(this.$permission.check)){
+			return this.$permission.check(topic);
+		}
+		return true;
 	},
 
 	//-----------------------------------------------------------
@@ -435,12 +451,12 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	sync: function(){
-		var mode = null;
+		var toolbarDefinedViewerMode = null;
 		
 		this.toolbar.forEach(function(topic, value){
 			switch (topic){
 			case 'mode':
-				mode = value;
+				toolbarDefinedViewerMode = value;
 				this.engine.engineMode = value ? 'edit' : 'view';
 				this.showEditControls(value);
 				break;
@@ -450,12 +466,13 @@ AbImageViewer.prototype = {
 			}
 		}.bind(this));
 		
+		//console.log('[toolbarDefinedViewerMode]=' + toolbarDefinedViewerMode);
+		//console.log('[defaultMode]=' + this.defaultMode);
+		
 		// 기본 모드 설정
-		if (mode === null){
-			mode = this.defaultMode;
-			
-			this.engine.engineMode = mode;
-			this.showEditControls(mode === 'edit');
+		if (toolbarDefinedViewerMode === null){
+			this.engine.engineMode = this.defaultMode;
+			this.showEditControls(this.defaultMode === 'edit');
 		}
 
 		this.enableToolbarTopics();
@@ -533,6 +550,9 @@ AbImageViewer.prototype = {
 
 	toolbarNotify: function (sender, topic, value){
 		//console.log('[VIEWER][Toolbar][Topic]['+ topic + '] ' + value);
+		
+		if (!this.permission(topic))
+			return;
 
 		switch(topic){
 		case 'file.open': this.openLocalFile(); break;
@@ -642,7 +662,7 @@ AbImageViewer.prototype = {
 	},
 
 	toolbarGroupNotify: function (sender, group, value){
-		//console.log('[VIEWER][Toolbar][Group]['+ group + '] ' + value);
+		// console.log('[VIEWER][Toolbar][Group]['+ group + '] ' + value);
 
 		switch(group){
 		case 'left':
@@ -655,7 +675,7 @@ AbImageViewer.prototype = {
 	},
 
 	listViewNotify: function(sender, topic, value){
-		console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ' + value);
+		// console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ' + value);
 
 		var page = null, index = -1;
 		switch(topic){
@@ -1363,18 +1383,20 @@ AbImageViewer.prototype = {
 	addImages: function (images, options){
 		if (!options) options = {};
 		if (!options.from) options.from = 'server';
+		
+		var addedPages = [];
 
 		return new Promise(function (resolve, reject){
 			if (!$.isArray(images)){
 				if (!AbCommon.isSetted(images)){
-					resolve(0);
+					resolve(addedPages);
 					return;
 				}
 				images = [images];
 			}
 	
 			if (!images.length){
-				resolve(0);
+				resolve(addedPages);
 				return;
 			}
 	
@@ -1426,15 +1448,17 @@ AbImageViewer.prototype = {
 					loader.row = row;
 					loader.index = i;
 		
-					this.add(loader, {
+					var ap = this.add(loader, {
 						angle: row.angle
 					});
+					
+					addedPages.push(ap);
 				}
 				
 				this.exec(function(){
 					this.updatePagesNotifyObservers();
 					
-					resolve(siz);
+					resolve(addedPages);
 				});
 	
 			});			
@@ -1550,9 +1574,8 @@ AbImageViewer.prototype = {
 				return;
 			}
 			
-			if (files.length >= 2){
-				console.log('[CATCH]');
-			}
+//			if (files.length >= 2)
+//				console.log('[CATCH]');
 
 			// 에디터 설정을 이미지 목록으로 변경
 			this.toggleListView('pages', false);
@@ -1568,7 +1591,7 @@ AbImageViewer.prototype = {
 				// type: image/png
 				// webkitRelativePath: <<empty string>>
 
-				console.log('[LOCAL][FILE] ' + file.name + ' (' + file.type + ')');
+				// console.log('[LOCAL][FILE] ' + file.name + ' (' + file.type + ')');
 
 				var loader = AbImageLoader.load(file);
 				if (loader)
@@ -2070,7 +2093,7 @@ AbImageViewer.prototype = {
 						imgElement = d.abimg.originThumbnailElement();
 						img = AbGraphics.canvas.renderImage(imgElement, decoder);
 						
-						console.log('[THUMBNAIL][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
+						// console.log('[THUMBNAIL][' + d.index + '] ' + img.substr(0, img.indexOf(',')));
 						
 						// WAS의 AbImagePack.ThumbnailInfo 대응
 						info = JSON.stringify({
@@ -2083,6 +2106,10 @@ AbImageViewer.prototype = {
 						
 					case 'end':
 						promise = Promise.resolve();
+						
+						// WAS의 AbImagePack.Bookmark 대응
+						// - { index: Number, vindex: Number }
+						info = JSON.stringify(d.info.bookmark);
 						break;
 					}
 				
@@ -2362,29 +2389,33 @@ AbImageViewer.prototype = {
 			chain: function (sendor, current, data){
 				var promise = null;
 				
-				if (current.pageInfo && current.pageInfo.page.angle){
-					var page = current.pageInfo.page;
+				if (current.pageInfo && !current.pageInfo.page.isError()){
+					if (current.pageInfo && current.pageInfo.page.angle){
+						var page = current.pageInfo.page;
+						
+						var pr = AbGraphics.angle.point(page.angle, 0, 0, current.imgInfo.width, current.imgInfo.height);
+						current.imgInfo.width = Math.round(Math.abs(pr.x));
+						current.imgInfo.height = Math.round(Math.abs(pr.y));
+					}
 					
-					var pr = AbGraphics.angle.point(page.angle, 0, 0, current.imgInfo.width, current.imgInfo.height);
-					current.imgInfo.width = Math.round(Math.abs(pr.x));
-					current.imgInfo.height = Math.round(Math.abs(pr.y));
-				}
-				
-				if (AbPrint.isLandscapeImage(current.imgInfo)){
-					promise = AbCommon.loadImage(current.imgInfo.url)
-									.then(function (eimg){
-										var src = AbPrint.landscape(eimg);
-										
-										var tmp = current.imgInfo.width;
-										current.imgInfo.width = current.imgInfo.height;
-										current.imgInfo.height = tmp;
-										
-										current.imgInfo.url = src;
-										return src;
-									});
+					if (AbPrint.isLandscapeImage(current.imgInfo)){
+						promise = AbCommon.loadImage(current.imgInfo.url)
+										.then(function (eimg){
+											var src = AbPrint.landscape(eimg);
+											
+											var tmp = current.imgInfo.width;
+											current.imgInfo.width = current.imgInfo.height;
+											current.imgInfo.height = tmp;
+											
+											current.imgInfo.url = src;
+											return src;
+										});
+					}else{
+						promise = Promise.resolve(current.imgInfo.url);
+					}
 				}else{
-					promise = Promise.resolve(current.imgInfo.url);
-				}
+					promise = Promise.resolve(false);
+				}				
 				
 				return promise;
 			}.bind(this),
@@ -2736,17 +2767,36 @@ AbImageViewer.prototype = {
 					viewer._requestParam = id;
 					
 					var promise = null;
-					if (r && $.isArray(r) && r.length){
-						promise = viewer.addImages(r);
+					var images = r && r.images && $.isArray(r.images) ? r.images : [];
+					var bookmarks = r && r.bookmarks && $.isArray(r.bookmarks) ? r.bookmarks : [];
+					
+					if (images.length){
+						promise = viewer.addImages(images);
 					}else{
 						promise = Promise.resolve(0);
 					}
 					
-					promise.then(function(){
+					promise.then(function(aps){
+						// 북마크 등록
+						// - aps: 추가된 페이지 목록 ({ index:Number, page:AbPage })
+						if (aps && aps.length && bookmarks.length){
+							var len = bookmarks.length;
+							for (var i=0; i < len; i++){
+								var d = aps[bookmarks[i]];
+
+								this.bookmarks.push(d.page);
+								
+								this.notifyObservers('bookmark.add', d.page.uid);
+
+								if (d.page.status == AbPage.prototype.LOADED)
+									this.bookmarkListView.notify('page.loaded', d);
+							}
+						}
+						
 						loader.hide();
 						
 						resolve();
-					});
+					}.bind(this));
 				},
 
 				error: function (r){

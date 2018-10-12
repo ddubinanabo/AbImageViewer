@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="AuthDao">
+
+	<select id="auth-level" parameterType="map" resultType="int">
+		SELECT USR_LVL FROM AB_USR WHERE USR_ID=#{USR_ID}
+	</select>
+
+	<select id="auth-permissions" parameterType="map" resultType="com.abrain.wiv.data.AbPermissionDbData">
+		SELECT
+			USR_LVL,
+			ITM_TP,
+			ITM,
+			USE_YN,
+			DSC
+		FROM AB_PERMISSION
+		WHERE
+		(
+			#{TP} = 'id' AND USR_LVL IN (SELECT USR_LVL FROM AB_USR WHERE USR_ID=#{VAL})
+		) OR (
+			#{TP} = 'level' AND USR_LVL IN (#{VAL})
+		)
+	</select>
+
+</mapper>

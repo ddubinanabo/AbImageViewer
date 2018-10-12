@@ -14,11 +14,11 @@ import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.config.AbImageConfig;
 import com.abrain.wiv.data.AbImageData;
-import com.abrain.wiv.data.AbImageDecoder;
 import com.abrain.wiv.data.AbImageInfo;
-import com.abrain.wiv.data.AbImageType;
 import com.abrain.wiv.data.SplayTree;
 import com.abrain.wiv.data.exif.AbExif;
+import com.abrain.wiv.enums.AbImageDecoder;
+import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.exceptions.NotFoundFileException;
 import com.abrain.wiv.readers.AbExifReader;
 import com.abrain.wiv.utils.FileUtil;

@@ -14,7 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import com.abrain.wiv.data.AbBrowserKind;
+import com.abrain.wiv.enums.AbBrowserKind;
 
 public class WebUtil {
 	public static String getRemoteIP(){
