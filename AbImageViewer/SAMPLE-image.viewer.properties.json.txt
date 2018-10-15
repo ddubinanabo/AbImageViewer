@@ -1,29 +1,47 @@
 {
-  "waterMark": {
-    "image": "resources/img/watermark.png"
-  },
-  "image": {
-    "save": "current"
-  },
-  "toolbar": {
-    "layout": [
-      "all"
-    ]
-  },
-  "shape": {
-    "save": "all",
-    "addUI": "none",
-    "selection": {
-      "style": "box",
-      "target": [
-        "rectangle",
-        "ellipse",
-        "arrow",
-        "pen",
-        "masking.rectangle",
-        "masking.ellipse"
-      ],
-      "lineDrawStyle": "box"
+  "viewer": {
+    "mode": "edit",
+    "waterMark": {
+      "image": "resources/img/watermark.png"
+    },
+    "image": {
+      "save": "all",
+      "storage": {
+        "type": "db",
+        "path": "C:\\Users\\Administrator\\Desktop\\AB_DOC"
+      }
+    },
+    "toolbar": {
+      "layout": [
+        "all"
+      ]
+    },
+    "shape": {
+      "save": "all",
+      "addUI": "none",
+      "selection": {
+        "style": "box",
+        "target": [
+          "rectangle",
+          "ellipse",
+          "arrow",
+          "pen",
+          "masking.rectangle",
+          "masking.ellipse"
+        ],
+        "lineDrawStyle": "path"
+      }
     }
+  },
+  "auth": {
+    "config": {
+      "enabled": false,
+      "account": {
+        "source": "cgi",
+        "field": "ab_usr_id",
+        "type": "id"
+      }
+    },
+    "permission": null
   }
 }
