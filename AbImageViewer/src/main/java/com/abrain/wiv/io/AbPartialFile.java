@@ -21,17 +21,51 @@ import org.apache.commons.io.FileUtils;
 import com.abrain.wiv.utils.DebugUtil;
 import com.abrain.wiv.utils.FileUtil;
 
+/**
+ * 분할 전송 파일 관리자
+ * <p>* 분할 전송된 파일을 관리합니다.
+ * @author Administrator
+ *
+ */
 public class AbPartialFile {
 	
+	/**
+	 * 전송 데이터 처리 정보
+	 * @author Administrator
+	 *
+	 */
 	public static class Result {
+		/**
+		 * 마지막 분할 데이터 여부
+		 */
 		public boolean completed;
+		/**
+		 * 저장한 파일 객체
+		 */
 		public File file;
+		/**
+		 * 세션 아이디
+		 */
 		public String sessionId;
+		/**
+		 * 저장한 바이너리 데이터<p>* 마지막 분할 데이터인 경우에만 설정됩니다.
+		 */
 		public byte[] bytes;
 	};
 	
+	/**
+	 * 할당된 폴더 정보
+	 * @author Administrator
+	 *
+	 */
 	public static class AllocResult {
+		/**
+		 * 폴더 경로
+		 */
 		public String path;
+		/**
+		 * 아이디
+		 */
 		public String id;
 	};
 
@@ -39,31 +73,47 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 분할 전송 폴더(partials)
+	 */
 	public static final String MID_PARTIALS = "partials";
+	/**
+	 * 인쇄 지원 폴더(prints)
+	 */
 	public static final String MID_PRINT_SUPPORT = "prints";
 
+	/**
+	 * 인쇄 임시 파일명 접두사(img-)
+	 */
 	public static final String MID_PRINT_SUPPORT_IMAGE = "img-";
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 디버그 모드
+	 */
 	private static final boolean debugMode = false;
 
 	//-----------------------------------------------------------------------------------
 	
 	/**
 	 * 아무 작업도 안함
+	 * <p>* 작업 플래그
 	 */
 	public static final int POSTPRC_NONE = 0;
 	/**
 	 * 바이너리 데이터로 변환하여 읽음
+	 * <p>* 작업 플래그
 	 */
 	public static final int POSTPRC_READ_BYTES = 1;
 	/**
 	 * 바이러니 데이터로 변환하여 재저장
+	 * <p>* 작업 플래그
 	 */
 	public static final int POSTPRC_SAVE_BYTES = 2;
 	/**
 	 * 임시 파일을 삭제
+	 * <p>* 작업 플래그
 	 */
 	public static final int POSTPRC_REMOVE = 4;
 
@@ -76,9 +126,9 @@ public class AbPartialFile {
 	/**
 	 * 임시 폴더 할당
 	 * <p>임시 폴더에 사용할 폴더를 생성해서 중복되지 않게 한다.
-	 * @param request
-	 * @param middleName
-	 * @return
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 폴더명
+	 * @return 할당된 폴더 정보
 	 */
 	public static AllocResult alloc(HttpServletRequest request, String middleName){
 		String basePath = getBasePath(request, middleName);
@@ -110,6 +160,15 @@ public class AbPartialFile {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 텍스트 파일을 저장합니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 폴더명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @param text 텍스트 내용
+	 * @return null이면 성공, 아니면 발생한 예외 객체
+	 */
 	public static Object saveText(HttpServletRequest request, String middleName, String id, String filename, String text){
 		String filepath = getPath(request, middleName, id, filename);
 		
@@ -197,8 +256,8 @@ public class AbPartialFile {
 	 * @param partials 전체 분할 수
 	 * @param partial 현재 분할 인덱스
 	 * @param content 분할 데이터
-	 * @return
-	 * @throws Exception
+	 * @return null이면 성공, 아니면 발생한 예외 객체
+	 * @throws Exception 예외
 	 */
 	public static Object save(HttpServletRequest request, String middleName, String id, String filename, int partials, int partial, String content) throws Exception{
 		return save(request, middleName, id, filename, partials, partial, content, POSTPRC_NONE);
@@ -215,9 +274,9 @@ public class AbPartialFile {
 	 * @param partials 전체 분할 수
 	 * @param partial 현재 분할 인덱스
 	 * @param content 분할 데이터
-	 * @param postProc 분할된 모든 자료를 저장 후 어떤 작업을 진행할 지를 결정함.
-	 * @return
-	 * @throws Exception
+	 * @param postProc 작업 플래그<p>* 분할된 모든 자료를 저장 후 어떤 작업을 진행할 지를 결정함.
+	 * @return null이면 성공, 아니면 발생한 예외 객체
+	 * @throws Exception 예외
 	 */
 	public static Object save(
 			HttpServletRequest request,
@@ -352,12 +411,12 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 임시 폴더의 파일에 대한 File 인스턴스를 리턴한다.
-	 * @param request
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
+	 * 임시 폴더의 파일에 대한 File 인스턴스를 리턴합니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 객체
 	 */
 	public static File read(HttpServletRequest request, String middleName, String id, String filename){
 		File file = new File(getPath(request, middleName, id, filename));
@@ -365,14 +424,14 @@ public class AbPartialFile {
 	}
 
 	/**
-	 * 임시 폴더의 파일에 대한 File 인스턴스를 리턴한다.
-	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받는다.
-	 * @param request
-	 * @param sessionId
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
+	 * 임시 폴더의 파일에 대한 File 인스턴스를 리턴합니다.
+	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받습니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 객체
 	 */
 	public static File readWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename){
 		File file = new File(getPathWithSession(request, sessionId, middleName, id, filename));
@@ -382,13 +441,13 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 저장된 임시 파일의 내용(BASE64)을 읽는다.
-	 * @param request
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
-	 * @throws Exception
+	 * 저장된 임시 파일의 내용(BASE64)을 읽습니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 내용
+	 * @throws Exception 예외
 	 */
 	public static String readText(HttpServletRequest request, String middleName, String id, String filename) throws Exception {
 		File file = read(request, middleName, id, filename);
@@ -398,15 +457,15 @@ public class AbPartialFile {
 	}
 
 	/**
-	 * 저장된 임시 파일의 내용(BASE64)을 읽는다.
-	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받는다.
-	 * @param request
-	 * @param sessionId
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
-	 * @throws Exception
+	 * 저장된 임시 파일의 내용(BASE64)을 읽습니다.
+	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받습니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 내용
+	 * @throws Exception 예외
 	 */
 	public static String readTextWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename) throws Exception {
 		File file = readWithSession(request, sessionId, middleName, id, filename);
@@ -418,13 +477,13 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 저장된 임시 파일의 내용(BASE64)을 읽어 바이너리로 변한해서 리턴한다.
-	 * @param request
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
-	 * @throws Exception
+	 * 저장된 임시 파일의 내용(BASE64)을 읽어 바이너리로 변한해서 리턴합니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
 	 */
 	public static byte[] readBytes(HttpServletRequest request, String middleName, String id, String filename) throws Exception {
 		String text = readText(request, middleName, id, filename);
@@ -432,15 +491,15 @@ public class AbPartialFile {
 	}
 
 	/**
-	 * 저장된 임시 파일의 내용(BASE64)을 읽어 바이너리로 변한해서 리턴한다.
-	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받는다.
-	 * @param request
-	 * @param sessionId
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
-	 * @throws Exception
+	 * 저장된 임시 파일의 내용(BASE64)을 읽어 바이너리로 변한해서 리턴합니다.
+	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받습니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
 	 */
 	public static byte[] readBytesWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename) throws Exception {
 		String text = readTextWithSession(request, sessionId, middleName, id, filename);
@@ -450,12 +509,12 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 저장된 임시 파일을 삭제한다.
-	 * @param request
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
+	 * 저장된 임시 파일을 삭제합니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 삭제했으면 true, 아니면 false
 	 */
 	public static boolean removeFile(HttpServletRequest request, String middleName, String id, String filename) {
 		File file = read(request, middleName, id, filename);
@@ -463,14 +522,14 @@ public class AbPartialFile {
 	}
 	
 	/**
-	 * 저장된 임시 파일을 삭제한다.
-	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받는다.
-	 * @param request
-	 * @param sessionId
-	 * @param middleName
-	 * @param id
-	 * @param filename
-	 * @return
+	 * 저장된 임시 파일을 삭제합니다.
+	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받습니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 삭제했으면 true, 아니면 false
 	 */
 	public static boolean removeFileWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename) {
 		File file = readWithSession(request, sessionId, middleName, id, filename);
@@ -480,11 +539,11 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 사용한 임시 폴더의 삭제를 시도한다. (폴더 내 파일이 없는 경우에만 삭제를 시도한다)
-	 * @param request
-	 * @param middleName
-	 * @param id
-	 * @return
+	 * 사용한 임시 폴더의 삭제를 시도합니다. (폴더 내 파일이 없는 경우에만 삭제를 시도합니다)
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @return 삭제했으면 true, 아니면 false
 	 */
 	public static boolean removeDirectory(HttpServletRequest request, String middleName, String id) {
 		String basePath = getBasePath(request, middleName);
@@ -496,11 +555,11 @@ public class AbPartialFile {
 	/**
 	 * 사용한 임시 폴더의 삭제를 시도한다. (폴더 내 파일이 없는 경우에만 삭제를 시도한다)
 	 * <p>IE의 P3P 정책때문에 추가된 코드로, 세션ID를 인자로 받는다.
-	 * @param request
-	 * @param sessionId
-	 * @param middleName
-	 * @param id
-	 * @return
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
+	 * @return 삭제했으면 true, 아니면 false
 	 */
 	public static boolean removeDirectoryWithSession(HttpServletRequest request, String sessionId, String middleName, String id) {
 		String basePath = getBasePathWithSession(request, sessionId, middleName);
@@ -509,6 +568,12 @@ public class AbPartialFile {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 디렉터리 삭제를 시도합니다.
+	 * @param basePath 폴더 경로
+	 * @param id 아이디
+	 * @return 삭제했으면 true, 아니면 false
+	 */
 	private static boolean tryRemoveDirectory(String basePath, String id){
 		String tmpPath = FileUtil.combinePath(basePath, id);
 		File tmpPathFile = new File(tmpPath);
@@ -529,11 +594,11 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	
 	/**
-	 * 임시 폴더를 삭제한다.
+	 * 임시 폴더를 삭제합니다.
 	 * <p> 하위 폴더 및 파일들도 같이 삭제
-	 * @param request
-	 * @param middleName
-	 * @param id
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 파일명
+	 * @param id 아이디
 	 */
 	public static void remove(HttpServletRequest request, String middleName, String id){
 		HttpSession session = request.getSession();
@@ -579,7 +644,13 @@ public class AbPartialFile {
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
-		
+
+	/**
+	 * 기본 폴더에 세션아이디로 폴더를 생성하고, 그 경로를 가져옵니다.
+	 * @param context 서블릿 Context
+	 * @param sessionId 세션 아이디
+	 * @return 생성된 폴더의 경로
+	 */
 	public static String rootFolder(ServletContext context, String sessionId) {
 		String rootDirPath = context.getRealPath(DIR_FILES);
 		
@@ -592,13 +663,33 @@ public class AbPartialFile {
 	
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 디버깅용
+	 */
 	private static boolean debugFirstCalled = false;
+	/**
+	 * 디버깅용
+	 */
 	private static Object debugLock = new Object();
 	
+	/**
+	 * 기본 폴더에 세션아이디, 중간 폴더명으로 된 폴더를 만들고 그 경로를 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 폴더명
+	 * @return
+	 */
 	private static String getBasePath(HttpServletRequest request, String middleName){
 		return getBasePathWithSession(request, null, middleName);
 	}
 
+	/**
+	 * 기본 폴더에 세션아이디, 중간 폴더명으로 된 폴더를 만들고 그 경로를 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * <p>* null을 입력하면 세션아이디를 쿠기에서 읽어옵니다.
+	 * @param middleName 중간 폴더명
+	 * @return 폴더 경로
+	 */
 	private static String getBasePathWithSession(HttpServletRequest request, String sessionId, String middleName){
 		
 		HttpSession session = request.getSession();		
@@ -647,10 +738,28 @@ public class AbPartialFile {
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 기본 폴더에 세션아이디, 중간 폴더명, 아이디으로 된 폴더를 만들고 그 경로에 파일명의 경로를 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @param middleName 중간 폴더명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 경로
+	 */
 	private static String getPath(HttpServletRequest request, String middleName, String id, String filename){
 		return getPathWithSession(request, null, middleName, id, filename);
 	}
 
+	/**
+	 * 기본 폴더에 세션아이디, 중간 폴더명, 아이디으로 된 폴더를 만들고 그 경로에 파일명의 경로를 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @param sessionId 세션 아이디
+	 * <p>* null을 입력하면 세션아이디를 쿠기에서 읽어옵니다.
+	 * @param middleName 중간 폴더명
+	 * @param id 아이디
+	 * @param filename 파일명
+	 * @return 파일 경로
+	 */
 	private static String getPathWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename){
 		
 		String basePath = getBasePathWithSession(request, sessionId, middleName);

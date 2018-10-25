@@ -25,22 +25,38 @@ import com.abrain.wiv.utils.DebugUtil;
 import com.abrain.wiv.utils.WebUtil;
 
 /**
- * Handles requests for the application home page.
+ * 메인 컨트롤러
  */
 @Controller
 public class HomeController {
 	
+	/**
+	 * HTTP 요청 정보
+	 */
 	@Autowired
 	private HttpServletRequest request;
 
+	/**
+	 * 이미지 DB 서비스
+	 */
 	@Autowired
 	private DocService svc;
 	
+	/**
+	 * 이미지 뷰어 설정 정보 팩 
+	 */
 	@Autowired
 	private AbViewerConfigPack config;
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 뷰어 페이지 세팅 작업
+	 * @param id 아이디
+	 * @param q 예약
+	 * @param model 뷰 모델
+	 * @throws Exception 예외
+	 */
 	private void prepare(
 			String id, String q,
 			Model model) throws Exception {
@@ -69,10 +85,10 @@ public class HomeController {
 
 	/**
 	 * 뷰어 페이지
-	 * @param request
-	 * @param response
-	 * @return
-	 * @throws Exception
+	 * @param q 예약
+	 * @param model 뷰 모델
+	 * @return JSP 페이지 경로
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String home(
@@ -89,10 +105,10 @@ public class HomeController {
 
 	/**
 	 * 뷰어 페이지 (수정 페이지)
-	 * @param id
-	 * @param model
-	 * @return
-	 * @throws Exception
+	 * @param id 아이디
+	 * @param model 뷰 모델
+	 * @return JSP 페이지 경로
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value = "/{id}", method = RequestMethod.GET)
 	public String homeWithId(
@@ -104,12 +120,13 @@ public class HomeController {
 	}
 
 	/**
-	 * 컨버팅된 문서 이미지 제공
-	 * @param q
-	 * @param n
-	 * @param request
-	 * @param response
-	 * @throws Exception
+	 * 컨버팅된 문서 이미지를 다운로드합니다.
+	 * @param q 이미지 폴더 경로
+	 * @param n 이미지 파일명
+	 * @param t 이미지 구분(thumb이면 섬네일 이미지)
+	 * @param request HTTP 요청 정보
+	 * @param response HTTP 응답 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value = "/doc")
 	public void doc(String q, String n, @RequestParam(required=false) String t, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -123,13 +140,13 @@ public class HomeController {
 	}
 	
 	/**
-	 * DB에 저장된 이미지 제공
-	 * @param q ID
-	 * @param s 시퀀스
-	 * @param t 타입
-	 * @param request
-	 * @param response
-	 * @throws Exception
+	 * DB에 저장된 이미지를 다운로드합니다.
+	 * @param q 아이디
+	 * @param s 인덱스
+	 * @param t 이미지 구분(thumb이면 섬네일 이미지)
+	 * @param request HTTP 요청 정보
+	 * @param response HTTP 응답 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value = "/img")
 	public void img(String q, String s, @RequestParam(required=false) String t, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -169,13 +186,14 @@ public class HomeController {
 	}
 	
 	/**
-	 * [인쇄 지원] 임시 저장된 이미지 파일 제공
-	 * @param q ID
-	 * @param s 시퀀스
-	 * @param request
-	 * @param response
-	 * @throws Exception
-	 */	
+	 * [인쇄 지원] 임시 저장된 이미지 파일을 다운로드합니다.
+	 * @param q 아이디
+	 * @param s 인덱스
+	 * @param x 세션아이디
+	 * @param request HTTP 요청 정보
+	 * @param response HTTP 응답 정보
+	 * @throws Exception 예외
+	 */
 	@RequestMapping(value = "/print-support/img")
 	public void printSupportImg(
 			String q, String s,

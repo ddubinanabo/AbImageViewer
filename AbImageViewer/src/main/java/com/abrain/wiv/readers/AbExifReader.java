@@ -18,17 +18,41 @@ import com.drew.metadata.Tag;
 import com.drew.metadata.exif.ExifDirectoryBase;
 import com.drew.metadata.exif.GpsDirectory;
 
+/**
+ * 이미지 EXIF 리더
+ * @author Administrator
+ *
+ */
 public class AbExifReader {
+	/**
+	 * 파일에서 정제된 EXIF 정보를 읽어 옵니다.
+	 * @param file 파일 객체
+	 * @return 정제된 EXIF 정보
+	 * @throws Exception 예외
+	 */
 	public static AbExif read(File file) throws Exception {
 		Metadata meta = ImageMetadataReader.readMetadata(file);
 		return readData(meta);
 	}
 	
+	/**
+	 * 스트림에서 정제된 EXIF 정보를 읽어 옵니다.
+	 * @param in 입력 스트림
+	 * @return 정제된 EXIF 정보
+	 * @throws Exception 예외
+	 */
 	public static AbExif read(InputStream in) throws Exception {
 		Metadata meta = ImageMetadataReader.readMetadata(in);
 		return readData(meta);
 	}
-	
+
+	/**
+	 * 스트림에서 정제된 EXIF 정보를 읽어 옵니다.
+	 * @param in 입력 스트림
+	 * @param length 읽을 크기
+	 * @return 정제된 EXIF 정보
+	 * @throws Exception 예외
+	 */
 	public static AbExif read(InputStream in, final long length) throws Exception {
 		Metadata meta = ImageMetadataReader.readMetadata(in, length);
 		return readData(meta);

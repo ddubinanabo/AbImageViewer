@@ -21,7 +21,7 @@ import com.abrain.wiv.data.AbBookmarkDbData;
 import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageDataList;
 import com.abrain.wiv.data.AbImageDbData;
-import com.abrain.wiv.data.AbImageInfo;
+import com.abrain.wiv.data.AbImageMetadata;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.AbPlainText;
 import com.abrain.wiv.data.externals.AbExtImages;
@@ -31,23 +31,45 @@ import com.abrain.wiv.services.DocService;
 import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.WebUtil;
 
+/**
+ * 이미지 API 컨트롤러
+ * @author Administrator
+ *
+ */
 @Controller
 public class ApiController extends AbstractApiController {
 	
+	/**
+	 * HTTP 요청 정보
+	 */
 	@Autowired
 	private HttpServletRequest request;
 	
+	/**
+	 * 이미지 DB 서비스
+	 */
 	@Autowired
 	private DocService svc;
 	
+	/**
+	 * 이미지 뷰어 설정 정보 팩 
+	 */
 	@Autowired
 	private AbViewerConfigPack config;
 
+	/**
+	 * 이미지 파일 설정 정보
+	 */
 	@Autowired
 	private AbImageConfig imageConfig;
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 이미지 뷰어 설정 정보 팩을 제공합니다.
+	 * @return 이미지 뷰어 설정 정보 팩
+	 * @throws Exception 예외
+	 */
 	@RequestMapping(value="/api/config", method=RequestMethod.POST)
 	@ResponseBody
 	public Object config () throws Exception{
@@ -56,6 +78,12 @@ public class ApiController extends AbstractApiController {
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 계정 권한 정보를 제공합니다.
+	 * @param value 계정 정보 또는 계정 권한 레벨
+	 * @return 계정 권한 정보
+	 * @throws Exception 예외
+	 */
 	@RequestMapping(value="/api/permission", method=RequestMethod.POST)
 	@ResponseBody
 	public Object permission (String value) throws Exception{
@@ -65,11 +93,11 @@ public class ApiController extends AbstractApiController {
 	}
 	
 	/**
-	 * 문서 컨버팅
-	 * @param name
-	 * @param content
-	 * @return
-	 * @throws Exception
+	 * 문서를 이미지로 컨버팅합니다.
+	 * @param name 문서 파일명
+	 * @param content 문서 내용 (BASE64)
+	 * @return 이미지 정보 목록
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/doc", method=RequestMethod.POST)
 	@ResponseBody
@@ -78,9 +106,9 @@ public class ApiController extends AbstractApiController {
 	}
 
 	/**
-	 * 세션 유지용
+	 * 세션 유지용 응답
 	 * <p>뷰어에서 지속적으로 이 웹 메서드를 호출합니다.
-	 * @return
+	 * @return 플레인 텍스트 정보
 	 */
 	@RequestMapping(value="/api/noop")
 	@ResponseBody
@@ -93,7 +121,7 @@ public class ApiController extends AbstractApiController {
 	
 	/**
 	 * 인쇄 지원 아이디 할당 (임시 폴더 생성)
-	 * @return AbAllocKeyData 객체
+	 * @return 할당 키 정보
 	 */
 	@RequestMapping(value="/api/print-support/alloc")
 	@ResponseBody
@@ -105,14 +133,14 @@ public class ApiController extends AbstractApiController {
 	
 	/**
 	 * 인쇄용 임시 이미지 저장
-	 * <p>IE에서 IFRAME의 세션 유지가 안되는 문제로, 세션 ID 값을 URL에 포함시킴
-	 * @param id
-	 * @param index
-	 * @param partials
-	 * @param partial
-	 * @param content
-	 * @return
-	 * @throws Exception
+	 * <p>IE에서 IFRAME의 세션 유지가 안되는 문제로, 세션 ID 값을 URL에 포함시켰습니다.
+	 * @param id 아이디
+	 * @param index 전송 인덱스
+	 * @param partials 전체 분할 수
+	 * @param partial 현재 분할 인덱스
+	 * @param content 분할 데이터
+	 * @return 플레인 텍스트 정보 (마지막 전송 시 이미지 URL을, 아니면 ok)
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/print-support/save")
 	@ResponseBody
@@ -142,10 +170,10 @@ public class ApiController extends AbstractApiController {
 	}
 	
 	/**
-	 * 인쇄 지원 임시 폴더 삭제
-	 * @param id
-	 * @return
-	 * @throws Exception
+	 * 인쇄 지원 임시 폴더를 삭제합니다.
+	 * @param id 아이디
+	 * @return 플레인 텍스트 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/print-support/remove")
 	@ResponseBody
@@ -160,9 +188,9 @@ public class ApiController extends AbstractApiController {
 	
 	/**
 	 * 이미지 목록 키 할당
-	 * @param pages
-	 * @return AbAllocKeyData 객체
-	 * @throws Exception
+	 * @param pages 이미지 개수
+	 * @return 할당 키 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/alloc", method=RequestMethod.POST)
 	@ResponseBody
@@ -179,9 +207,10 @@ public class ApiController extends AbstractApiController {
 
 	/**
 	 * 이미지 수정 준비 작업
-	 * @param id
-	 * @return
-	 * @throws Exception
+	 * @param id 아이디
+	 * @param pages 이미지 개수
+	 * @return 플레인 텍스트 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/modify-prepare", method=RequestMethod.POST)
 	@ResponseBody
@@ -197,16 +226,16 @@ public class ApiController extends AbstractApiController {
 	/**
 	 * 이미지 및 관련 정보 분할 등록 및 DB 저장 처리
 	 * <p>modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미한다.
-	 * @param modify
-	 * @param id
-	 * @param index
-	 * @param type
-	 * @param info
-	 * @param partials
-	 * @param partial
-	 * @param content
-	 * @return
-	 * @throws Exception
+	 * @param modify 수정 여부(true|false)
+	 * @param id 아이디
+	 * @param index 인덱스
+	 * @param type 전송작업 구분(image|image-source|image-result|thumb)
+	 * @param info 정보 (AbImagePack.ImageInfo/AbImagePack.ThumbnailInfo JSON)
+	 * @param partials 전체 분할 수
+	 * @param partial 현재 분할 인덱스
+	 * @param content 분할 데이터
+	 * @return 플레인 텍스트 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/save-image", method=RequestMethod.POST)
 	@ResponseBody
@@ -350,9 +379,9 @@ public class ApiController extends AbstractApiController {
 	}
 
 	/**
-	 * 이미지 등록 완료
-	 * @param id
-	 * @return
+	 * 이미지 등록 완료 처리
+	 * @param id 아이디
+	 * @return 플레인 텍스트 정보
 	 */
 	@RequestMapping(value="/api/save-completed", method=RequestMethod.POST)
 	@ResponseBody
@@ -367,10 +396,10 @@ public class ApiController extends AbstractApiController {
 	}
 	
 	/**
-	 * 이미지 전송 중 오류
-	 * @param id
-	 * @return
-	 * @throws Exception
+	 * 이미지 전송 중 오류 처리
+	 * @param id 아이디
+	 * @return 플레인 텍스트 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/remove", method=RequestMethod.POST)
 	@ResponseBody
@@ -387,9 +416,9 @@ public class ApiController extends AbstractApiController {
 	
 	/**
 	 * 등록된 이미지 목록 조회
-	 * @param id
-	 * @return
-	 * @throws Exception
+	 * @param id 아이디
+	 * @return 이미지 목록 정보
+	 * @throws Exception 예외
 	 */
 	@RequestMapping(value="/api/images", method=RequestMethod.POST)
 	@ResponseBody
@@ -402,6 +431,12 @@ public class ApiController extends AbstractApiController {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * DB에서 이미지 목록 정보를 조회합니다.
+	 * @param id 아이디
+	 * @return 이미지 목록 정보
+	 * @throws Exception 예외
+	 */
 	private Object dbImages (String id) throws Exception {
 		if (id == null || id.isEmpty())
 			throw new ArgumentException();
@@ -416,7 +451,7 @@ public class ApiController extends AbstractApiController {
 			int siz = datas.size();
 			for (int i=0; i < siz; i++){
 				AbImageDbData data = datas.get(i);
-				AbImageInfo info = data.info();
+				AbImageMetadata info = data.metadata();
 				
 				String q = "q=" + id + "&s=" + data.seq;
 				
@@ -446,6 +481,12 @@ public class ApiController extends AbstractApiController {
 		return new AbImageDataList(rs, bs);
 	}
 	
+	/**
+	 * 폴더에서 이미지 목록 정보를 조회합니다.
+	 * @param id 아이디
+	 * @return 이미지 목록 정보
+	 * @throws Exception 예외
+	 */
 	private Object folderImages (String id) throws Exception {
 		String path = FileUtil.combinePath(config.viewer.image.storage.path, id);
 		

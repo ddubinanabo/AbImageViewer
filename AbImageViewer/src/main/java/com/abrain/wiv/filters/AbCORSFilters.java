@@ -12,6 +12,11 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.stereotype.Component;
 
+/**
+ * CORS 대응 필터 클래스입니다.
+ * @author Administrator
+ *
+ */
 @Component
 public class AbCORSFilters implements Filter {
 	

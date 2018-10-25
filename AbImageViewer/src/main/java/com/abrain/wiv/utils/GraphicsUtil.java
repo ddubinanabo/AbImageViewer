@@ -16,22 +16,56 @@ import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.enums.AbImageDecoder;
 
+/**
+ * 그래픽스 관련 도구
+ * @author Administrator
+ *
+ */
 public class GraphicsUtil {
+	/**
+	 * 섬네일 이미지 파일명 접두사
+	 */
 	private static final String PREFIX = "thumb_";
 	
+	/**
+	 * 섬네일 이미지 최대 크기
+	 */
 	private static final int THUMB_WIDTH = 120, THUMB_HEIGHT = 120;
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 섬네일 이미지 생성 경과
+	 * @author Administrator
+	 *
+	 */
 	public static class ThumbnailImageResult {
+		/**
+		 * 원본 이미지 크기
+		 */
 		public int srcWidth, srcHeight;
+		/**
+		 * 섬네일 이미지 크기
+		 */
 		public int width, height;
+		/**
+		 * 섬네일 이미지
+		 */
 		public BufferedImage image;
+		/**
+		 * 예외 정보
+		 * <p>* 예외 발생 시 설정됩니다.
+		 */
 		public Exception e;
 	}
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @return 섬네일 이미지 생성 경과
+	 */
 	public static ThumbnailImageResult renderThumbnail(File imgFile) {
 		String filename = imgFile.getName();
 		String extension = FilenameUtils.getExtension(filename);
@@ -42,6 +76,12 @@ public class GraphicsUtil {
 		return renderThumbnail(imgFile, decoder);
 	}
 
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @param decoder 이미지 렌더링 힌트
+	 * @return 섬네일 이미지 생성 경과
+	 */
 	public static ThumbnailImageResult renderThumbnail(File imgFile, AbImageDecoder decoder) {
 		ThumbnailImageResult r = new ThumbnailImageResult();
 		
@@ -104,6 +144,11 @@ public class GraphicsUtil {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 생성한 섬네일 이미지 파일 정보
+	 * @author Administrator
+	 *
+	 */
 	public static class ThumbnailResult {
 		public int srcWidth, srcHeight;
 		public int width, height;
@@ -114,18 +159,42 @@ public class GraphicsUtil {
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @return 생성한 섬네일 이미지 파일 정보
+	 */
 	public static ThumbnailResult thumbnail(File imgFile) {
 		return thumbnail(imgFile, null, AbImageDecoder.ABDEC_JPG);
 	}
 
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @param decoder 이미지 렌더링 힌트
+	 * @return 생성한 섬네일 이미지 파일 정보
+	 */
 	public static ThumbnailResult thumbnail(File imgFile, AbImageDecoder decoder) {
 		return thumbnail(imgFile, null, decoder);
 	}
 
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @param outputPath 저장할 폴더 경로
+	 * @return 생성한 섬네일 이미지 파일 정보
+	 */
 	public static ThumbnailResult thumbnail(File imgFile, String outputPath) {
 		return thumbnail(imgFile, outputPath, AbImageDecoder.ABDEC_JPG);
 	}
 
+	/**
+	 * 섬네일 이미지를 생성합니다.
+	 * @param imgFile 원본 이미지 파일
+	 * @param outputPath 저장할 폴더 경로
+	 * @param decoder 이미지 렌더링 힌트
+	 * @return 생성한 섬네일 이미지 파일 정보
+	 */
 	public static ThumbnailResult thumbnail(File imgFile, String outputPath, AbImageDecoder decoder) {
 		ThumbnailResult r = new ThumbnailResult();
 		
@@ -190,6 +259,14 @@ public class GraphicsUtil {
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
 	
+	/**
+	 * 최대 폭/높이에 맞는 비율을 계산합니다.
+	 * @param srcWidth 폭
+	 * @param srcHeight 높이
+	 * @param limitWidth 최대 폭
+	 * @param limitHeight 최대 높이
+	 * @return 비율
+	 */
 	public static double zoom(int srcWidth, int srcHeight, int limitWidth, int limitHeight){
 		double rx = (double)limitWidth / (double)srcWidth;
 		double ry = (double)limitHeight / (double)srcHeight;
@@ -197,6 +274,15 @@ public class GraphicsUtil {
 		return rx > ry ? ry : rx;
 	}
 	
+	/**
+	 * 최대 폭/높이에 맞는 비율을 계산합니다.
+	 * <p>* 폭/높이가 최대 폭/높이보다 큰 경우에만 계산하며, 작은 경우는 1을 리턴합니다.
+	 * @param srcWidth 폭
+	 * @param srcHeight 높이
+	 * @param limitWidth 최대 폭
+	 * @param limitHeight 최대 높이
+	 * @return 비율 
+	 */
 	public static double limit(int srcWidth, int srcHeight, int limitWidth, int limitHeight){
 		boolean bOverX = limitWidth < srcWidth, bOverY = limitHeight < srcHeight;
 		if ( bOverX || bOverY ) {
@@ -210,18 +296,44 @@ public class GraphicsUtil {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 렌더링 힌트으로 ImageIO의 formatName을 가져옵니다.
+	 * @param decoder 이미지 렌더링 힌트
+	 * @return 문자열
+	 */
 	public static String formatName(AbImageDecoder decoder) {
 		return decoder == AbImageDecoder.ABDEC_PNG ? "png" : "jpg";
 	}
 
+	/**
+	 * 이미지를 파일에 씁니다.
+	 * @param image 이미지 객체
+	 * @param decoder 이미지 렌더링 힌트
+	 * @param out 파일 객체
+	 * @throws IOException 예외
+	 */
 	public static void write (RenderedImage image, AbImageDecoder decoder, File out) throws IOException {
 		ImageIO.write(image, formatName(decoder), out);
 	}
 
+	/**
+	 * 이미지를 출력 스트림에 씁니다.
+	 * @param image 이미지 객체
+	 * @param decoder 이미지 렌더링 힌트
+	 * @param out 출력 스트림 예외
+	 * @throws IOException 예외
+	 */
 	public static void write (RenderedImage image, AbImageDecoder decoder, OutputStream out) throws IOException {
 		ImageIO.write(image, formatName(decoder), out);
 	}
 
+	/**
+	 * 이미지를 출력 스트림에 씁니다.
+	 * @param image 이미지 객체
+	 * @param decoder 이미지 렌더링 힌트
+	 * @param out 출력 스트림
+	 * @throws IOException 예외
+	 */
 	public static void write (RenderedImage image, AbImageDecoder decoder, ImageOutputStream out) throws IOException {
 		ImageIO.write(image, formatName(decoder), out);
 	}

@@ -15,8 +15,20 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.abrain.wiv.data.AbErrorResponse;
 
-public class AbstractApiController {
+/**
+ * REATfull API 추상 컨트롤러
+ * <p>* 예외에 대해 정보를 브라우저에 제공합니다.
+ * @author Administrator
+ *
+ */
+public abstract class AbstractApiController {
 	
+	/**
+	 * 예외를 핸들링합니다.
+	 * @param request 요청 정보
+	 * @param e 예외
+	 * @return 예외 정보
+	 */
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseEntity<AbErrorResponse> handleException(HttpServletRequest request, Exception e){
@@ -32,6 +44,11 @@ public class AbstractApiController {
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 예외 정보를 생성합니다.
+	 * @param e 예외
+	 * @return 예외 정보
+	 */
 	private static AbErrorResponse getResponse(Exception e){
 		AbErrorResponse r = new AbErrorResponse();
 		
@@ -45,6 +62,11 @@ public class AbstractApiController {
 		return r;		
 	}
 	
+	/**
+	 * 스택 추적 정보를 문자열로 변환합니다.
+	 * @param e 예외
+	 * @return 스택 추적 정보 문자열
+	 */
 	private static String getStackTrace(Exception e){
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		e.printStackTrace(new PrintStream(out));

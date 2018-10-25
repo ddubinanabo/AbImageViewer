@@ -17,41 +17,76 @@ import com.abrain.wiv.enums.AbAuthSourceKind;
 import com.abrain.wiv.enums.AbAuthType;
 
 /**
- * 권한 정보 처리
+ * 이미지 뷰어 권한 정보
  * @author Administrator
  *
  */
 @Component
 public class AbAuth {
 	
+	/**
+	 * HTTP 요청 정보
+	 */
 	@Autowired
 	private HttpServletRequest request;
 	
+	/**
+	 * 계정 권한 DAO
+	 */
 	@Autowired
 	private AuthDao dao;
 
+	/**
+	 * 권한 설정 정보
+	 */
 	@Autowired
 	public AbAuthConfig config;
 
 	//-----------------------------------------------------------
 
+	/**
+	 * 계정 권한 정보
+	 */
 	private AbAuthPermission permission;
 
 	//-----------------------------------------------------------
 
+	/**
+	 * 권한 설정 정보를 가져옵니다.
+	 * @return 권한 설정 정보
+	 */
 	public AbAuthConfig getConfig() { return config; }
+	/**
+	 * 계정 권한 정보를 가져옵니다.
+	 * @return 계정 권한 정보
+	 */
 	public AbAuthPermission getPermission() { return permission; }
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 권한 사용 여부를 가져옵니다.
+	 * @return 권한 사용 여부
+	 */
 	public boolean enabled() { return config != null ? config.enabled : false; }
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 퍼미션을 확인합니다.
+	 * @param name 토픽
+	 * @return 허용 여부
+	 */
 	public boolean permission(String...name) {
 		return !enabled() ? true : (permission != null ? permission.permission(name) : false);
 	}
 
+	/**
+	 * 토픽별 분기
+	 * <p>* 마지막 문자열은 else 분기입니다.
+	 * @param args 토픽명, 문자열, 토픽명, 문자열 ... 마지막 문자열
+	 * @return 토픽에 해당하는 문자열을 리턴합니다.
+	 */
 	public String decode(String...args) {
 		if (args == null)
 			return "";
@@ -72,6 +107,10 @@ public class AbAuth {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 계정 정보를 획득합니다.
+	 * @return 계정 정보 또는 계정 권한 레벨
+	 */
 	public boolean read() {
 		//System.out.println("sample=" + AbAuthSourceKind.ABAUTH_LOCAL_STORAGE);
 		
@@ -108,6 +147,11 @@ public class AbAuth {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 계정의 권한 레벨을 획득합니다.
+	 * @param value 계정 정보 또는 계정 권한 레벨
+	 * @return 정상적으로 획득하면 true
+	 */
 	public boolean get(String value) {
 		permission = null;
 		
@@ -132,6 +176,11 @@ public class AbAuth {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 쿠키값를 가져옵니다.
+	 * @param name 이름
+	 * @return 값
+	 */
 	private String cookie (String name) {
 		Cookie[] cookies = request.getCookies();
 		
@@ -145,6 +194,11 @@ public class AbAuth {
 		return null;
 	}
 	
+	/**
+	 * 세션값을 가져옵니다.
+	 * @param name 이름
+	 * @return 값
+	 */
 	private String session (String name) {
 		HttpSession session = request.getSession();
 		if (session != null) {

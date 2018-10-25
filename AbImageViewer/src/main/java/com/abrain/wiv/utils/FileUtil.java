@@ -15,11 +15,24 @@ import java.util.UUID;
 
 import javax.activation.MimetypesFileTypeMap;
 
+/**
+ * 파일 관련 도구
+ * @author Administrator
+ *
+ */
 public class FileUtil {
+	/**
+	 * 기본 버퍼 크기
+	 */
 	public static final int BUFSIZ = 20480;
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 파일의 mime-type을 가져옵니다.
+	 * @param file 파일 객체
+	 * @return mime-type
+	 */
 	public static String contentType(File file) {
 		Path path = Paths.get(file.getAbsolutePath());
 		
@@ -44,6 +57,12 @@ public class FileUtil {
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 경로와 인자들을 경로 구분자로 구분하여 가져옵니다.
+	 * @param path 경로
+	 * @param arg 인자1, 인자2, ... 인자N
+	 * @return 합쳐진 경로
+	 */
 	public static String combinePath(String path, String ...arg) {
 		java.nio.file.Path oPath = java.nio.file.Paths.get(path, arg);
 		return oPath.toString();
@@ -111,11 +130,22 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 안전한 파일명을 가져옵니다.
+	 * @param basename 파일명
+	 * @return 안전한 파일명
+	 */
 	public static String safeBaseName(String basename){
 		return basename.replace("\\", "").replace("/", "").replace(":", "").replace("*", "").replace("?", "")
 				.replace("\"", "").replace("<", "").replace(">", "").replace("|", "");
 	}
 	
+	/**
+	 * 파일명을 URL 형식으로 인코딩합니다.
+	 * @param filename 파일명
+	 * @return 인코딩된 파일명
+	 * @throws Exception 예외
+	 */
 	public static String encodeFileName(String filename)
 			throws Exception {
 		return java.net.URLEncoder.encode(filename, "UTF-8");
@@ -123,10 +153,21 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 폴더의 유니크한 이름을 가진 폴더를 생성하고, 그 경로를 가져옵니다.
+	 * @param dir 폴더
+	 * @return 유니크한 폴더 경로
+	 */
 	public static String unique (String dir){
 		return unique(dir, true);
 	}
 
+	/**
+	 * 폴더의 유니크한 이름을 가진 폴더의 경로를 가져옵니다.
+	 * @param dir 폴더 경로
+	 * @param mkdir 폴더를 생성할 지 여부
+	 * @return 유니크한 폴더 경로
+	 */
 	public static String unique (String dir, boolean mkdir){
 		UUID uid = UUID.randomUUID();
 		//String id = uid.toString().replaceAll("-", "").toUpperCase();
@@ -147,6 +188,12 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 파일에 바이너리 데이터를 씁니다.
+	 * @param path 파일 경로
+	 * @param bytes 바이너리 데이터
+	 * @throws Exception FileNotFoundException, Exception
+	 */
 	public static void write (String path, byte[] bytes) throws Exception{
 		FileOutputStream out = null;
 		
@@ -188,10 +235,23 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 입력 스트림을 읽어 출력 스트림에 씁니다. 
+	 * @param in 입력 스트림
+	 * @param out 출력 스트림
+	 * @throws Exception 예외
+	 */
 	public static void write(InputStream in, OutputStream out) throws Exception{
 		write(in, out, BUFSIZ);
 	}
 	
+	/**
+	 * 입력 스트림을 읽어 출력 스트림에 씁니다.
+	 * @param in 입력 스트림
+	 * @param out 출력 스트림
+	 * @param bufsiz 버퍼 크기
+	 * @throws Exception 예외
+	 */
 	public static void write(InputStream in, OutputStream out, int bufsiz) throws Exception{
         byte[] buf = new byte[bufsiz];
         int len = -1;
@@ -203,10 +263,23 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 파일에서 바이너리 데이터를 읽어 옵니다.
+	 * @param path 파일 경로
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (String path) throws Exception{
 		return read(path, BUFSIZ);
 	}
 	
+	/**
+	 * 파일에서 바이너리 데이터를 읽어 옵니다.
+	 * @param path 파일 경로
+	 * @param bufsiz 버퍼 크기
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (String path, int bufsiz) throws Exception{
 		FileInputStream in = null;
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -252,10 +325,23 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 스트림에서 바이너리 데이터를 읽어옵니다.
+	 * @param in 입력 스트림
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (InputStream in) throws Exception{
 		return read(in, BUFSIZ);
 	}
 	
+	/**
+	 * 스트림에서 바이너리 데이터를 읽어옵니다.
+	 * @param in 입력 스트림
+	 * @param bufsiz 버퍼 크기
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (InputStream in, int bufsiz) throws Exception{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		
@@ -265,10 +351,23 @@ public class FileUtil {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 파일에서 바이너리 데이터를 읽어옵니다.
+	 * @param file 파일 객체
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (File file) throws Exception{
 		return read(file, BUFSIZ);
 	}
 	
+	/**
+	 * 파일에서 바이너리 데이터를 읽어옵니다.
+	 * @param file 파일 객체
+	 * @param bufsiz 버퍼 크기
+	 * @return 바이너리 데이터
+	 * @throws Exception 예외
+	 */
 	public static byte[] read (File file, int bufsiz) throws Exception{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		FileInputStream in = null;

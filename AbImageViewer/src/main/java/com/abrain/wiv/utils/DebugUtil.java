@@ -1,10 +1,15 @@
 package com.abrain.wiv.utils;
 
+/**
+ * 디버깅 관련 도구
+ * @author Administrator
+ *
+ */
 public class DebugUtil {
 	/**
 	 * 웹 취약성 분석에서 [오류메시지를 통한 정보 노출] 보안약점 지적을 피하기 위한 메서드
 	 * <p> 모든 catch 문에서 사용하세요.
-	 * @param e
+	 * @param e 예외 객체
 	 */
 	public static void print(Exception e){
 		/**

@@ -17,6 +17,11 @@ import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.utils.DebugUtil;
 
+/**
+ * 이미지 DB 서비스
+ * @author Administrator
+ *
+ */
 @Service
 public class DocService {
 
@@ -25,6 +30,10 @@ public class DocService {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 테스트용입니다. 이미지 뷰어와는 연관이 없습니다.
+	 * @return 값
+	 */
 	public Integer test(){
 		return dao.test();
 	}
@@ -32,16 +41,12 @@ public class DocService {
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
-
-	public static class Key {
-		public String id, time;
-	}
 	
 	//-----------------------------------------------------------
 	
 	/**
-	 * 이미지 목록 키 생성
-	 * @return
+	 * 이미지 목록 ID를 생성합니다.
+	 * @return 할당 키 정보
 	 */
 	public Object alloc(){
 		UUID uid = UUID.randomUUID();
@@ -64,6 +69,19 @@ public class DocService {
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 이미지를 임시 등록합니다.
+	 * @param id 이미지 목록 ID
+	 * @param seq 이미지 목록의 인덱스
+	 * @param ip 아이피
+	 * @param imageInfo 이미지 전송 정보 중 이미지 정보
+	 * @param imageSource 이미지 바이너리 데이터
+	 * @param imageResult 렌더링된 이미지 바이러니 데이터
+	 * @param thumbInfo 이미지 전송 정보 중 섬네일 정보
+	 * @param thumbSource 섬네일 이미지 바이러니 데이터
+	 * @param bookmark 이미지 전송 정보 중 북마크 인덱스 정보
+	 * @return null이면 정상적으로 등록, 아니면 발생한 예외 객체
+	 */
 	public Object record(
 			String id,
 			int seq,
@@ -90,6 +108,13 @@ public class DocService {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 등록 실패 시 임시 등록 이미지들을 제거합니다.
+	 * @param id 이미지 목록 ID
+	 * @param type 로그용 구분자
+	 * @param e 발생한 예외 객체
+	 * @return 발생한 예외 객체
+	 */
 	private Exception procImageRegError(String id, String type, Exception e){
 		System.out.println("[DOC-RECORD]["+type+"] 이미지 저장 실패!!!");
 		
@@ -110,24 +135,49 @@ public class DocService {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 임시 등록된 이미지 목록을 삭제합니다.
+	 * @param id 이미지 목록 ID
+	 */
 	public void remove(String id){
 		dao.remove(id);
 	}
 	
+	/**
+	 * 임시 등록된 이미지 목록을 등록 완료 처리합니다.
+	 * @param id 이미지 목록 ID
+	 */
 	public void approval(String id){
 		dao.approval(id);
 	}
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 등록완료된 이미지 북마크 목록을 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @return 이미지 북마크 DB 정보
+	 */
 	public List<AbBookmarkDbData> selectBookmark (String id){
 		return dao.selectBookmark(id);
 	}
 
+	/**
+	 * 등록완료된 이미지 목록을 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @return 이미지 DB 정보 목록
+	 */
 	public List<AbImageDbData> select (String id){
 		return dao.select(id);
 	}
 	
+	/**
+	 * 등록완료된 이미지를 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @param seq 이미지 목록의 인덱스
+	 * @param type 이미지 구분
+	 * @return 바이너리 데이터
+	 */
 	public AbBinaryData image (String id, int seq, AbImageType type){
 		return dao.image(id, seq, type);
 	}

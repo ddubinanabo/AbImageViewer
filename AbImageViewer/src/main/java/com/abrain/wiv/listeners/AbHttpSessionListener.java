@@ -17,6 +17,12 @@ import org.apache.log4j.Logger;
 
 import com.abrain.wiv.utils.DebugUtil;
 
+/**
+ * 세션 리스너입니다.
+ * <p>* 세션이 종료될 떄 임시 폴더 및 파일들을 삭제합니다.
+ * @author Administrator
+ *
+ */
 public class AbHttpSessionListener implements HttpSessionListener, ServletContextListener {
 	
 	private static ServletContext context;
@@ -35,6 +41,10 @@ public class AbHttpSessionListener implements HttpSessionListener, ServletContex
 	
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 세션이 생성될 때 호출됩니다.
+	 * <p>* 세션 아이디를 획득합니다.
+	 */
 	@Override
 	public void sessionCreated(HttpSessionEvent event) {
 		String sessionId = null;
@@ -50,6 +60,15 @@ public class AbHttpSessionListener implements HttpSessionListener, ServletContex
         }
 	}
 
+	/**
+	 * 세션 종료될 때 호출됩니다.
+	 * <p>* 획득한 세션 아이디의 임시 폴더들을 삭제합니다.
+	 * <p>* 임시 폴더 목록
+	 * <ul>
+	 * 	<li>/WEB-INF/docs/
+	 * 	<li>/WEB-INF/files/tmp/
+	 * </ul>
+	 */
 	@Override
 	public void sessionDestroyed(HttpSessionEvent event) {
 		String sessionId = null;

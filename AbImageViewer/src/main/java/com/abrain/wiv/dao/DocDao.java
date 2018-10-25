@@ -9,19 +9,28 @@ import com.abrain.wiv.abstracts.AbstractDao;
 import com.abrain.wiv.data.AbBinaryData;
 import com.abrain.wiv.data.AbBookmarkDbData;
 import com.abrain.wiv.data.AbImageDbData;
-import com.abrain.wiv.data.AbImageInfo;
+import com.abrain.wiv.data.AbImageMetadata;
 import com.abrain.wiv.data.AbImagePack;
 import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.data.exif.AbExifGPS;
 import com.abrain.wiv.enums.AbImageType;
 import com.abrain.wiv.utils.DateUtil;
 
+/**
+ * 이미지 DB DAO
+ * @author Administrator
+ *
+ */
 @SuppressWarnings("unchecked")
 @Repository
 public class DocDao extends AbstractDao {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 테스트용입니다. 이미지 뷰어와는 연관이 없습니다.
+	 * @return 값
+	 */
 	public Integer test(){
 		int value = (int)sqlSession.selectOne("doc-test");
 		return value;
@@ -30,16 +39,16 @@ public class DocDao extends AbstractDao {
 	//-----------------------------------------------------------
 	
 	/**
-	 * 이미지 임시 등록
-	 * @param id
-	 * @param seq
-	 * @param ip
-	 * @param imageInfo
-	 * @param imageSource
-	 * @param imageResult
-	 * @param thumbInfo
-	 * @param thumbSource
-	 * @param bookmark
+	 * 이미지를 임시 등록합니다.
+	 * @param id 이미지 목록 ID
+	 * @param seq 이미지 목록의 인덱스
+	 * @param ip 아이피
+	 * @param imageInfo 이미지 전송 정보 중 이미지 정보
+	 * @param imageSource 이미지 바이너리 데이터
+	 * @param imageResult 렌더링된 이미지 바이러니 데이터
+	 * @param thumbInfo 이미지 전송 정보 중 섬네일 정보
+	 * @param thumbSource 섬네일 이미지 바이러니 데이터
+	 * @param bookmark 이미지 전송 정보 중 북마크 인덱스 정보
 	 */
 	public void record(
 			String id,
@@ -71,8 +80,8 @@ public class DocDao extends AbstractDao {
 		param.put("THUMB_SRC", thumbSource);
 		param.put("THUMB_SRC_SIZ", thumbSource.length);
 		
-		if (imageInfo.hasInfo()) {
-			AbImageInfo info = imageInfo.info;
+		if (imageInfo.hasMetadata()) {
+			AbImageMetadata info = imageInfo.info;
 			
 			param.put("INF_NM", info.getName());
 			param.put("INF_TXT", info.getText());
@@ -152,8 +161,8 @@ public class DocDao extends AbstractDao {
 	//-----------------------------------------------------------
 
 	/**
-	 * 임시 등록된 이미지 목록 삭제
-	 * @param id
+	 * 임시 등록된 이미지 목록을 삭제합니다.
+	 * @param id 이미지 목록 ID
 	 */
 	public void remove(String id){
 
@@ -169,8 +178,8 @@ public class DocDao extends AbstractDao {
 	//-----------------------------------------------------------
 
 	/**
-	 * 임시 등록된 이미지 목록을 등록 완료 처리
-	 * @param id
+	 * 임시 등록된 이미지 목록을 등록 완료 처리합니다.
+	 * @param id 이미지 목록 ID
 	 */
 	public void approval(String id){
 
@@ -195,9 +204,9 @@ public class DocDao extends AbstractDao {
 	//-----------------------------------------------------------
 	
 	/**
-	 * 등록완료된 이미지 목록 조회
-	 * @param id
-	 * @return
+	 * 등록완료된 이미지 목록을 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @return 이미지 DB 정보 목록
 	 */
 	public List<AbImageDbData> select (String id){
 		HashMap<String, Object> param = new HashMap<String, Object>();
@@ -207,9 +216,9 @@ public class DocDao extends AbstractDao {
 	}
 	
 	/**
-	 * 등록완료된 이미지 북마크 목록 조회
-	 * @param id
-	 * @return
+	 * 등록완료된 이미지 북마크 목록을 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @return 이미지 북마크 DB 정보
 	 */
 	public List<AbBookmarkDbData> selectBookmark (String id){
 		HashMap<String, Object> param = new HashMap<String, Object>();
@@ -219,11 +228,11 @@ public class DocDao extends AbstractDao {
 	}
 	
 	/**
-	 * 등록완료된 이미지 조회
-	 * @param id
-	 * @param seq
-	 * @param type
-	 * @return
+	 * 등록완료된 이미지를 조회합니다.
+	 * @param id 이미지 목록 ID
+	 * @param seq 이미지 목록의 인덱스
+	 * @param type 이미지 구분
+	 * @return 바이너리 데이터
 	 */
 	public AbBinaryData image (String id, int seq, AbImageType type){
 		HashMap<String, Object> param = new HashMap<String, Object>();

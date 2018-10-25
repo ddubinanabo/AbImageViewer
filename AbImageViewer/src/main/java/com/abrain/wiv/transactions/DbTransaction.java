@@ -7,6 +7,11 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import com.abrain.wiv.utils.DebugUtil;
 
+/**
+ * 트랜잭션 정보
+ * @author Administrator
+ *
+ */
 public class DbTransaction {
 	private DbTransaction(){}
 	
@@ -18,10 +23,16 @@ public class DbTransaction {
 	
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 커밋합니다.
+	 */
 	public void commit(){
 		tm.commit(status);
 	}
 	
+	/**
+	 * 롤백합니다.
+	 */
 	public void rollback(){
 		try
 		{
@@ -40,6 +51,12 @@ public class DbTransaction {
 	//-----------------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------------
 
+	/**
+	 * 트랜잭션을 시작합니다.
+	 * @param tm 트랜잭션 관리자
+	 * @param name 이름
+	 * @return 트랜잭션 정보
+	 */
 	public static DbTransaction begin(DataSourceTransactionManager tm, String name){
 //		WebApplicationContext context = ContextLoader.getCurrentWebApplicationContext();
 //		DataSource ds = (DataSource)context.getBean(DataSource.class);

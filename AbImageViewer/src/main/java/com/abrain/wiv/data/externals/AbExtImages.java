@@ -14,7 +14,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.config.AbImageConfig;
 import com.abrain.wiv.data.AbImageData;
-import com.abrain.wiv.data.AbImageInfo;
+import com.abrain.wiv.data.AbImageMetadata;
 import com.abrain.wiv.data.SplayTree;
 import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.enums.AbImageDecoder;
@@ -25,6 +25,12 @@ import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.GraphicsUtil;
 import com.abrain.wiv.utils.WebUtil;
 
+/**
+ * 외부 파일 이미지 지원
+ * <p>* 서버의 이미지 파일을 클라이언트에 제공합니다.
+ * @author Administrator
+ *
+ */
 public class AbExtImages {
 	public AbExtImages(AbImageConfig config, String path) throws Exception {
 		this.config = config;
@@ -55,30 +61,56 @@ public class AbExtImages {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지/섬네일/주석 경로
+	 */
 	private String imgPath, thumbPath, annoPath;
+	/**
+	 * 이미지/섬네일/주석 파일 객체
+	 */
 	private File imgDir, thumbDir, annoDir;
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 수집된 주석 파일 객체 트리
+	 */
 	private SplayTree<String, File> annotations = null;
+	/**
+	 * 수집된 섬네일 파일 객체 트리
+	 */
 	private SplayTree<String, File> thumbnails = null;
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 설정 정보
+	 */
 	private AbImageConfig config;
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 이미지/XML 파일 필터
+	 */
 	private FileFilter imageFilter = null, xmlFilter = null;
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * XML 파일 필터를 가져옵니다.
+	 * @return
+	 */
 	private FileFilter xmlFilter() {
 		if (xmlFilter == null)
 			xmlFilter = new ImageFileFilter("xml");
 		return xmlFilter;
 	}
 	
+	/**
+	 * 이미지 파일 필터를 가져옵니다.
+	 * @return
+	 */
 	private FileFilter imageFilter() {
 		if (imageFilter == null)
 			imageFilter = new ImageFileFilter(config.ACCEPTS);
@@ -87,6 +119,9 @@ public class AbExtImages {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 주석/마스킹 파일을 수집합니다.
+	 */
 	private void collectAnnotation() {
 		if (annotations != null)
 			return;
@@ -104,6 +139,9 @@ public class AbExtImages {
 		}
 	}
 	
+	/**
+	 * 섬네일 이미지를 수집합니다.
+	 */
 	private void collectThumbnail() {
 		if (thumbnails != null)
 			return;
@@ -123,6 +161,11 @@ public class AbExtImages {
 
 	//-----------------------------------------------------------
 
+	/**
+	 * 이미지 파일을 수집하고, 이미지 정보 목록을 가져옵니다.
+	 * @return 이미지 파일 목록
+	 * @throws Exception 예외
+	 */
 	public List<AbImageData> collect() throws Exception {
 		collectAnnotation();
 		collectThumbnail();
@@ -166,7 +209,7 @@ public class AbExtImages {
 			String path = URLEncoder.encode(imgPath, "UTF-8");
 			String name = URLEncoder.encode(filename, "UTF-8");
 			
-			AbImageInfo imgInfo = new AbImageInfo();
+			AbImageMetadata imgInfo = new AbImageMetadata();
 			imgInfo.setName(filename);
 			imgInfo.setText(filename);
 			imgInfo.setType(mimeType);
@@ -208,6 +251,15 @@ public class AbExtImages {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 파일을 다운로드합니다.
+	 * @param response HTTP 응답 정보
+	 * @param name 파일명
+	 * @param type 이미지 구분
+	 * @param needCreate 생성이 필요한 지 여부 (섬네일 이미지만 해당됩니다)
+	 * <p>true면 섬네일 이미지를 만들어서 다운로드합니다.
+	 * @throws Exception 예외
+	 */
 	public void download(HttpServletResponse response, String name, AbImageType type, boolean needCreate) throws Exception {
 		if (type == AbImageType.ABIMG_IMAGE) {
 			File file = new File(imgPath + "/" + name);
@@ -238,10 +290,23 @@ public class AbExtImages {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 파일의 이미지 정보를 가져옵니다.
+	 * @param path 파일 경로
+	 * @return 이미지 정보
+	 * @throws Exception 예외
+	 */
 	public static AbImageData file(String path) throws Exception {
 		return file(path, null);
 	}
 
+	/**
+	 * 이미지 파일의 이미지 정보를 가져옵니다.
+	 * @param path 파일 경로
+	 * @param annoPath 주석 경로
+	 * @return 이미지 정보
+	 * @throws Exception 예외
+	 */
 	public static AbImageData file(String path, String annoPath) throws Exception {
 		File file = new File(path);
 		if (!file.exists())
@@ -273,7 +338,7 @@ public class AbExtImages {
 		
 		AbExif exif = AbExifReader.read(file);
 		
-		AbImageInfo imgInfo = new AbImageInfo();
+		AbImageMetadata imgInfo = new AbImageMetadata();
 		imgInfo.setName(filename);
 		imgInfo.setText(filename);
 		imgInfo.setType(mimeType);
@@ -299,6 +364,11 @@ public class AbExtImages {
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
 	
+	/**
+	 * 이미지 파일 필터
+	 * @author Administrator
+	 *
+	 */
 	public static class ImageFileFilter implements FileFilter {
 		public ImageFileFilter(String accepts) {
 			if (accepts != null && !accepts.isEmpty()) {
@@ -325,8 +395,15 @@ public class AbExtImages {
 			}
 		}
 		
+		/**
+		 * 허용 확장자 목록
+		 */
 		private List<String> accepts = new ArrayList<>();
 		
+		/**
+		 * 파일이 이미지인지 확인합니다.
+		 * return 이미지이면 true
+		 */
 		@Override
 		public boolean accept(File file) {
 			String name = file.getName();

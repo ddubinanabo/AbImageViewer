@@ -5,6 +5,11 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+/**
+ * 이 클래스는 SQLite 테스트용으로, 이미지 뷰어와는 연관이 없습니다.
+ * @author Administrator
+ *
+ */
 public class SqliteTester {
 	
 	static {
@@ -21,7 +26,7 @@ public class SqliteTester {
 	public int test() {
 		try
 		{
-			Connection conn = DriverManager.getConnection("jdbc:sqlite:D:\\DB-Datas\\Sqlite\\abrain.db");
+			Connection conn = DriverManager.getConnection("jdbc:sqlite:C:\\abrain.db");
 			
 			String sql = "SELECT COUNT(*) FROM AB_DOC";
 			

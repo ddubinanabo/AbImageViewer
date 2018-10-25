@@ -22,21 +22,34 @@ import com.abrain.wiv.exceptions.ArgumentException;
 import com.abrain.wiv.exceptions.NotFoundFileException;
 
 /**
- * External
+ * 서버 파일 지원 API 컨트롤러
  * @author Administrator
  *
  */
 @Controller
 public class ExtApiController extends AbstractApiController {
 	
+	/**
+	 * HTTP 요청 정보
+	 */
 	@Autowired
 	private HttpServletRequest request;
 	
+	/**
+	 * 이미지 파일 설정 정보
+	 */
 	@Autowired
 	private AbImageConfig imageConfig;
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 서버 폴더의 이미지 목록을 수집하고, 이미지 정보 목록을 제공합니다. 
+	 * @param q 폴더 경로
+	 * @param t 표시명 (|로 구분된 문자열)
+	 * @return 이미지 정보 목록
+	 * @throws Exception 예외
+	 */
 	@RequestMapping(value="/api/ext/folder", method=RequestMethod.POST)
 	@ResponseBody
 	public Object folder (String q, @RequestParam(defaultValue="") String t) throws Exception{
@@ -63,6 +76,13 @@ public class ExtApiController extends AbstractApiController {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 한 개의 이미지 정보를 가져옵니다.
+	 * @param q 이미지 파일 경로
+	 * @param a 주석 경로
+	 * @return 이미지 정보
+	 * @throws Exception 예외
+	 */
 	@RequestMapping(value="/api/ext/file", method=RequestMethod.POST) 
 	@ResponseBody
 	public Object file (String q, @RequestParam(defaultValue="") String a) throws Exception{

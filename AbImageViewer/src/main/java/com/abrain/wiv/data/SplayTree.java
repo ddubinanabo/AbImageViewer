@@ -3,13 +3,32 @@ package com.abrain.wiv.data;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Splay Tree 제네릭
+ * <p>* 트리의 노드가 탐색 또는 갱신을 위해 접근된 후, 스플레이되는 이진 탐색 트리입니다.
+ * @author Administrator
+ *
+ * @see <a href="https://en.wikipedia.org/wiki/Splay_tree">Splay tree Wiki</a>
+ * @param <T> 키 타입
+ * @param <V> 값 타입
+ */
 public class SplayTree<T, V> {
 	
+	/**
+	 * 루트 노드
+	 */
 	private Node<T, V> root;
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 트리가 비었는 지 확인합니다.
+	 * @return 비었으면 true
+	 */
 	public boolean isEmpty() { return root == null; }
+	/**
+	 * 트리를 비웁니다.
+	 */
 	public void clear() {
 		root = null;
 	}
@@ -17,9 +36,9 @@ public class SplayTree<T, V> {
 	//-----------------------------------------------------------
 	
 	/**
-	 * 
-	 * @param key
-	 * @param value
+	 * 노드를 추가합니다.
+	 * @param key 키
+	 * @param value 값
 	 * @return 0 = 삽입 완료, 1 = 수정, -1 = 키 중복
 	 */
 	public int add(T key, V value){
@@ -27,10 +46,10 @@ public class SplayTree<T, V> {
 	}
 	
 	/**
-	 * 
-	 * @param key
-	 * @param value
-	 * @param existIsUpdate
+	 * 노드를 추가합니다.
+	 * @param key 키
+	 * @param value 값
+	 * @param existIsUpdate 노드가 존재하면 값을 수정할 지 여부
 	 * @return 0 = 삽입 완료, 1 = 수정, -1 = 키 중복
 	 */
 	private int add(T key, V value, boolean existIsUpdate){
@@ -67,9 +86,9 @@ public class SplayTree<T, V> {
 	}
 	
 	/**
-	 * 
-	 * @param key
-	 * @return 삭제된 노드
+	 * 노드를 제거하고, 그 노드를 가져옵니다.
+	 * @param key 키
+	 * @return 제거된 노드
 	 */
 	public Node<T, V> remove(T key){
 		if (isEmpty())
@@ -97,9 +116,9 @@ public class SplayTree<T, V> {
 	}
 	
 	/**
-	 * 탐색
-	 * @param key
-	 * @return
+	 * 노드를 탐색합니다.
+	 * @param key 키
+	 * @return 노드
 	 */
 	public Node<T, V> find(T key){
 		if (isEmpty())
@@ -111,10 +130,19 @@ public class SplayTree<T, V> {
 		return root.keyCode == keyCode ? root : null;
 	}
 	
+	/**
+	 * 최대 값을 탐색합니다.
+	 * @return 노드
+	 */
 	public Node<T, V> findMax(){
 		return findMax(null);
 	}
 	
+	/**
+	 * 최대 값을 탐색합니다.
+	 * @param start 시작 노드
+	 * @return 노드
+	 */
 	public Node<T, V> findMax(Node<T, V> start){
 		if (isEmpty())
 			return null;
@@ -125,10 +153,19 @@ public class SplayTree<T, V> {
 		return current;
 	}
 	
+	/**
+	 * 최소값을 탐색합니다.
+	 * @return 노드
+	 */
 	public Node<T, V> findMin(){
 		return findMin(null);
 	}
 	
+	/**
+	 * 최소값을 탐색합니다.
+	 * @param start 시작 노드
+	 * @return 노드
+	 */
 	public Node<T, V> findMin(Node<T, V> start){
 		if (isEmpty())
 			return null;
@@ -139,6 +176,11 @@ public class SplayTree<T, V> {
 		return current;
 	}
 	
+	/**
+	 * 키보다 작은 값 중 가장 큰 값을 탐색합니다.
+	 * @param key 키
+	 * @return 노드
+	 */
 	public Node<T, V> findGreatestLessThan(T key){
 		if (isEmpty())
 			return null;
@@ -154,6 +196,10 @@ public class SplayTree<T, V> {
 		return null;
 	}
 	
+	/**
+	 * 키 목록을 가져옵니다.
+	 * @return 키 목록
+	 */
 	public List<T> keys() {
 		ArrayList<T> r = new ArrayList<T>();
 		
@@ -169,6 +215,10 @@ public class SplayTree<T, V> {
 		return r;
 	}
 	
+	/**
+	 * 값 목록을 가져옵니다.
+	 * @return 값 목록
+	 */
 	public List<V> values() {
 		ArrayList<V> r = new ArrayList<V>();
 		
@@ -184,11 +234,19 @@ public class SplayTree<T, V> {
 		return r;
 	}
 	
+	/**
+	 * 트리를 순회합니다.
+	 * @param visitor 트리 순회 인터페이스
+	 */
 	public void traverse(TraverseVisitor<T, V> visitor){
 		if (!isEmpty())
 			root.traverse(visitor);
 	}
 	
+	/**
+	 * 너비 우선 탐색을 합니다.
+	 * @param visitor 너비 우선 탐색 인터페이스
+	 */
 	public void traverseBreadthFirst(TraverseBreadthFirstVisitor<V> visitor){
 		if (isEmpty())
 			return;
@@ -238,6 +296,10 @@ public class SplayTree<T, V> {
 	
 	//-----------------------------------------------------------
 
+	/**
+	 * 노드를 루트로 이동합니다.
+	 * @param keyCode 해쉬코드
+	 */
 	private void splay(int keyCode){
 		if (isEmpty())
 			return;
@@ -298,6 +360,11 @@ public class SplayTree<T, V> {
 	
 	//-----------------------------------------------------------
 	
+	/**
+	 * 해쉬코드를 가져옵니다.
+	 * @param value 값
+	 * @return 해쉬코드
+	 */
 	private static int getHashCode(Object value){
 		return value == null ? 0 : value.hashCode();
 	}
@@ -306,14 +373,43 @@ public class SplayTree<T, V> {
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
 	
+	/**
+	 * 트리 순회 인터페이스
+	 * @author Administrator
+	 *
+	 * @param <T> 키 타입
+	 * @param <V> 값 타입
+	 */
 	public static interface TraverseVisitor<T, V> {
+		/**
+		 * 순회 노드
+		 * @param node 노드
+		 */
 		void node(Node<T, V> node);
 	}
 	
+	/**
+	 * 너비 우선 탐색 인터페이스
+	 * @author Administrator
+	 *
+	 * @param <V> 키 타입
+	 */
 	public static interface TraverseBreadthFirstVisitor<V> {
+		/**
+		 * 노드의 값을 체크합니다.
+		 * @param value 값
+		 * @return true을 탐색을 중단합니다.
+		 */
 		boolean check(V value);
 	}
 
+	/**
+	 * 노드
+	 * @author Administrator
+	 *
+	 * @param <T> 키 타입
+	 * @param <V> 값 타입
+	 */
 	public static class Node<T, V> {
 		private Node(){}
 		
@@ -340,6 +436,10 @@ public class SplayTree<T, V> {
 
 		//-----------------------------------------------------------
 		
+		/**
+		 * 트리를 순회를 합니다.
+		 * @param v 트리 순회 인터페이스
+		 */
 		private void traverse(TraverseVisitor<T, V> v){
 			Node<T, V> current = this;
 			

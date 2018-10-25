@@ -16,12 +16,26 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.abrain.wiv.enums.AbBrowserKind;
 
+/**
+ * 웹 관련 도구
+ * @author Administrator
+ *
+ */
 public class WebUtil {
+	/**
+	 * 아이피를 가져옵니다.
+	 * @return 아이피
+	 */
 	public static String getRemoteIP(){
 		HttpServletRequest req = ((ServletRequestAttributes)RequestContextHolder.currentRequestAttributes()).getRequest();
 		return getRemoteIP(req);
 	}
 	
+	/**
+	 * 아이피를 가져옵니다.
+	 * @param req HTTP 요청 정보
+	 * @return 아이피
+	 */
 	public static String getRemoteIP(HttpServletRequest req){
 		String ip = req.getHeader("X-FORWARDED-FOR");
 		if (ip == null)
@@ -32,6 +46,11 @@ public class WebUtil {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 브라우저의 종류를 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @return 브라우저 종류
+	 */
 	public static AbBrowserKind getBrowser(HttpServletRequest request){
 		String userAgent = new String(request.getHeader("User-Agent")).toLowerCase();
 		
@@ -51,10 +70,23 @@ public class WebUtil {
 
 	//-----------------------------------------------------------
 	
+	/**
+	 * 파일을 다운로드합니다.
+	 * @param response HTTP 응답 정보
+	 * @param file 다운로드할 파일 객체
+	 * @return null이면 정상, null이 아니면 발생한 예외의 객체입니다.
+	 */
 	public static Exception download(HttpServletResponse response, File file) {
 		return download(response, file, null);
 	}
 	
+	/**
+	 * 파일을 다운로드합니다.
+	 * @param response HTTP 응답 정보
+	 * @param file 다운로드할 파일 객체
+	 * @param filename 파일명
+	 * @return null이면 정상, null이 아니면 발생한 예외의 객체입니다.
+	 */
 	public static Exception download(HttpServletResponse response, File file, String filename) {
 		long length = file.length();
 		FileInputStream in = null;
@@ -94,6 +126,13 @@ public class WebUtil {
 		return r;
 	}
 	
+	/**
+	 * 바이너리 데이터를 다운로드합니다.
+	 * @param response HTTP 응답 정보
+	 * @param filename 파일명
+	 * @param bytes 바이너리 데이터
+	 * @return null이면 정상, null이 아니면 발생한 예외의 객체입니다.
+	 */
 	public static Exception download(HttpServletResponse response, String filename, byte[] bytes) {
 		ByteArrayInputStream in = new ByteArrayInputStream(bytes);
 		
@@ -102,6 +141,14 @@ public class WebUtil {
 		return r;
 	}
 	
+	/**
+	 * 입력 스트림에서 바리너리 데이터를 읽어 다운로드합니다.
+	 * @param response HTTP 응답 정보
+	 * @param filename 파일명
+	 * @param in 입력 스트림
+	 * @param length 읽을 길이
+	 * @return null이면 정상, null이 아니면 발생한 예외의 객체입니다.
+	 */
 	public static Exception download(HttpServletResponse response, String filename, InputStream in, long length) {
 		OutputStream out = null;
 		Exception ex = null;

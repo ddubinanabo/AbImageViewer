@@ -23,7 +23,7 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FilenameUtils;
 
 import com.abrain.wiv.data.AbImageData;
-import com.abrain.wiv.data.AbImageInfo;
+import com.abrain.wiv.data.AbImageMetadata;
 import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.enums.AbImageDecoder;
 import com.abrain.wiv.exceptions.ArgumentException;
@@ -34,7 +34,7 @@ import com.abrain.wiv.utils.FileUtil;
 import com.abrain.wiv.utils.GraphicsUtil;
 
 /**
- * 폴라리스 변환 툴
+ * 폴라리스 변환 도구
  * @author Administrator
  *
  */
@@ -43,23 +43,58 @@ public class PolarisConverter {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 임시 파일들을 저장할 경로
+	 */
 	private static final String DIR_DOC = "/WEB-INF/docs/";
+	/**
+	 * 폴라리스 컨버터가 위치한 경로
+	 */
 	private static final String DIR_CONVERTER = "/WEB-INF/converters";
 
+	/**
+	 * 변환 이미지 폭
+	 */
 	private static final int IMG_WIDTH = 700;
+	/**
+	 * 변환 이미지 높이
+	 */
 	private static final int IMG_HEIGHT = 990;
 	
+	/**
+	 * 변환 이미지 타입
+	 */
 	private static final String IMG_TYPE = "JPEG";
+	/**
+	 * 이미지 렌더링 힌트
+	 */
 	private static final AbImageDecoder IMG_DECODER = AbImageDecoder.ABDEC_JPG;
+	/**
+	 * 이미지 mime-type
+	 */
 	private static final String IMG_MIMETYPE = "image/jpeg";
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 실패 확인용 정규식
+	 * <p>* 폴라리스 컨버터는 실패 정보를 기본 출력 스트림(stdout)에 표시합니다. 이 정규식은 그 정보를 읽는 데 사용됩니다.
+	 */
 	private static final Pattern loadFail = Pattern.compile("^\\s*loadfail\\s*:\\s*([\\-0-9].)\\s*$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+	/**
+	 * 실패 확인용 정규식
+	 * <p>* 폴라리스 컨버터는 실패 정보를 기본 출력 스트림(stdout)에 표시합니다. 이 정규식은 그 정보를 읽는 데 사용됩니다.
+	 */
 	private static final Pattern printFail = Pattern.compile("^\\s*printfail\\s*:\\s*([\\-0-9].)\\s*$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 기본 폴더에 세션아이디로 폴더를 생성하고, 그 경로를 가져옵니다.
+	 * @param context 서블릿 Context
+	 * @param sessionId 세션 아이디
+	 * @return 생성된 폴더의 경로
+	 */
 	public static String rootFolder(ServletContext context, String sessionId) {
 		String rootDirPath = context.getRealPath(DIR_DOC);
 		
@@ -72,6 +107,14 @@ public class PolarisConverter {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 문서 파일을 이미지 파일로 컨버팅하고, 그 이미지 파일들의 이미지 정보 목록을 가져옵니다.
+	 * @param request HTTP 요청 정보
+	 * @param name 문서 파일명
+	 * @param content 문서 내용 (BASE64)
+	 * @return 이미지 정보 목록
+	 * @throws Exception 예외
+	 */
 	public static List<AbImageData> convert (HttpServletRequest request, String name, String content)
 			throws Exception{
 		if (name == null || name.isEmpty()){
@@ -189,7 +232,7 @@ public class PolarisConverter {
 			
 			//AbExif exif = AbExifReader.read(file);
 			
-			AbImageInfo info = new AbImageInfo();
+			AbImageMetadata info = new AbImageMetadata();
 			info.setName(filename);
 			info.setText(filename);
 			info.setType(IMG_MIMETYPE);
@@ -212,6 +255,15 @@ public class PolarisConverter {
 
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 컨버팅된 이미지 파일을 다운로드합니다.
+	 * @param q 이미지 폴더 경로
+	 * @param n 이미지 파일명
+	 * @param t 이미지 구분(thumb이면 섬네일 이미지)
+	 * @param request HTTP 요청 정보
+	 * @param response HTTP 응답 정보
+	 * @throws Exception 예외
+	 */
 	public static void download(String q, String n, String t, HttpServletRequest request, HttpServletResponse response) throws Exception {
 		if (q == null || q.isEmpty()){
 			throw new ArgumentException();
@@ -321,6 +373,14 @@ public class PolarisConverter {
 	
 	//-----------------------------------------------------------------------------------
 	
+	/**
+	 * 폴라리스 컨버터를 실행합니다.
+	 * @param request HTTP 요청 정보
+	 * @param docPath 문서 파일 경로
+	 * @param dir 이미지를 저장할 폴더 경로
+	 * @param tempDir 컨버터가 사용할 임시 폴더 경로
+	 * @return null이면 성공, 아니면 발생한 예외 객체
+	 */
 	private static Exception exec(HttpServletRequest request, String docPath, String dir, String tempDir){
 		ServletContext context = request.getSession().getServletContext();
 		String modPath = context.getRealPath(DIR_CONVERTER);
