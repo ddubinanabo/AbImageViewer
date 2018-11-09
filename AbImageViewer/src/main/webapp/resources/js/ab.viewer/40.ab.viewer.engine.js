@@ -481,7 +481,16 @@ function AbViewerEngine(options){
 		horiz: function() { return this.left + this.right; },
 		vert: function() { return this.top + this.bottom; },
 	};
-	
+		
+	//-----------------------------------------------------------
+	// 플래그
+
+	/**
+	 * 도형 툴바 클릭 후 다른 영역을 클릭할 때 취소 처리 여부
+	 * @type {Boolean}
+	 */
+	this.cancelAnyClick = true;
+
 	//-----------------------------------------------------------
 	// 옵저버
 
@@ -1791,6 +1800,8 @@ AbViewerEngine.prototype = {
 			}
 		}
 
+		//console.log('[MOUSE][DOWN] mode=' + this.selection.mode);
+
 		if (!this.selection.mode){
 			var targetShape = this.shapeObject(this.selection.target);
 
@@ -1929,7 +1940,7 @@ AbViewerEngine.prototype = {
 			}
 
 			// restore background
-			this.restoreSelection();
+			//this.restoreSelection();
 
 			// check minimum size
 			var x1 = this.selection.start.x, y1 = this.selection.start.y;
@@ -2088,7 +2099,9 @@ AbViewerEngine.prototype = {
 				if (target.attr('ve-type') === 'creation')
 					return;
 			}
-			this.selection.reset();
+
+			if (this.cancelAnyClick)
+				this.selection.reset();
 			break;
 		}
 	},
@@ -2101,10 +2114,11 @@ AbViewerEngine.prototype = {
 	editMouseClickEvent: function (e, states){
 		switch(this.selection.mode){
 		case 'inline':
-			//console.log('[INLINE]');
+			//console.log('[INLINE] runtime=' + this.runtime);
 			this.exec(function (){
-				if (this.selection.clickTarget)
-				this.selection.clickTarget.inlineEdit(this);
+				if (this.selection.clickTarget){
+					this.selection.clickTarget.inlineEdit(this);
+				}
 
 				this.selection.reset();
 
@@ -2330,6 +2344,7 @@ AbViewerEngine.prototype = {
 	 * <p>* 완료 후 resize가 Notify됩니다.
 	 */
 	resize: function(){
+		var runtime = this.runtime;
 		this.runtime = true;
 
 		var width = this.panel.width(), height = this.panel.height();
@@ -2379,7 +2394,7 @@ AbViewerEngine.prototype = {
 		
 		this.paint();
 		
-		this.runtime = false;
+		this.runtime = runtime;
 
 		// Notify
 		this.notifyObservers('resize');
@@ -4180,6 +4195,8 @@ AbViewerEngine.prototype = {
 				
 			var strokeSize = this.selection.style && this.selection.style.stroke ? this.selection.style.stroke.width : 1;
 			var pbox = AbGraphics.box.inflate(box.x, box.y, box.width, box.height, strokeSize);
+
+			//pbox = page.toCanvasBox(pbox);
 			
 			this.paintRect(pbox.x, pbox.y, pbox.width, pbox.height);
 			//this.paintRect(pbox.x + page.x, pbox.y + page.y, pbox.width, pbox.height);
@@ -4263,6 +4280,9 @@ AbViewerEngine.prototype = {
 		// 가상 좌표계 좌표
 		if (targetShape && AbCommon.supportRestoreMinimumSize(targetShape)){
 			var minimum = targetShape.restoreMinimumSize();
+
+			minimum.width *= page.scale.x;
+			minimum.height *= page.scale.y;
 
 			var tbox = page.toCanvasBox(targetShape.box());
 			this.selection.drawed = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, minimum.width, minimum.height);
@@ -4465,11 +4485,13 @@ AbViewerEngine.prototype = {
 	/**
 	 * 화면 버퍼에 페이지와 도형들을 그립니다.
 	 * @param {Boolean} [painting=true] 렌더링 후 화면에 복사할 지 여부입니다.
+	 * @param {Boolean} [forciblyPaint=false] 강제 그리기 여부입니다.
 	 */
-	render: function (painting){
+	render: function (painting, forciblyPaint){
 		if (!this.context) return;
 
 		if (!arguments.length) painting = true;
+		if (!AbCommon.isBool(forciblyPaint)) forciblyPaint = false;
 
 		//console.log('[CALL] render()');
 		this.exec(function (){
@@ -4653,7 +4675,7 @@ AbViewerEngine.prototype = {
 			//-----------------------------------------------------------
 
 			if (painting)
-				this.paint();
+				this.paint(forciblyPaint);
 		});
 	},
 
@@ -4694,6 +4716,7 @@ AbViewerEngine.prototype = {
 
 	/**
 	 * 화면 버퍼에서 설정된 영역만 화면으로 복사합니다.
+	 * <p>* 메모 도형 등에서 사용합니다.
 	 * @param {Number} x X좌표
 	 * @param {Number} y Y좌표
 	 * @param {Number} w 폭
@@ -4717,9 +4740,12 @@ AbViewerEngine.prototype = {
 	/**
 	 * 화면 버퍼의 내용을 화면을 복사합니다.
 	 * <p>* 엔진이 애니메이션 중이라면 동작하지 않습니다.
+	 * @param {Boolean} [forciblyPaint=false] 강제 그리기 여부입니다.
 	 */
-	paint: function(){
-		if (this.animateStates.$engine === true)
+	paint: function(forciblyPaint){
+		if (!AbCommon.isBool(forciblyPaint)) forciblyPaint = false;
+
+		if (!forciblyPaint && this.animateStates.$engine === true)
 			return;
 
 //		this.exec(function (){
@@ -4729,6 +4755,9 @@ AbViewerEngine.prototype = {
 //				this.clearCanvas(ctx);
 //			ctx.drawImage(this.context.canvas, 0, 0);
 //		});
+
+		var runtime = this.runtime;
+		if (forciblyPaint) this.runtime = true;
 		
 		var ctx = this.viewContext;
 
@@ -4736,6 +4765,7 @@ AbViewerEngine.prototype = {
 			this.clearCanvas(ctx);
 		ctx.drawImage(this.context.canvas, 0, 0);
 		
+		if (forciblyPaint) this.runtime = runtime;
 	},
 
 	/**

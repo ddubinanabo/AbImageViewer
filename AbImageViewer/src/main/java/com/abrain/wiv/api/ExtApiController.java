@@ -56,7 +56,7 @@ public class ExtApiController extends AbstractApiController {
 		if (q == null || q.isEmpty())
 			throw new ArgumentException();
 		
-		String[] ts = t.trim().split("\\|");
+		String[] ts = t == null || t.trim().isEmpty() ? new String[0] : t.trim().split("\\|");
 		
 		AbExtImages eximg = new AbExtImages(imageConfig, q);
 		List<AbImageData> imgs = eximg.collect();

@@ -1,5 +1,6 @@
 package com.abrain.wiv.config;
 
+import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -171,6 +172,12 @@ public class AbImageViewerConfig {
 		public String save;
 		
 		/**
+		 * 로컬 다운로드 개수 제한
+		 */
+		@Value("${viewer.image.local-save-limit}")
+		public int localSaveLimit;
+		
+		/**
 		 * 이미지 스토로지 관련 설정
 		 */
 		@Autowired
@@ -183,6 +190,12 @@ public class AbImageViewerConfig {
 		 * @return {@link #save}
 		 */
 		public String getSave() { return save; }
+		/**
+		 * 로컬 다운로드 개수 제한
+		 * @return {@link #localSaveLimit}
+		 */
+		@JsonProperty("local-save-limit")
+		public int getLocalSaveLimit() { return localSaveLimit; }
 		/**
 		 * 이미지 스토로지 관련 설정을 가져옵니다.
 		 * @return {@link #storage}
@@ -324,6 +337,12 @@ public class AbImageViewerConfig {
 		public String save;
 		
 		/**
+		 * 로컬 다운로드 개수 제한
+		 */
+		@Value("${viewer.shape.local-save-limit}")
+		public int localSaveLimit;
+		
+		/**
 		 * 추가 방식 설정 (none|window=스타일 설정창 사용)
 		 */
 		@Value("${viewer.shape.add.ui}")
@@ -342,6 +361,12 @@ public class AbImageViewerConfig {
 		 * @return {@link #save}
 		 */
 		public String getSave() { return save; }
+		/**
+		 * 로컬 다운로드 개수 제한
+		 * @return {@link #localSaveLimit}
+		 */
+		@JsonProperty("local-save-limit")
+		public int getLocalSaveLimit() { return localSaveLimit; }
 		/**
 		 * 추가 방식 설정을 가져옵니다.
 		 * @return {@link #addUI}

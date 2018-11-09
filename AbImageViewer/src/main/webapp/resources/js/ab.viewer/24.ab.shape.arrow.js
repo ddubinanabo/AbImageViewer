@@ -355,7 +355,7 @@ AbShapeArrow.prototype = {
 	 * @return {Rect}
 	 */
 	padding: function() {
-		var pad = this.controlSize() >> 1;
+		var pad = this.controlSize() / 2;
 		return { left: 0, top: pad, right: 0, bottom: pad };
 	},
 	/**

@@ -57,14 +57,33 @@ AbPageCollection.prototype = {
 	//-----------------------------------------------------------
 
 	/**
-	 * 페이지 전체의 도형 개수를 가져옵니다.
-	 * @return {Number}
+	 * 페이지 전체의 도형 개수와 도형이 있는 페이지의 개수 정보
+	 * @typedef {Object} NumShapesResult
+	 * @property {Number} shapes 전체 페이지의 도형 개수
+	 * @property {Number} pages 도형이 있는 페이지 개수
+	 */
+
+	/**
+	 * 페이지 전체의 도형 개수와 도형이 있는 페이지의 개수를 가져옵니다.
+	 * @return {NumShapesResult} 페이지 전체의 도형 개수와 도형이 있는 페이지의 개수 정보
 	 */
 	numShapes: function(){
+		var info = {
+			shapes: 0,
+			pages: 0,
+		};
+
 		var nums = 0;
-		for (var i = this.source.length - 1; i >= 0; i--)
-			nums += this.source[i].shapes.length;
-		return nums;
+
+		for (var i = this.source.length - 1; i >= 0; i--){
+			nums = this.source[i].shapes.length;
+
+			if (nums > 0){
+				info.shapes += nums;
+				info.pages ++;
+			}
+		}
+		return info;
 	},
 
 	//-----------------------------------------------------------

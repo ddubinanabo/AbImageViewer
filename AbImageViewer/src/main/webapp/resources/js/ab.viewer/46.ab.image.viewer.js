@@ -141,6 +141,7 @@
  * @property {String} waterMark.image 워터마크 이미지 URL
  * @property {Object} image 이미지 관련 설정
  * @property {String} image.save 서버 전송 방식 설정 (all|current)
+ * @property {Number} image.local-save-limit 이미지 로컬 다운로드 제한 설정 (값이 0이거나 음수면 제한 없음)
  * @property {Object} image.storage 이미지 스토로지 관련 설정
  * @property {String} image.storage.type 이미지 스토로지 타입 설정 (db|folder)
  * @property {String} image.storage.path 이미지 스트로지 경로 설정 (type이 folder인 경우)
@@ -148,7 +149,8 @@
  * @property {String} toolbar.layout 툴바 레이아웃 설정 (all|main|right)
  * @property {Object} shape 주석/마스킹 관련 설정
  * @property {String} shape.save 저장 옵션 (all|masking=마스킹만 저장)
- * @property {String} shape.addUI 추가 방식 설정 (none|window=스타일 설정창 사용)
+ * @property {String} shape.addUI 추가 방식 설정 (none|window=스타일 설정창 사용|toolbar=도형 스타일 툴바 먼저 표시)
+ * @property {Number} shape.local-save-limit 이미지 로컬 다운로드 제한 설정 (값이 0이거나 음수면 제한 없음)
  * @property {Object} shape.selection 주석/마스킹 선택 관련 설정
  * @property {String} shape.selection.style 선택 방식 설정 (path|box)
  * @property {Array.<String>} shape.selection.target 선택 방식을 적용할 도형 배열 (style이 box일 경우)<p>(all|rectangle|ellipse|line|arrow|pen|highlightpen|masking.rectangle|masking.ellipse)
@@ -1376,6 +1378,14 @@ AbImageViewer.prototype = {
 			return;
 		}
 
+		// 툴바 설정 (toolbar)의 후 처리
+		if (topic == 'shape' && value === 'created'){
+			var addUI = this.config('shape.addUI');
+			if (addUI === 'toolbar'){
+				this.engine.cancelAnyClick = true;
+			}
+		}
+
 		// Styler 연게
 		if (topic == 'shape'){
 			switch(value){
@@ -1537,7 +1547,13 @@ AbImageViewer.prototype = {
 	styleNotify: function (sender, name, value, shape){
 		var changed = value.changed;
 
+		var addUI = this.config('shape.addUI');
+		if (addUI === 'toolbar' && this.engine.selection.target){
+			return;
+		}
+
 		if (changed){
+
 			shape.measure();
 			shape.notify('styled');
 
@@ -1748,7 +1764,9 @@ AbImageViewer.prototype = {
 	 * @return {Promise} Promise 객체
 	 */
 	addShape: function (shapeName){
-		var enableShapeWindow = this.config('shape.addUI') === 'window';
+		var addUI = this.config('shape.addUI');
+		var enableShapeWindow = addUI === 'window';
+		var enableToolbar = addUI === 'toolbar';
 		
 		if (enableShapeWindow){
 			return this.shapeStyleWindow(shapeName)
@@ -1769,8 +1787,16 @@ AbImageViewer.prototype = {
 						});
 		}else{
 			return new Promise(function (resolve, reject){
+				var viewer = this;
+
 				this.engine.exec(function(){
 					this.addShape(shapeName);
+
+					if (enableToolbar){
+						this.cancelAnyClick = false;
+						viewer.styler.set(this.shapeObject(shapeName));
+					}
+
 					resolve('ok');
 				});
 			}.bind(this));
@@ -2423,6 +2449,8 @@ AbImageViewer.prototype = {
 			return;
 		}
 
+		var configLocalSaveLimit = this.config('image.local-save-limit');
+
 		var pageIdx = this.engine.currentPageIndex;
 
 		// 체크된 페이지 또는 현재 페이지 수집
@@ -2433,10 +2461,18 @@ AbImageViewer.prototype = {
 
 		if (!collect.pages.length)
 			return;
-
+			
+		if (configLocalSaveLimit && configLocalSaveLimit > 0){
+			if (collect.pages.length > configLocalSaveLimit){
+				AbMsgBox.warningHtml('최대 ' + configLocalSaveLimit + '까지만 다운로드 할 수 있습니다.<br/>'+
+					'이미지를 '+configLocalSaveLimit+'개 이하로 선택하세요.');
+				return;
+			}
+		}
+	
 		var msg = '';
 		if (collect.type == 'single'){
-			msg = '어떤 형식으로 저장하시겠습니까?';
+			msg = '선택한 이미지를 어떤 형식으로 저장하시겠습니까?';
 		}else{
 			msg = '선택한 이미지(들)를 어떤 형식으로 저장하시겠습니까?';
 		}
@@ -2515,6 +2551,7 @@ AbImageViewer.prototype = {
 	 */
 	saveToLocalText: function(){
 		var configSave = this.config('shape.save') || 'all';
+		var configLocalSaveLimit = this.config('shape.local-save-limit');
 		
 		var target = { text: '주석/마스킹', value: 'all' };
 		if (configSave === 'masking'){
@@ -2525,20 +2562,39 @@ AbImageViewer.prototype = {
 		// 체크된 페이지 또는 전체 페이지 수집
 		var collect = this.collectSelectedOrAllPages();
 
-		var numShapes = 0, msg = null, isAll = false;
+		var numShapePages = 0, numShapes = 0, msg = null, isAll = false;
 		if (collect.type == 'all'){
-			numShapes = this.images.numShapes();
+			var rinfo = this.images.numShapes();
+
+			numShapes = rinfo.shapes;
+			numShapePages = rinfo.pages;
+
 			msg = '모든 이미지의 '+target.text+' 정보를 저장하시겠습니까';
 			isAll = true;
 		}else{
-			for (var i = collect.pages.length - 1; i >= 0; i--)
-				numShapes += collect.pages[i].shapes.length;
+			var nums = 0;
+			for (var i = collect.pages.length - 1; i >= 0; i--){
+				nums = collect.pages[i].shapes.length;
+
+				if (nums > 0){
+					numShapes += nums;
+					numShapePages++;
+				}
+			}
 			msg = '선택한 이미지(들)의 '+target.text+' 정보를 저장하시겠습니까';
 		}
 
 		if (!numShapes)
 			return;
-
+			
+		if (configLocalSaveLimit && configLocalSaveLimit > 0){
+			if (numShapePages > configLocalSaveLimit){
+				AbMsgBox.warningHtml('최대 ' + configLocalSaveLimit + '까지만 다운로드 할 수 있습니다.<br/>'+
+					'도형이 있는 이미지를 '+configLocalSaveLimit+'개 이하로 선택하세요.');
+				return;
+			}
+		}
+	
 		AbMsgBox.confirm(msg)
 			.then(function (r){
 				if (r == 'ok'){
@@ -2547,42 +2603,64 @@ AbImageViewer.prototype = {
 
 					// this.notifyObservers('file.save.annotation');
 
-					var output = [AbCommon.xmlHeader()];
+					var self = this;
+					var ps = [];
+					var numPages = collect.pages.length;
 
-					if (isAll)
-						output.push('<pages all="true">');
-					else
-						output.push('<pages all="false">');
-
-					var cnt = collect.pages.length;
-					for (var i=0; i < cnt; i++){
+					for (var i=0; i < numPages; i++){
 						var page = collect.pages[i];
 
+						if (!page.shapes.length)
+							continue;
+
 						var index = this.images.indexOf(page.uid);
+	
+						// 실행 함수
+						var func = function (resolve, reject){
+							var target = arguments.callee.target;
+							var page = arguments.callee.page;
+							var index = arguments.callee.index;
+							var self = arguments.callee.self;
 
-						output.push('<page index="'+index+'">');
+							var output = [AbCommon.xmlHeader()];
 
-						var nums = page.shapes.length;
-						for (var j=0; j < nums; j++){
-							var s = page.shapes[j];
-							
-							if (target.value === 'masking' && s.type !== 'masking')
-								continue;
-							
-							output.push(s.serialize());
-						}
+							output.push('<page index="'+index+'">');
+		
+							var nums = page.shapes.length;
+							for (var j=0; j < nums; j++){
+								var s = page.shapes[j];
+								
+								if (target.value === 'masking' && s.type !== 'masking')
+									continue;
+								
+								output.push(s.serialize());
+							}
 
-						output.push('</page>');
+							output.push('</page>');
+
+							var blob = new Blob(output, {type: 'text/plain;charset=utf-8'});
+							saveAs(blob, 'image_'+(index+1)+'_shapes.xml');
+
+							resolve(index);
+						};
+						func.target = target;
+						func.page = page;
+						func.index = index;
+						func.self = self;
+
+						ps.push(new Promise(func));
 					}
-
-					output.push('</pages>');
 
 					//-----------------------------------------------------------
 
-					var blob = new Blob(output, {type: "text/plain;charset=utf-8"});
-					saveAs(blob, "shapes.xml");
-
-					this.notifyObservers('file.save.annotation');
+					AbCommon.sequencePromiseAll(ps, null, { term: { progress: 10, promise: 10 } })
+						.then(function (){
+							self.notifyObservers('file.save.annotation');
+						})
+						.catch(function(e){
+							console.log(e);
+							AbMsgBox.error(e);
+						});
 				}
 			}.bind(this));
 	},
@@ -3497,7 +3575,7 @@ AbImageViewer.prototype = {
 		
 		var numShapes = 0, msg = null, isAll = false;
 		if (collect.type == 'all'){
-			numShapes = this.images.numShapes();
+			numShapes = this.images.numShapes().shapes;
 			msg = '모든 이미지의 주석/마스킹을 삭제하시겠습니까?';
 			isAll = true;
 		}else{

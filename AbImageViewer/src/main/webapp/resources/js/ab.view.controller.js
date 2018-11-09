@@ -131,7 +131,7 @@ var AbViewController = {
 	 * @default false
 	 */
 	SERVER_ACCESS: true,
-	
+
 	/**
 	 * 이미지 뷰어 인스턴스, 자동으로 설정된다
 	 * @static
@@ -201,8 +201,7 @@ var AbViewController = {
 	 */
 	initServerUrls: function(){
 
-		var resourcePath = 'resources/';
-		//var resourcePath = '';
+		var resourcePath = AbViewController.SERVER_ACCESS ? 'resources/' : '';
 
 		//-----------------------------------------------------------
 		// HTML5 웹 워커 실행 경로
@@ -333,7 +332,8 @@ var AbViewController = {
 						  "storage": {
 							"type": "db",
 							"path": "C:\\Users\\Administrator\\Desktop\\AB_DOC"
-						  }
+						  },
+						  "local-save-limit": 0
 						},
 						"toolbar": {
 						  "layout": [
@@ -342,7 +342,7 @@ var AbViewController = {
 						},
 						"shape": {
 						  "save": "all",
-						  "addUI": "none",
+						  "addUI": "toolbar",
 						  "selection": {
 							"style": "box",
 							"target": [
@@ -354,7 +354,8 @@ var AbViewController = {
 							  "masking.ellipse"
 							],
 							"lineDrawStyle": "path"
-						  }
+						  },
+						  "local-save-limit": 0
 						}
 					  },
 					  "auth": {
@@ -618,7 +619,13 @@ var AbViewController = {
 		
 		if (AbViewController.SERVER_ACCESS)
 			AbNoop.exec();
-		
+
+		//-----------------------------------------------------------
+		// 샘플 이미지 로드
+		//-----------------------------------------------------------
+
+		// sampleImage.bind(this)(0);
+			
 		//-----------------------------------------------------------
 		// 인자값 처리
 		//-----------------------------------------------------------
@@ -631,3 +638,14 @@ var AbViewController = {
 		}
 	},
 };
+
+// function sampleImage(index){
+// 	var urls = [
+// 		'sample/sample1.png',
+// 		'sample/sample2.jpg',
+// 	];
+
+// 	var url = urls[index];
+
+// 	this.imageViewer.addImages(urls);
+// }

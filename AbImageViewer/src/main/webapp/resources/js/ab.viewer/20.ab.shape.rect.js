@@ -355,6 +355,22 @@ AbShapeRectangle.prototype = {
 	 */
 	validLineDistance: function () { return this.style.stroke && this.style.stroke.width ? this.style.stroke.width: 1; },
 
+	/**
+	 * 복구 최소 크기를 가져옵니다.
+	 * <p>* 복구 크기는 도형 추가 중 배경을 복구하는 영역의 크기를 말합니다.
+	 * @return {Size} 크기
+	 */
+	restoreMinimumSize: function(){
+		var hasStyle = false;
+		var lw = 0;
+		
+		if (this.style.stroke){
+			hasStyle = this.style.stroke && this.style.stroke.width && this.style.stroke.color;
+			lw = this.style.stroke.width;
+		}
+		return { width: hasStyle ? lw : 0, height: hasStyle ? lw : 0 };
+	},
+
 	//-----------------------------------------------------------
 
 	/**
@@ -366,18 +382,32 @@ AbShapeRectangle.prototype = {
 	draw: function(ctx, page, direct){
 		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
 
+		var width = this.width * scaleX;
+		var height = this.height * scaleY;
+
 		AbShapeTool.beginRectDraw(this, ctx, page);
-		
+
 		if (this.style.color){
 			ctx.fillStyle = this.style.color;
-			ctx.fillRect(0, 0, this.width * scaleX, this.height * scaleY);
+			ctx.fillRect(0, 0, width, height);
 		}
 
 		if (this.style.stroke && this.style.stroke.width && this.style.stroke.color){
 			ctx.strokeStyle = this.style.stroke.color;
 			ctx.lineWidth = this.style.stroke.width;
 
-			ctx.strokeRect(0, 0, this.width * scaleX, this.height * scaleY);
+			var lw = this.style.stroke.width;
+			var lhw = (lw / 2);
+
+			// ctx.moveTo(lhw, lhw);
+			// ctx.lineTo(width - lhw, lhw);
+			// ctx.lineTo(width - lhw, height - lhw);
+			// ctx.lineTo(lhw, height - lhw);
+			// ctx.lineTo(lhw, lhw);
+			// ctx.stroke();
+
+			ctx.strokeRect(lhw, lhw, width-lw, height-lw );
+			//ctx.strokeRect(lhw, lhw, (this.width-lw) * scaleX, (this.height-lw) * scaleY );
 		}
 		
 		AbShapeTool.endDraw(this, ctx);

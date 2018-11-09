@@ -873,7 +873,8 @@ AbBoxEditIndicator.prototype = {
 	 */
 	draw: function(ctx){
 		var tbox = this.targetScaledBox();
-		var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };	
+
+		var tpadding = AbCommon.isFunction(this.target.drawPadding) ? this.target.drawPadding() : this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
 		var angle = this.target.angle;
 		var style = this.target.focused ? this.style.focus : this.style.default;
 

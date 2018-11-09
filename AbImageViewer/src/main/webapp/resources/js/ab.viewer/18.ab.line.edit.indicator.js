@@ -368,20 +368,20 @@ AbLineEditIndicator.prototype = {
 	 */
 	containsBox: function(x, y, w, h){
 		var page = this.target.engine.currentPage;
-		var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
+		//var tpadding = this.target.padding() || { left: 0, top: 0, right: 0, bottom: 0 };
 
 		if (arguments.length >= 4){	
 			var pc = page.toCanvasBox(x, y, w, h);
 			x = pc.x; y = pc.y; w = pc.width; h = pc.height;
 
 			var tbox = this.target.box();
-			tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+			//tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
 			tbox = page.toCanvasBox(tbox);
 			
 			return AbGraphics.contains.box(x, y, w, h, tbox.x, tbox.y, tbox.width, tbox.height);
 		}else{
 			var tbox = this.target.box();
-			tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
+			//tbox = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, tpadding);
 			tbox = page.toCanvasBox(tbox);
 
 			var pc = page.toCanvas(x, y);

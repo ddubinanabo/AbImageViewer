@@ -294,7 +294,7 @@ AbShapeLine.prototype = {
 		var page = this.engine ? this.engine.currentPage : null;
 		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
 
-		var pad = (this.style.width >> 1) * scaleX;
+		var pad = (this.style.width / 2) * scaleX;
 		return { left: 0, top: pad, right: 0, bottom: pad };
 	},
 	/**

@@ -330,13 +330,13 @@ AbShapeTextBox.prototype = {
 				this.move(x2, y2);
 			}
 		}else if (cmd == 'measured'){
-			var gap = this.style.stroke.width << 1;
+			var gap = this.getStrokeWidth() << 1;
 			var w = this.textWidth << 1;
 			var h = this.textHeight << 1;
 			this.size(w + this.textPadding.horiz() + gap, h + this.textPadding.vert() + gap);
 			this.measure();
 		}else if (cmd == 'styled'){
-			var gap = this.style.stroke.width << 1;
+			var gap = this.getStrokeWidth() << 1;
 			this.size(this.textWidth + this.textPadding.horiz() + gap, this.textHeight + this.textPadding.vert() + gap);
 		}
 	},
@@ -449,9 +449,11 @@ AbShapeTextBox.prototype = {
 	 * @return {ShapeObjectResizeResult} 크기 조정 결과 정보
 	 */
 	resizable: function (width, height){
+		var gap = this.getStrokeWidth() << 1;
+
 		var m = this.measureSize(null, width, this.text);
 		var textSize = AbGraphics.size.minimum(this.textWidth, this.textHeight, m);
-		var mbox = AbGraphics.size.maximum(textSize.width + this.textPadding.horiz(), textSize.height + this.textPadding.vert(), this.minimum());
+		var mbox = AbGraphics.size.maximum(textSize.width + this.textPadding.horiz() + gap, textSize.height + this.textPadding.vert() + gap, this.minimum());
 
 		var overW = mbox.width > width;
 		var overH = mbox.height > height;
@@ -460,6 +462,8 @@ AbShapeTextBox.prototype = {
 		if (overW && overH) result = false;
 		else if (overW) result = 'h';
 		else if (overH) result = 'v';
+		
+		//console.log('result=' + result + ', width=' + mbox.width + ', height=' + mbox.height);
 
 		return { result: result, width: mbox.width, height: mbox.height };
 	},
@@ -522,6 +526,14 @@ AbShapeTextBox.prototype = {
 
 	//-----------------------------------------------------------
 
+	getStrokeWidth: function(){
+		if (this.style.stroke && this.style.stroke.width && this.style.stroke.color)
+			return this.style.stroke.width;
+		return 0;
+	},
+
+	//-----------------------------------------------------------
+
 	/**
 	 * 메모의 크기를 설정합니다.
 	 * @private
@@ -534,7 +546,15 @@ AbShapeTextBox.prototype = {
 			var pos = page.toCanvas(this.x, this.y);
 			var siz = { width: this.width * page.scale.x, height: this.height * page.scale.y };
 			var newsiz = { width: width * page.scale.x, height: height * page.scale.y };
-			
+
+			var gap = this.getStrokeWidth();
+			var textPadding = this.textPadding;
+			var horiz = textPadding.horiz() + (gap << 1);
+			var vert = textPadding.vert() + (gap << 1);
+
+			//newsiz.width += horiz;
+			//newsiz.height += vert;
+
 			//var crbox = this.indicator.correct('RB', this.x, this.y, width, height, this.width, this.height);
 			var crbox = this.indicator.correct('RB', pos.x, pos.y, newsiz.width, newsiz.height, siz.width, siz.height);
 			pos = page.fromCanvas(crbox.x, crbox.y);
@@ -543,7 +563,10 @@ AbShapeTextBox.prototype = {
 			this.y = pos.y;
 			this.width = crbox.width / page.scale.x;
 			this.height = crbox.height / page.scale.y;
-			
+
+			//this.width += textPadding.horiz() + (gap << 1);
+			//this.height += textPadding.vert() + (gap << 1);
+
 			// this.x = crbox.x;
 			// this.y = crbox.y;
 			// this.width = crbox.width;
@@ -571,7 +594,7 @@ AbShapeTextBox.prototype = {
 		this.setTextSyle(ctx);
 		
 		var textPadding = this.textPadding;
-		var gap = this.style.stroke.width;
+		var gap = this.getStrokeWidth();
 
 		var r = this.wrapMeasureText(ctx, text, {
 			maxWidth: width - textPadding.horiz() - (gap << 1)
@@ -604,7 +627,7 @@ AbShapeTextBox.prototype = {
 			y = r.y;
 		}
 
-		var gap = this.style.stroke.width;
+		var gap = this.getStrokeWidth();
 		var textPadding = this.textPadding;
 		var dblgap = gap << 1;
 		var hs = textPadding.horiz(), vs = textPadding.vert();
@@ -616,6 +639,10 @@ AbShapeTextBox.prototype = {
 		};
 
 		var tx = textRect.x, ty = textRect.y, tw = this.textWidth, th = this.textHeight;
+		if (!this.text){
+			tw = textRect.width;
+			th = textRect.height;
+		}
 
 		switch (this.style.text.align){
 		case 'center':
@@ -645,16 +672,17 @@ AbShapeTextBox.prototype = {
 		textbox.on('focusout', { engine: engine, shape: this, textbox: textbox }, function (e){
 			var element = $(this);
 			var s = e.data.shape;
+			var text = element.val();
 
-			s.text = element.val();
 			textbox.off('focusout');
 			textbox.off('input');
-			textbox.hide();
+
+			s.text = text;			
 
 			s.measure();
 
 			if (s.width < s.textWidth || s.height < s.textHeight){
-				var gap = s.style.stroke.width;
+				var gap = s.getStrokeWidth() << 1;
 				s.size(s.textWidth + s.textPadding.horiz() + gap, s.textHeight + s.textPadding.vert() + gap);
 			}
 
@@ -662,8 +690,11 @@ AbShapeTextBox.prototype = {
 
 			// end record history
 			e.data.engine.history.end(e.data.engine);
+			e.data.engine.render(true, true);
 
-			e.data.engine.render();
+			setTimeout(function(){
+				textbox.hide();
+			}, 0);
 		});
 
 		textbox.on('input', { engine: engine, shape: this, textbox: textbox }, function (e){
@@ -676,12 +707,17 @@ AbShapeTextBox.prototype = {
 			if (this.scrollHeight > element.height())
 				h = this.scrollHeight;
 
-			var left = s.textPadding.left + s.style.stroke.width;
-			var top = s.textPadding.top + s.style.stroke.width;
-			var horiz = s.textPadding.horiz() + (s.style.stroke.width << 1);
-			var vert = s.textPadding.vert() + (s.style.stroke.width << 1);
+			var gap = s.getStrokeWidth();
 
-			var pc = { x: w ? w : s.width, y: h ? h : s.height };
+			var left = s.textPadding.left + gap;
+			var top = s.textPadding.top + gap;
+			var horiz = s.textPadding.horiz() + (gap << 1);
+			var vert = s.textPadding.vert() + (gap << 1);
+
+			var pc = {
+				x: (w ? w : s.width - horiz) + horiz,
+				y: (h ? h : s.height - vert) + vert
+			};
 			
 			if (w != null && h != null){
 				// element.width(w);
@@ -693,7 +729,8 @@ AbShapeTextBox.prototype = {
 				var y = s.y + top;
 		
 				//e.data.textbox.move(x, y);
-				e.data.textbox.box(s.x, s.y, s.width, s.height);
+				//e.data.textbox.box(s.x, s.y, s.width, s.height);
+				e.data.textbox.box(s.x + left, s.y + top, s.width - horiz, s.height - vert);
 
 				e.data.engine.render();
 			}else if (w != null){
@@ -704,7 +741,8 @@ AbShapeTextBox.prototype = {
 				var y = s.y + top;
 		
 				//e.data.textbox.move(x, y);
-				e.data.textbox.box(s.x, s.y, s.width, s.height);
+				//e.data.textbox.box(s.x, s.y, s.width, s.height);
+				e.data.textbox.box(s.x + left, s.y + top, s.width - horiz, s.height - vert);
 
 				e.data.engine.render();
 			}else if (h != null){
@@ -773,7 +811,7 @@ AbShapeTextBox.prototype = {
 			textbox.css('text-align', align);
 		}
 
-		var gap = this.style.stroke.width;
+		var gap = this.getStrokeWidth();
 
 		// begin record history
 		engine.history.begin('shape', 'update', engine, ['angle', 'x', 'y', 'width', 'height', 'textWidth', 'textHeight', 'text']);
@@ -1050,10 +1088,13 @@ AbShapeTextBox.prototype = {
 			ctx.strokeStyle = this.style.stroke.color;
 			ctx.lineWidth = this.style.stroke.width;
 
-			ctx.strokeRect(0, 0, drawWidth, drawHeight);
+			var lw = this.style.stroke.width;
+			var lhw = (lw / 2);
+
+			ctx.strokeRect(lhw, lhw, drawWidth - lw, drawHeight - lw);
 		}
 
-		var gap = this.style.stroke.width;
+		var gap = this.getStrokeWidth();
 		var textPadding = this.textPadding;
 		var dblgap = gap << 1;
 		var hs = textPadding.horiz(), vs = textPadding.vert();
@@ -1089,7 +1130,7 @@ AbShapeTextBox.prototype = {
 		// ctx.strokeRect(textPadding.left, textPadding.top, r.width, r.height);
 		// ctx.fillStyle = 'cyan';
 		// ctx.font = '700 16px tahoma';
-		// ctx.fillText('text(width='+r.width+', height='+r.height+')', 0, textPadding.top + this.style.stroke.width + r.height + 5);
+		// ctx.fillText('text(width='+r.width+', height='+r.height+')', 0, textPadding.top + this.getStrokeWidth() + r.height + 5);
 
 		// console.log('[INLINE][TEST] width=' + this.width + ', textWidth=' + r.width + ', textHeight=' + r.height + ', lines=' + r.lines);
 

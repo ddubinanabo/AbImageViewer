@@ -102,6 +102,8 @@ function AbShapePen(options){
 	this.style = {
 		width: style.width || 1,
 		color: style.color || 'rgb(41,0,139)',
+		// width: style.width || 5,
+		// color: style.color || '#00FFFF',
 	};
 
 	// editor에 생성시 크기를 지정할 필요없음을 명시
@@ -371,10 +373,42 @@ AbShapePen.prototype = {
 	//-----------------------------------------------------------
 
 	/**
+	 * 드로잉용 여백 정보를 가져옵니다.
+	 * <p>* 드로잉 시에만 적용되는 도형과 지시자 사이의 여백 크기입니다.
+	 * <p>* 지시자가 드로잉시에 호출됩니다.
+	 * @return {Rect}
+	 */
+	drawPadding: function() {
+		var configValue = this.engine.selectionStyle(this.name);
+
+		var half = 0;
+		var lineWidth = this.style.width || 0;
+		half = lineWidth > 0 ? (lineWidth / 2) : 0;
+		if (half < 0) half = 0;
+
+		return { left: half, top: half, right: half, bottom: half };
+	},
+
+	/**
 	 * 도형의 여백 정보를 가져옵니다. (도형과 지시자 사이의 여백 크기)
 	 * @return {Rect}
 	 */
-	padding: function() { return { left: 0, top: 0, right: 0, bottom: 0 }; },
+	padding: function() {
+		var configValue = this.engine.selectionStyle(this.name);
+
+		var half = 0;
+		if (configValue === 'box'){
+			var page = this.engine ? this.engine.currentPage : null;
+			var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
+	
+			var lineWidth = this.style.width || 0;
+			half = lineWidth > 0 ? (lineWidth / scaleX / 2) : 0;
+			if (half < 0) half = 0;
+		}
+
+		return { left: half, top: half, right: half, bottom: half };
+	},
+
 	//contains: function(x, y, w, h){ return this.indicator.contains.apply(this.indicator, arguments); },
 	/**
 	 * 도형의 스트로크가 대상 점/상자와 충돌하는 지 검사합니다.
@@ -431,7 +465,7 @@ AbShapePen.prototype = {
 
 		var startX = tbox.x, startY = tbox.y;
 		//var v = Math.round(2 * r.ratio);
-		v = 3;
+		v = 3 + (this.style.width || 0);
 		var len = this.points.length;
 		var lp = null;
 		for (var i=0; i < len; i++){
