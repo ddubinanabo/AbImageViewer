@@ -97,4 +97,53 @@ public class ExtApiController extends AbstractApiController {
 		return img;
 	}
 
+	//-----------------------------------------------------------
+	
+	/**
+	 * 한 개의 이미지 정보를 가져옵니다.
+	 * <p>* file()의 확장판으로, pdf|tiff 파일에 대한 처리가 추가되어 있습니다.
+	 * @param q 파일 경로
+	 * @param t 표시명 (|로 구분된 문자열)
+	 * @param st 서브 이미지 표시명 (|로 구분된 문자열)
+	 * @return 이미지 정보
+	 * @throws Exception 예외
+	 */
+	@RequestMapping(value="/api/ext/fileEx", method=RequestMethod.POST) 
+	@ResponseBody
+	public Object fileEx (String q, @RequestParam(defaultValue="") String t, @RequestParam(defaultValue="") String st) throws Exception{
+		if (q == null || q.isEmpty())
+			throw new ArgumentException();
+		
+		if (t != null && t.isEmpty()) t = null;
+		if (st != null && st.isEmpty()) st = null;
+		
+		AbImageData img = AbExtImages.fileEx(imageConfig, q);
+		if (img != null) {
+			if (img.hasInfo()) {
+				if (t != null)
+					img.getInfo().setText(t);
+			}
+			
+			if (st != null) {
+				String[] texts = st == null || st.trim().isEmpty() ? new String[0] : st.trim().split("\\|");
+				
+				List<AbImageData> subImages = img.getImages();
+				int numSubImages = subImages != null ? subImages.size() : 0;
+				
+				for (int i=0; i < texts.length; i++) {
+					String customText = texts[i];
+					
+					if (i < numSubImages) {
+						AbImageData sub = subImages.get(i);
+						if (sub.hasInfo()) {
+							sub.getInfo().setText(customText);
+						}
+					}					
+				}
+			}			
+		}
+
+		return img;
+	}
+
 }

@@ -201,13 +201,15 @@ var AbViewController = {
 	 */
 	initServerUrls: function(){
 
+		//var host = 'http://localhost:8084/wiv/';
+		var host = '';
 		var resourcePath = AbViewController.SERVER_ACCESS ? 'resources/' : '';
 
 		//-----------------------------------------------------------
 		// HTML5 웹 워커 실행 경로
 		
-		AbVendor.executePath = resourcePath + AbVendor.executePath;
-		AbImageLoader.executePath = resourcePath + AbImageLoader.executePath;
+		AbVendor.executePath = host + resourcePath + AbVendor.executePath;
+		AbImageLoader.executePath = host + resourcePath + AbImageLoader.executePath;
 
 		//-----------------------------------------------------------
 		// WAS 문서 컨버터의 웹메서드 URL 정보
@@ -217,25 +219,32 @@ var AbViewController = {
 		//-----------------------------------------------------------
 		// WAS 이미지 저장 웹메서드 URL 정보
 
-		AbImageViewer.prototype.URLS.CONFIG = 'api/config';
-		AbImageViewer.prototype.URLS.PERMISSION = 'api/permission';
+		AbImageViewer.prototype.URLS.CONFIG = host + 'api/config';
+		AbImageViewer.prototype.URLS.PERMISSION = host + 'api/permission';
 		
-		AbImageViewer.prototype.URLS.OPEN = 'api/images';
+		AbImageViewer.prototype.URLS.OPEN = host + 'api/images';
 		
-		AbImageViewer.prototype.URLS.SAVE.ALLOC = 'api/alloc'; // 신규 등록 아이디 할당
-		AbImageViewer.prototype.URLS.SAVE.MODIFY = 'api/modify-prepare'; // 수정 준비 작업
+		AbImageViewer.prototype.URLS.SAVE.ALLOC = host + 'api/alloc'; // 신규 등록 아이디 할당
+		AbImageViewer.prototype.URLS.SAVE.MODIFY = host + 'api/modify-prepare'; // 수정 준비 작업
 		
-		AbImageViewer.prototype.URLS.SAVE.IMAGE = 'api/save-image'; // 각 이미지 및 관련 정보 분할 등록
-		AbImageViewer.prototype.URLS.SAVE.REMOVE = 'api/remove'; // 전송 중 오류 시 삭제
-		AbImageViewer.prototype.URLS.SAVE.COMPLETED = 'api/save-completed'; // 이미지 등록 완료 
+		AbImageViewer.prototype.URLS.SAVE.IMAGE = host + 'api/save-image'; // 각 이미지 및 관련 정보 분할 등록
+		AbImageViewer.prototype.URLS.SAVE.REMOVE = host + 'api/remove'; // 전송 중 오류 시 삭제
+		AbImageViewer.prototype.URLS.SAVE.COMPLETED = host + 'api/save-completed'; // 이미지 등록 완료 
 
 		//-----------------------------------------------------------
 		// WAS 인쇄지원 웹메서드 URL 정보
 		
-		AbImageViewer.prototype.URLS.PRINT.ALLOC = 'api/print-support/alloc';
-		AbImageViewer.prototype.URLS.PRINT.IMAGE = 'api/print-support/save';
-		AbImageViewer.prototype.URLS.PRINT.REMOVE = 'api/print-support/remove';
-		AbImageViewer.prototype.URLS.PRINT.DOWNLOAD = 'print-support/img';		
+		AbImageViewer.prototype.URLS.PRINT.ALLOC = host + 'api/print-support/alloc';
+		AbImageViewer.prototype.URLS.PRINT.IMAGE = host + 'api/print-support/save';
+		AbImageViewer.prototype.URLS.PRINT.REMOVE = host + 'api/print-support/remove';
+		AbImageViewer.prototype.URLS.PRINT.DOWNLOAD = host + 'print-support/img';		
+
+		//-----------------------------------------------------------
+		// WAS 인터페이스 URL 정보
+
+		iAbViewer.URLS.FOLDER = host + iAbViewer.URLS.FOLDER;
+		iAbViewer.URLS.FILE = host + iAbViewer.URLS.FILE;
+		iAbViewer.URLS.FILE_EX = host + iAbViewer.URLS.FILE_EX;
 	},
 		
 	/**
@@ -250,7 +259,7 @@ var AbViewController = {
 		//   이미지 로드 중 먹통이 되는 현상이 있습니다.
 
 		if (AbCommon.ieVersion() != -1)
-			AbCommon.ENABLE_WEB_WORKER = false;
+			AbCommon.ENABLE_WEB_WORKER = true;
 
 		//-----------------------------------------------------------
 		// 이미지 전송 시 병렬 처리 개수
@@ -337,7 +346,7 @@ var AbViewController = {
 						},
 						"toolbar": {
 						  "layout": [
-							"all"
+							"all",
 						  ]
 						},
 						"shape": {
@@ -348,8 +357,9 @@ var AbViewController = {
 							"target": [
 							  "rectangle",
 							  "ellipse",
-							  "arrow",
+							  //"arrow",
 							  "pen",
+							  "polygon",
 							  "masking.rectangle",
 							  "masking.ellipse"
 							],
@@ -386,6 +396,10 @@ var AbViewController = {
 			permissions: [],
 			value: null,
 		};
+
+		var layoutConfig = config && config.viewer && config.viewer.toolbar ? config.viewer.toolbar.layout : 'all';
+		if (layoutConfig !== 'all')
+			this.setLayout(layoutConfig);
 		
 		if (config && config.auth && config.auth.config.enabled === true){
 			var local = config.auth.config.account.source === 'local-storage';
@@ -405,14 +419,14 @@ var AbViewController = {
 							config.auth.permission = r;
 							config.auth.permission.map = this.permissionMap(config.auth.permission);
 							
-							this.setLayout(config.auth.permission);						
+							this.setLayoutByPermission(config.auth.permission);						
 							return config;
 						}.bind(this));
 				}else{
 					pm.map = {};
 					config.auth.permission = pm;
 					
-					this.setLayout(config.auth.permission);
+					this.setLayoutByPermission(config.auth.permission);
 				}
 			}else{
 				pm.map = this.permissionMap(config.auth.permission);
@@ -445,10 +459,41 @@ var AbViewController = {
 	},
 	
 	/**
+	 * 레이아웃 옵션에 따라 레이아웃 설정
+	 * @param {Array.<String>} layoutConfig 레이아웃 옵션
+	 */
+	setLayout: function (layoutConfig){
+		var layouts = $('[ab-layout]');
+		var numLayouts = layouts.length;
+		for (var i=0; i < numLayouts; i++){
+			var he = layouts.get(i);
+			var e = $(he);
+			
+			var layout = e.attr('ab-layout');
+
+			var accept = false;
+			
+			var topics = layout.trim().split(/\s*,\s*/g);
+			var numTopics = topics.length;
+			for (var j=0; j < numTopics; j++){
+				var item = topics[j];
+				
+				if ($.inArray(item, layoutConfig) >= 0){
+					accept = true;
+					break;
+				}
+			}
+
+			if (!accept)
+				e.detach();
+		}
+	},
+	
+	/**
 	 * 퍼미션에 따라 레이아웃 설정
 	 * @param {AbViewController.Permission} permission 서버에서 다운받은 퍼미션 객체
 	 */
-	setLayout: function (permission){
+	setLayoutByPermission: function (permission){
 		var level = permission ? permission.level : -1;
 		var map = permission && permission.map ? permission.map : {};
 		
@@ -624,7 +669,7 @@ var AbViewController = {
 		// 샘플 이미지 로드
 		//-----------------------------------------------------------
 
-		// sampleImage.bind(this)(0);
+		//sampleImage.bind(this)(0);
 			
 		//-----------------------------------------------------------
 		// 인자값 처리
@@ -639,13 +684,54 @@ var AbViewController = {
 	},
 };
 
-// function sampleImage(index){
-// 	var urls = [
-// 		'sample/sample1.png',
-// 		'sample/sample2.jpg',
-// 	];
+function sampleImage(index){
+	var urls = [
+		'sample/sample1.png',
+		//'sample/sample2.jpg',
+		'sample/sample0.jpg',
+	];
 
-// 	var url = urls[index];
+	var url = urls[index];
 
-// 	this.imageViewer.addImages(urls);
-// }
+	this.imageViewer.addImages(urls);
+
+	//-----------------------------------------------------------
+
+	setTimeout(function(){
+		this.engine.addShape(new AbShapePolygon({
+			x: 133.02988505747126, y: 116.72720306513409, width: 167.59157088122603, height: 116.0750957854406,
+			points: [{ x: 11.08582375478926, y: 43.6911877394636 }, { x: 92.59923371647508, y: 0 }, { x: 167.59157088122603, y: 64.55862068965516 }, { x: 95.20766283524904, y: 116.0750957854406 }, { x: 0, y: 93.90344827586208 }, { x: 18.25900383141763, y: 67.16704980842911 }, { x: 84.77394636015325, y: 87.3823754789272 }, { x: 115.42298850574713, y: 62.6022988505747 }, { x: 86.07816091954021, y: 31.30114942528735 }, { x: 41.082758620689646, y: 54.77701149425286 },]
+		}));
+		//this.engine.addShape(new AbShapeMemoPad({ source: AbIcons.MEMOPAD, x: 77.91318074191003, y: 298.21941594317286, width: 48, height: 48, }));
+		this.engine.addShape(new AbShapeRectangle({
+			x: 173.28966061562747, y: 422.8492501973165, width: 193.43962115232833, height: 80.59984214680344
+		}));
+
+		this.engine.createShape('memopad', {
+			x: 77.91318074191003, y: 298.21941594317286, width: 133, height: 86,
+			style: {
+				color: '#99CFFF',
+			},
+			text: '테스트입니다.\n이 얼간이야!!'
+		}, function(s){
+			s.prepare();
+			this.engine.addShape(s);
+			this.engine.render();
+
+			var page = this.engine.currentPage;
+			this.renderThumbnail(page);
+
+		}.bind(this));
+
+		// this.engine.createShape('memopad', { x: 77.91318074191003, y: 298.21941594317286 }, function(s){
+		// 	s.prepare();
+		// 	this.engine.addShape(s);
+
+		// 	this.engine.render();
+
+		// 	var page = this.engine.currentPage;
+		// 	this.renderThumbnail(page);
+
+		// }.bind(this));
+	}.bind(this.imageViewer), 500);
+}

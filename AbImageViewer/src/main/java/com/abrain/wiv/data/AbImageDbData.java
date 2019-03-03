@@ -1,5 +1,8 @@
 package com.abrain.wiv.data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.abrain.wiv.data.exif.AbExif;
 import com.abrain.wiv.data.exif.AbExifGPS;
 
@@ -15,8 +18,19 @@ public class AbImageDbData {
 	public String id;
 	/**
 	 * 이미지 목록의 인덱스
+	 * <p>* db record의 시퀀스
 	 */
 	public int seq;
+	/**
+	 * 메인 인덱스
+	 * <p>* 메인 페이지 별 인덱스
+	 */
+	public int manSeq;
+	/**
+	 * 서브 인덱스
+	 * <p>* 메인 페이지 내 인덱스
+	 */
+	public int subSeq;
 	/**
 	 * 최초 등록자 아이피
 	 */
@@ -209,6 +223,17 @@ public class AbImageDbData {
 	 * 이미지 등록 일시
 	 */
 	public String regDt;
+	/**
+	 * 자식 이미지 정보
+	 * <p>* 이 정보는 DB 조회 시 설정되는 것이 아니라 서비스 객체에서 채워집니다.
+	 */
+	public List<AbImageDbData> children = new ArrayList<AbImageDbData>();
+
+	/**
+	 * 자식 이미지 정보가 있는 지 확인합니다.
+	 * @return 있으면 true
+	 */
+	public boolean hasChildren() { return children != null && children.size() > 0; }
 
 	/**
 	 * EXIF 정보가 있는 지 확인합니다.

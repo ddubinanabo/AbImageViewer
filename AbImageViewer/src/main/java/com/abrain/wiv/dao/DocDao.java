@@ -42,6 +42,8 @@ public class DocDao extends AbstractDao {
 	 * 이미지를 임시 등록합니다.
 	 * @param id 이미지 목록 ID
 	 * @param seq 이미지 목록의 인덱스
+	 * @param mainSeq 메인 인덱스
+	 * @param subSeq 서브 인덱스
 	 * @param ip 아이피
 	 * @param imageInfo 이미지 전송 정보 중 이미지 정보
 	 * @param imageSource 이미지 바이너리 데이터
@@ -53,6 +55,8 @@ public class DocDao extends AbstractDao {
 	public void record(
 			String id,
 			int seq,
+			int mainSeq,
+			int subSeq,
 			String ip,
 			AbImagePack.ImageInfo imageInfo,
 			byte[] imageSource,
@@ -64,21 +68,23 @@ public class DocDao extends AbstractDao {
 		
 		param.put("ID", id);
 		param.put("SEQ", seq);
+		param.put("MAN_SEQ", mainSeq);
+		param.put("SUB_SEQ", subSeq);
 		param.put("IP", ip);
 		param.put("ROT", imageInfo.angle);
 		param.put("IMG_DEC", imageInfo.decoder);
 		param.put("WID", imageInfo.width);
 		param.put("HGT", imageInfo.height);
 		param.put("IMG_SRC", imageSource);
-		param.put("IMG_SRC_SIZ", imageSource.length);		
+		param.put("IMG_SRC_SIZ", imageSource != null ? imageSource.length : 0);		
 		param.put("IMG_RSLT", imageResult);
 		param.put("IMG_RSLT_SIZ", imageResult != null ? imageResult.length : 0);
 		param.put("SHAPES", imageInfo.shapes);
 		
-		param.put("THUMB_WID", thumbInfo.width);
-		param.put("THUMB_HGT", thumbInfo.height);
+		param.put("THUMB_WID", thumbInfo != null ? thumbInfo.width : 0);
+		param.put("THUMB_HGT", thumbInfo != null ? thumbInfo.height : 0);
 		param.put("THUMB_SRC", thumbSource);
-		param.put("THUMB_SRC_SIZ", thumbSource.length);
+		param.put("THUMB_SRC_SIZ", thumbSource != null ? thumbSource.length : 0);
 		
 		if (imageInfo.hasMetadata()) {
 			AbImageMetadata info = imageInfo.info;

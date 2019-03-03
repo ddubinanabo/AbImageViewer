@@ -36,6 +36,13 @@ var AbShapeObject = function(){
 	 */
 	this.shapeStyle = 'box';	// box, line
 	/**
+	 * 도형 모드 (normal|private)
+	 * <p>* 메모패드 등과 같은 도형의 처리를 위해 추가된 옵션으로, 값이 private 인 경우 엔진은 해당 도형 전용 편집 모드로 전환합니다.
+	 * @type {String}
+	 * @default
+	 */
+	this.editMode = 'private';
+	/**
 	 * 토큰 (예약)
 	 * @private
 	 * @type {String}
@@ -83,6 +90,14 @@ var AbShapeObject = function(){
 	 * @type {Boolean}
 	 */
 	this.collectPoints = true;
+
+	// editor에 좌료를 수집해야 한다는 것을 명시
+	/**
+	 * 라인을 수집한다는 것을 명시합니다.
+	 * <p>*엔진은 이 필드를 확인하고 도형에 좌표를 전달합니다.
+	 * @type {Boolean}
+	 */
+	this.collectLines = true;
 
 };
 
@@ -300,8 +315,9 @@ AbShapeObject.prototype = {
 	 * &lt;&lt;optional&gt;&gt;
 	 * 텍스트 편집을 시작합니다.
 	 * @param {AbViewerEngine} engine 엔진 인스턴스
+	 * @param {AbShapeTextBox.TextEditCallback} [endEdit] 텍스트 편집 콜백 함수
 	 */
-	inlineEdit: function(engine){},
+	inlineEdit: function(engine, endEdit){},
 
 	/**
 	 * &lt;&lt;optional&gt;&gt;
@@ -324,6 +340,20 @@ AbShapeObject.prototype = {
 	 * 스트로크 졍로에 좌표 등록을 마칩니다.
 	 */
 	endPoint: function(){},
+
+	/**
+	 * 좌표 수집을 종료해야 하는 지 판단합니다.
+	 * <p>* 시작점과 동일하면 수집 종료
+	 * @param {Number} x X좌표
+	 * @param {Number} y Y좌표
+	 * @return {Boolean} 종료해야 하면 true
+	 */
+	isEndPoint: function (x, y){
+		if (!this.points.length) return false;
+
+		var pt = this.points[0];
+		return Math.abs(pt.x - x) < 1 && Math.abs(pt.y - y) < 1;
+	},
 
 	/**
 	 * &lt;&lt;optional&gt;&gt;

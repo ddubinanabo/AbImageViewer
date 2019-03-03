@@ -239,4 +239,59 @@ var AbIcons = {
 		data: 'resources/icon/shape.checker.png',
 		width: 64, height: 64,
 	},
+
+	/**
+	 * 48x48 크기의 포스트잇 이미지 정보
+	 * @type {AbIcons.Source}
+	 * @const
+	 * @memberof AbIcons
+	 */
+	MEMOPAD: {
+		data: 'resources/icon/shape.memo.png',
+		width: 48, height: 48,
+	},
+
+	/**
+	 * 64x64 크기의 비디오 이미지 정보
+	 * @type {AbIcons.Source}
+	 * @const
+	 * @memberof AbIcons
+	 */
+	VIDEO: {
+		data: 'resources/icon/icon.video.64.png',
+		width: 64, height: 64,
+	},
+
+	/**
+	 * 512x512 크기의 비디오 이미지 정보
+	 * @type {AbIcons.Source}
+	 * @const
+	 * @memberof AbIcons
+	 */
+	VIDEO_LARGE: {
+		data: 'resources/icon/icon.video.512.png',
+		width: 512, height: 512,
+	},
+
+	/**
+	 * 64x64 크기의 오디오 이미지 정보
+	 * @type {AbIcons.Source}
+	 * @const
+	 * @memberof AbIcons
+	 */
+	AUDIO: {
+		data: 'resources/icon/icon.audio.64.png',
+		width: 64, height: 64,
+	},
+
+	/**
+	 * 512x512 크기의 오디오 이미지 정보
+	 * @type {AbIcons.Source}
+	 * @const
+	 * @memberof AbIcons
+	 */
+	AUDIO_LARGE: {
+		data: 'resources/icon/icon.audio.512.png',
+		width: 512, height: 512,
+	},
 };

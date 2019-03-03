@@ -204,7 +204,7 @@
   * @ignore
   * @function
   */
-function AbImageViewer$$doPrint(){
+ function AbImageViewer$$doPrint(){
 	setTimeout(function (){
 		var eloading = $('#print-loading');
 		eloading.hide();
@@ -282,6 +282,14 @@ function AbImageViewer$$endPrint(id){
 function AbImageViewer(options){
 	if (!options) options = {};
 	var styleOptions = options.style || {};
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 뷰 컨트롤 HTML 엘리먼트 선택자
+	 * @type {String}
+	 */
+	this.selector = options.selector || '#canvas';
 
 	//-----------------------------------------------------------
 	
@@ -434,6 +442,12 @@ function AbImageViewer(options){
 	this.bookmarks = new AbPageCollection();
 
 	/**
+	 * 하단 페이지 목록
+	 * @type {AbPageCollection}
+	 */
+	this.subImages = new AbPageCollection();
+
+	/**
 	 * 이미지 이미지뷰
 	 * <p>* {@link AbImageViewer#install|install()}에서 설정합니다.
 	 * @private
@@ -516,6 +530,11 @@ function AbImageViewer(options){
 		
 		notifySelectPage: this.enableNotifySelectPage,
 	});
+
+	/**
+	 * 뷰 컨트롤
+	 */
+	this.canvas = $(this.selector);
 };
 	
 //-----------------------------------------------------------
@@ -658,6 +677,13 @@ AbImageViewer.prototype = {
 	 */
 	IMAGE_TYPES: [ 'image', 'image-source', 'image-result', 'thumb' ],
 
+	/**
+	 * 이미지 저장 작업 목록 (서브 페이지가 있는 페이지용)
+	 * @static
+	 * @type {Array.<String>}
+	 */
+	REF_IMAGE_TYPES: [ 'image' ],
+
 	//-----------------------------------------------------------
 	
 	/**
@@ -758,6 +784,19 @@ AbImageViewer.prototype = {
 				});
 				this.bookmarkListView.observe(this);
 				this.observe(this.bookmarkListView);
+
+				//-----------------------------------------------------------
+				// 하단 섬네일 목록
+				//-----------------------------------------------------------
+
+				this.subListView = new AbImageSubListView({
+					name: 'sub',
+					pages: this.subImages,
+
+					selector: '#sub-thumbnails',
+				});
+				this.subListView.observe(this);
+				this.observe(this.subListView);
 
 				//-----------------------------------------------------------
 				// 모아보기
@@ -962,10 +1001,18 @@ AbImageViewer.prototype = {
 
 	/**
 	 * 이미지 목록이 변경되었음을 Notify합니다.
+	 * @param {Boolean} [usageSubPage=false] 서브 페이지 여부
 	 */
-	updatePagesNotifyObservers: function(){
-		this.notifyObservers('pages', this.images.length());
-		this.toolbar.set('page.total', this.listView.pages.length(), false);
+	updatePagesNotifyObservers: function(usageSubPage){
+		if (!AbCommon.isBool(usageSubPage)) usageSubPage = false;
+
+		if (usageSubPage){
+			this.notifyObservers('sub.pages', this.subImages.length());
+			this.toolbar.set('page.total', this.subListView.pages.length(), false);	
+		}else{
+			this.notifyObservers('pages', this.images.length());
+			this.toolbar.set('page.total', this.listView.pages.length(), false);	
+		}		
 	},
 
 	//-----------------------------------------------------------
@@ -1044,6 +1091,8 @@ AbImageViewer.prototype = {
 			'annotation.textbox',
 			'annotation.checker',
 			'annotation.stamp',
+			'annotation.polygon',
+			'annotation.memopad',
 			
 			'masking.rectangle',
 			'masking.ellipse'
@@ -1058,8 +1107,10 @@ AbImageViewer.prototype = {
 
 		editable = this.engine.pages.length() > 0;
 
-
 		this.toolbar.enableTopic(pageTopics, editable);
+
+		if (page)
+			this.toolbar.enableKind('image', page.mediaType === 'image');
 	},
 
 	//-----------------------------------------------------------
@@ -1143,9 +1194,27 @@ AbImageViewer.prototype = {
 			
 		case 'clear.shapes': this.clearShapes(); break;
 			
-		case 'page.prev': this.prevPage(); break;
-		case 'page.next': this.nextPage(); break;
-		case 'page.no': this.page(value); break;
+		case 'page.prev':
+			if (this.engine.hasSubPage()){
+				this.prevSubPage();
+			}else{
+				this.prevPage();
+			}
+			break;
+		case 'page.next':
+			if (this.engine.hasSubPage()){
+				this.nextSubPage();
+			}else{
+				this.nextPage();
+			}
+			break;
+		case 'page.no':
+			if (this.engine.hasSubPage()){
+				this.subPage(value);
+			}else{
+				this.page(value);
+			}
+			break;
 
 		case 'page.scale':
 			switch (value){
@@ -1174,6 +1243,8 @@ AbImageViewer.prototype = {
 		case 'annotation.textbox':
 		case 'annotation.checker':
 		case 'annotation.stamp':
+		case 'annotation.polygon':
+		case 'annotation.memopad':
 			this.addShape(topic.replace('annotation.',''))
 				.then(function(r){
 					if (r === 'cancel')
@@ -1212,7 +1283,7 @@ AbImageViewer.prototype = {
 	 * @param {*} value 값
 	 */
 	toolbarGroupNotify: function (sender, group, value){
-		// console.log('[VIEWER][Toolbar][Group]['+ group + '] ' + value);
+		// console.log('[VIEWER][Toolbar][Group]['+ group + '] ', value);
 
 		switch(group){
 		case 'left':
@@ -1232,13 +1303,15 @@ AbImageViewer.prototype = {
 	 * @param {*} value 값
 	 */
 	listViewNotify: function(sender, topic, value){
-		// console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ' + value);
+		// console.log('[VIEWER][ListView]['+sender.name+']['+ topic + '] ', value);
 
 		var page = null, index = -1;
 		switch(topic){
 		case 'info':
 			var page = this.images.getById(value);
-			var rd = AbImageInfoRenderer.render(page);
+			var rd = AbImageInfoRenderer.render(page, {
+				origin: true,
+			});
 			if (rd){
 				AbMsgBox.open({
 					title: rd.title,
@@ -1344,18 +1417,145 @@ AbImageViewer.prototype = {
 				var d = value.pages[i];
 				a.push(d.index);
 			}
-				
-			this.engine.removePages(a);
 
-			this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
-			this.toolbar.set('page.total', this.images.length(), false);
+			if (a.length){
+				this.engine.removePages(a);
 
-			this.notifyObservers(topic, value);
+				this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
+				this.toolbar.set('page.total', this.images.length(), false);
+	
+				this.notifyObservers(topic, value);
+	
+				this.enableSubImages();	
+			}				
 			break;
 
 		case 'history.sync.end':
 			this.toolbar.set('page.no', this.listView.selectedIndex + 1, false);
 			this.toolbar.set('page.total', this.listView.pages.length(), false);
+
+			this.enableSubImages();
+			break;
+		}
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 하단 리스트뷰에서 Notify한 내용을 처리합니다. 
+	 * @private
+	 * @param {AbImageListView} sender Notify한 객체
+	 * @param {String} topic 토픽
+	 * @param {*} value 값
+	 */
+	subListViewNotify: function(sender, topic, value){
+		// console.log('[VIEWER][ListView][SUB]['+sender.name+']['+ topic + '] ', value);
+
+		var page = null, index = -1;
+		switch(topic){
+		case 'info':
+			var page = this.subImages.getById(value);
+			var rd = AbImageInfoRenderer.render(page);
+			if (rd){
+				AbMsgBox.open({
+					title: rd.title,
+					textHtml: rd.html,
+				});
+			}
+			break;
+		case 'request.load':
+			this.loadSubPage(value);
+			break;
+		case 'renderlist':
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('renderlist', {
+				name: sender.name,
+				token: sender.token,
+				visible: value.visible,
+				loading: value.loading,
+			});
+			break;
+		case 'click':
+			page = this.subImages.getById(value.uid);
+			index = this.subImages.indexOf(page);
+			
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('click', {
+				name: sender.name,
+				token: sender.token,
+				index: index,
+				uid: value.uid,
+				status: value.status
+			});
+			break;
+		case 'select':
+			page = this.subImages.getById(value);
+			index = this.subImages.indexOf(page);
+			
+			// 인터페이스를 위한 이벤트 발생
+			this.trigger('select', {
+				name: sender.name,
+				token: sender.token,
+				index: index,
+				uid: value,
+			});
+			
+			this.engine.selectSubPage(index);
+			break;
+		case 'dblclick':
+			if (sender.token === 'popup'){
+				if (this.listPopupStyle === 'readonly'){
+					this.showListViewPopup(false);
+					var collection = this.subImages;
+
+					page = collection.getById(value);
+					index = collection.indexOf(page);
+
+					this.exec(function (){
+						this.engine.selectPage(index);
+					});
+				}else{
+					this.showListViewPopup(false);
+				}
+			}
+			break;
+		case 'selected':
+			this.toolbar.set('page.no', value + 1, false);
+			break;
+		case 'unselect':
+			this.engine.unselectSubPage();
+			this.toolbar.set('page.no', 0, false);
+			break;
+
+		case 'page.remove.list':
+			var siz = value.pages.length, a = [];
+			for (var i=0; i < siz; i++){
+				var d = value.pages[i];
+				a.push(d.index);
+			}
+
+			if (a.length){
+				var delPages = this.engine.removeSubPages(a);
+				
+				// 서브 리스트 뷰는 기존 리스트 뷰와 다르게 별개의 AbPageCollection 객체를 가지고 있습니다.
+				// 따라서, 삭제되는 페이지는 AbPageCollection 객체에 적용하기 위해 삭제 처리를 해줘야 합니다.
+				// this.subImages 객체와 동기화
+				// this.subImages는 별개의 객체이기 때문에 삭제 처리를 따로 해줘야 합니다.
+				for (var i = delPages.length - 1; i >= 0; i--){
+					var d = delPages[i];
+					this.subImages.splice(d.index, 1);
+				}
+				
+				this.toolbar.set('page.no', this.subListView.selectedIndex + 1, false);
+				this.toolbar.set('page.total', this.subImages.length(), false);
+	
+				this.notifyObservers('sub.' + topic, value);
+			}
+			break;
+
+		case 'history.sync.end':
+			this.toolbar.set('page.no', this.subListView.selectedIndex + 1, false);
+			this.toolbar.set('page.total', this.subListView.pages.length(), false);
 			break;
 		}
 	},
@@ -1370,7 +1570,112 @@ AbImageViewer.prototype = {
 	 * @param {*} value 값
 	 */
 	engineNotify: function(sender, topic, value){
-		//console.log('[VIEWER][Engine]['+ topic + '] ' + value);
+		//console.log('[VIEWER][Engine]['+ topic + '] ', value);
+
+		var isSubPageAction = false;
+		var listView = this.listView;
+		var images = this.images;
+		var curPage = this.engine.currentPage;
+		var curPageIndex = this.engine.currentPageIndex;
+
+		// 서브 페이지 처리
+		if (this.engine.hasSubPage()){
+			isSubPageAction = true;
+
+			listView = this.subListView;
+			images = this.subImages;
+			
+			//if (topic && topic.length >= 4 && topic.substr(0, 4) === 'sub.') topic = topic.substr(4);
+
+			switch (topic){
+			case 'sub.request.select':
+				this.subListView.go(value);
+				return;
+
+			case 'sub.page':
+				if (value == 'select'){
+					var page = this.engine.currentPage;
+
+					/**
+					 * 현재 페이지가 섬네일 이미지만 로드되었는다면
+					 * 이미지를 로드하고 화면을 갱신합니다.
+					 */
+					if (page && page.isReadyImage()){
+						this.exec(function (){
+							page.source.image()
+								.then(function(){
+									this.engine.refresh();
+								}.bind(this));
+						});
+					}
+				}
+
+				if (value == 'add' || value == 'select'){
+					var fitTo = this.engine.fit();
+					if (fitTo){
+						this.toolbar.set('page.scale', 'fit.' + fitTo, false);
+
+						this.toolbar.set('fit.' + fitTo, true, false);
+					}else{
+						this.toolbar.set('page.scale', Math.round(this.engine.scale() * 100) + '%', false);
+
+						this.toolbar.set('fit.horiz', false, false);
+						this.toolbar.set('fit.vert', false, false);
+						this.toolbar.set('fit.in', false, false);
+					}
+				}
+
+				if (value == 'select' && curPage){
+					this.notifyObservers('sub.page.select', curPage.uid);
+
+					if (this.engine.focusedShape)
+						this.styler.set(this.engine.focusedShape);
+					else if (!this.engine.selectedShapes.length)
+						this.styler.clear();
+				}
+				
+				// 툴바 활성화
+				this.enableToolbarTopics();
+				return;
+
+			case 'sub.history.sync':
+				
+				// 서브 리스트 뷰는 기존 리스트 뷰와 다르게 별개의 AbPageCollection 객체를 가지고 있습니다.
+				// 따라서, Undo/Redo 되면서 추가/삭제되는 페이지는 AbPageCollection 객체에 적용하기 위해 추가/삭제 처리를 해줘야 합니다.
+				// this.subImages 객체와 동기화
+				// this.subImages는 별개의 객체이기 때문에 추가/삭제 처리를 따로 해줘야 합니다.
+				
+				// undo/redo에 대한 복원 처리
+				switch(value.topic){
+				case 'page':
+					switch(value.cmd){
+					case 'remove':
+						switch(value.docmd){
+						case 'undo':
+							var siz = value.data.length;
+							for (var i=0; i < siz; i++){
+								var d = value.data[i];
+								this.subImages.splice(d.index, 0, d.source);
+							}
+							break;
+	
+						case 'redo':
+							for (var i=value.data.length - 1; i >= 0; i--){
+								var d = value.data[i];
+								this.subImages.splice(d.index, 1);
+							}
+							break;
+						}
+						break;
+					}
+					break;
+				}
+
+				// notify 메시지 전달
+				this.notifyObservers(topic, value);
+				return;
+			}
+		}
 
 		// 페이지 선택 요청
 		if (topic == 'request.select'){
@@ -1437,20 +1742,20 @@ AbImageViewer.prototype = {
 
 		case 'page':
 			if (value == 'select'){
-				var page = this.engine.currentPage;
-
 				/**
 				 * 현재 페이지가 섬네일 이미지만 로드되었는다면
 				 * 이미지를 로드하고 화면을 갱신합니다.
 				 */
-				if (page && page.isReadyImage()){
+				if (curPage && curPage.isReadyImage()){
 					this.exec(function (){
-						page.source.image()
+						curPage.source.image()
 							.then(function(){
 								this.engine.refresh();
 							}.bind(this));
 					});
 				}
+
+				this.enableSubImages();
 			}
 
 			if (value == 'add' || value == 'select'){
@@ -1468,8 +1773,8 @@ AbImageViewer.prototype = {
 				}
 			}
 
-			if (value == 'select' && this.engine.currentPage){
-				this.notifyObservers('page.select', this.engine.currentPage.uid);
+			if (value == 'select' && curPage){
+				this.notifyObservers('page.select', curPage.uid);
 
 				if (this.engine.focusedShape)
 					this.styler.set(this.engine.focusedShape);
@@ -1482,14 +1787,17 @@ AbImageViewer.prototype = {
 			break;
 			
 		case 'history':
-			if (value == 'undoing' || value == 'redoing')
-				// 실행취소/다시실행을 위해 이미지 목록으로 변경
-				this.toggleListView('pages', false);
+			if (!isSubPageAction){
+				if (value == 'undoing' || value == 'redoing')
+					// 실행취소/다시실행을 위해 이미지 목록으로 변경
+					this.toggleListView('pages', false);
+			}
 			break;
 
 		case 'history.sync':
 			// 에디터 설정을 이미지 목록으로 변경
-			this.toggleListView('pages', false);
+			if (!isSubPageAction)
+				this.toggleListView('pages', false);
 
 			this.notifyObservers(topic, value);
 			break;
@@ -1505,33 +1813,69 @@ AbImageViewer.prototype = {
 					var page = list[i];
 					
 					if (AbCommon.isNumber(page))
-						page = this.images.get(page);
+						page = images.get(page);
 					
 					if (!page.source)
 						continue;
-					
-					var func = function (){
-						var self = arguments.callee.self;
-						var page = arguments.callee.page;
 
-						self.renderThumbnail(page);
-					};
-					func.page = page;
-					func.self = this;
-
-					setTimeout(func, execDelay);
+					var numSubPages = page.subPages.length();
+					if (numSubPages){
+						for (var j=0; j < numSubPages; j++){
+							var subPage = page.subPages.get(j);
+							
+							if (subPage.status !== AbPage.prototype.LOADED)
+								continue;
+	
+							var func = function (){
+								var self = arguments.callee.self;
+								var page = arguments.callee.page;
+								var index = arguments.callee.index;
+								
+								self.renderThumbnail(page, {
+									topicPrefix: 'sub.',
+									refSub: index === 0,
+								});
+							};
+							func.page = subPage;
+							func.index = j;
+							func.self = this;
+		
+							setTimeout(func, execDelay);	
+						}	
+					}else{
+						var func = function (){
+							var self = arguments.callee.self;
+							var page = arguments.callee.page;
+	
+							self.renderThumbnail(page);
+						};
+						func.page = page;
+						func.self = this;
+	
+						setTimeout(func, execDelay);	
+					}					
 				}
 
 			}else{
 				this.exec(function (){
-					var page = this.engine.currentPage;
+					var page = curPage;
 					if (!page) return;
 					
-					this.renderThumbnail(page);
+					if (isSubPageAction)
+						this.renderThumbnail(page, {
+							topicPrefix: 'sub.',
+							refSub: curPageIndex === 0,
+						});
+					else
+						this.renderThumbnail(page);
+
 				}, execDelay);
 			}
 			break;
 		}
+
+		// 엔진에 notify 수행이 종료되었음을 알립니다.
+		this.engine.endNotify(topic, value);
 	},
 
 	//-----------------------------------------------------------
@@ -1553,7 +1897,7 @@ AbImageViewer.prototype = {
 		}
 
 		if (changed){
-
+			shape.notify('styling');
 			shape.measure();
 			shape.notify('styled');
 
@@ -1876,13 +2220,14 @@ AbImageViewer.prototype = {
 	 * 페이지를 추가합니다.
 	 * @private
 	 * @param {Function} promise 이미지 로드 함수
+	 * @param {String} [xmlShapes] 도형 정의 XML 문자열
 	 * <p>* {@link AbImageLoader#load|AbImageLoader.load()}를 참고하세요.
 	 * @param {Object} [options] 옵션 
 	 * @param {Object} [options.history=false] History 기록 여부
 	 * @param {Object} [options.angle=0] 이미지 회전 각도
 	 * @return {AbImageViewer.PageData} 페이지 데이터
 	 */
-	add: function(promise, options){
+	add: function(promise, xmlShapes, options){
 		var history = options && AbCommon.isBool(options.history) ? options.history : false;
 		var angle = options && AbCommon.isNumber(options.angle) ? options.angle : 0;
 
@@ -1890,6 +2235,7 @@ AbImageViewer.prototype = {
 			uid: this.images.uuid(),
 			status: AbPage.prototype.READY,
 			loader: promise,
+			xmlShapes: xmlShapes,
 			angle: angle,
 		});
 
@@ -1910,22 +2256,25 @@ AbImageViewer.prototype = {
 	 * XML 문자열로 정의된 도형들을 페이지에 추가합니다.
 	 * @private
 	 * @param {AbPage} page {@link AbPage|페이지} 인스턴스
-	 * @param {String} shapeDefines 도형 정의 XML 문자열
+	 * @param {String} xmlShapes 도형 정의 XML 문자열
 	 * @return {Promise} Promise 객체
 	 */
-	creatingShapes: function (page, shapeDefines){
+	creatingShapes: function (page, xmlShapes){
 		var engine = this.engine;
 		
-		if (shapeDefines){
+		if (xmlShapes){
 			promise = new Promise(function (resolve, reject){
 				var cpage = engine.currentPage;
 				
 				try
 				{
 					// <?xml version="1.0" encoding="UTF-8"?> 제거
-					shapeDefines = AbCommon.removeXmlHeader(shapeDefines);
+					xmlShapes = AbCommon.removeXmlHeader(xmlShapes);
 					
-					var ps = AbCommon.deserializePageShapes(shapeDefines);
+					var ps = AbCommon.deserializePageShapes(xmlShapes);
+					
+					page.xmlShapes = xmlShapes;
+					
 					var psLen = ps.length, called = 0;
 					for (var i=0; i < psLen; i++){
 						var prop = ps[i];
@@ -1973,12 +2322,19 @@ AbImageViewer.prototype = {
 		if (pageData.page.isLoading())
 			return false;
 
+		function isMultiple(e){ return e.images && e.images.length; }
+
 		pageData.page.status = AbPage.prototype.LOADING;
 		this.notifyObservers('page.loading', pageData.page.uid);
 		
 		var engine = this.engine;
 
 		return pageData.page.loader()
+			.then(function(e){
+				if (isMultiple(e))
+					this.prepareSubImageThumbnails(pageData, e.images, e.from);
+				return e;
+			}.bind(this))
 			.then(function (e){
 				/**
 				 * e = {@link AbImageLoader.LoadedImageInfo} 이미지 로드 정보
@@ -1986,7 +2342,8 @@ AbImageViewer.prototype = {
 //				console.log('[PAGE LOADER]');
 //				console.log(e);
 				
-				return this.creatingShapes(pageData.page, e.shapes)
+
+				return this.creatingShapes(pageData.page, pageData.page.xmlShapes)
 					.then(function (){
 						return e;
 					});
@@ -1995,7 +2352,12 @@ AbImageViewer.prototype = {
 				/**
 				 * e = {@link AbImageLoader.LoadedImageInfo} 이미지 로드 정보
 				 */
-				return this.setImage(pageData, e.image, e.info, e.from, e.decoder);	
+
+				var kind = e && e.decoder ? (AbCommon.isString(e.decoder) ? e.decoder : e.decoder.kind ) : null;
+
+				if (kind === 'video' || kind === 'audio')
+					return this.setMedia(pageData, e.media, e.uri, e.info, e.from, e.decoder);	
+				return this.setImage(pageData, e.image, e.info, e.from, e.decoder, e.images);	
 			}.bind(this))
 			.catch(function (e){
 				pageData.page.status = AbPage.prototype.ERROR;
@@ -2007,6 +2369,88 @@ AbImageViewer.prototype = {
 	},
 
 	/**
+	 * 페이지에 로드된 미디어를 설정합니다.
+	 * @private
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 * @param {String} media 미디어 이미지 URI
+	 * @param {String} mediaUri 미디어 URI
+	 * @param {AbMedia.Metadata} mediaInfo 미디어 메타데이터
+	 * @param {AbImageLoader.From} from 미디어 획득처
+	 * @param {(String|AbImageLoader.Result)} decoder 렌더링 힌트 (jpeg|png)
+	 */
+	setMedia: function(pageData, media, mediaUri, mediaInfo, from, decoder){
+		// 미디어 종류
+		var kind = decoder ? (AbCommon.isString(decoder) ? decoder : decoder.kind ) : null;
+
+		// 이미지 객체에 저장될 이미지 정보
+		/**
+		 * @type {AbMedia.Info}
+		 */
+		var info = { from: from, data: mediaInfo };
+
+		var iconLarge = null, icon = null;
+
+		if (kind == 'audio'){
+			iconLarge = AbIcons.AUDIO_LARGE;
+			icon = AbIcons.AUDIO;
+		}else{
+			iconLarge = AbIcons.VIDEO_LARGE;
+			icon = AbIcons.VIDEO;
+		}
+
+		//-----------------------------------------------------------
+
+		var options = {
+			info: info,
+
+			width: iconLarge.width,
+			height: icon.height,
+
+			image: iconLarge.data,
+			thumbnail: icon.data,
+
+			media: {
+				kind: kind,
+				uri: mediaUri,
+				data: media,
+			}
+		};
+
+		//-----------------------------------------------------------
+
+		var abm = new AbMedia(options);
+		var promise = abm.thumbnail();
+
+		//-----------------------------------------------------------
+
+		var pageIndex = pageData.index;
+		var page = pageData.page;
+
+		return promise
+			.then(function(e){
+				page.width = abm.width;
+				page.height = abm.height;
+				page.source = abm;
+				page.mediaType = kind;
+
+				page.error = null;
+				page.status = AbPage.prototype.LOADED;
+
+			}.bind(this))
+			.then(function(e){
+				this.notifyObservers('page.loaded', pageData);
+			}.bind(this))
+			.catch(function(e){
+				console.log(e);
+
+				page.status = AbPage.prototype.ERROR;
+				page.error = e;
+
+				this.notifyObservers('page.error', page.uid);
+			}.bind(this));
+	},
+
+	/**
 	 * 페이지에 로드된 이미지를 설정합니다.
 	 * @private
 	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
@@ -2014,8 +2458,9 @@ AbImageViewer.prototype = {
 	 * @param {AbImage.Metadata} imageInfo 이미지 메타데이터
 	 * @param {AbImageLoader.From} from 이미지 획득처
 	 * @param {(String|AbImageLoader.Result)} decoder 렌더링 힌트 (jpeg|png)
+	 * @param {Array.<AbImageLoader.LoadedImageInfo>} [images] 서브 이미지 목록
 	 */
-	setImage: function(pageData, image, imageInfo, from, decoder){
+	setImage: function(pageData, image, imageInfo, from, decoder, images){
 		// 렌더링 디코더
 		var renderDecoder = 'jpeg';
 		if (decoder){
@@ -2034,6 +2479,7 @@ AbImageViewer.prototype = {
 		 * @type {AbImage.Info}
 		 */
 		var info = { from: from, data: imageInfo, decoder: renderDecoder };
+		if (images && images.length) info.images = images;
 		/**
 		 * AbImage 옵션
 		 */
@@ -2129,6 +2575,7 @@ AbImageViewer.prototype = {
 	 * @property {AbImageLoader.From} [options.from] 이미지 획득처
 	 * @property {AbImage.Metadata} [options.preset] 기준 이미지 메타데이터
 	 * @property {String} [options.decoder] 렌더링 힌트 (jpeg|png)
+	 * @property {String} [options.subTexts] 서브 페이지 표시 문자열
 	 * @return {Promise} Promise 객체
 	 */
 	addImages: function (images, options){
@@ -2155,55 +2602,32 @@ AbImageViewer.prototype = {
 				var siz = images.length;
 				for (var i=0; i < siz; i++){
 					var row = images[i];
-	
-					var loader = function (){
-						var row =  arguments.callee.row;
-						var index =  arguments.callee.index;
-		
-						return new Promise(function (resolve, reject){
-							var img = {};
-							var imageInfo = $.extend({}, options.preset);
-							
-							if (row.info)
-								imageInfo = $.extend(imageInfo, row.info);
-
-							var decoder = options.decoder;
-							
-							if (AbCommon.isString(row)){
-								img['image'] = row;
-							}else{
-								if (AbCommon.isString(row.image)){
-									img['image'] = row.image;
-								}
-								if (AbCommon.isString(row.thumbnail)){
-									img['thumbnail'] = row.thumbnail;
-								}
-								if (AbCommon.isNumber(row.width) && AbCommon.isNumber(row.height) && (row.width > 0 && row.height > 0)){
-									img['width'] = row.width;
-									img['height'] = row.height;
-								}
-								if (AbCommon.isNumber(row.angle)){
-									img['angle'] = row.angle;
-								}
-								if (row.decoder)
-									decoder = row.decoder;
-							}
-
-							var r = { from: options.from, decoder: decoder, image: img, info: imageInfo };
-							if (row.shapes)
-								r['shapes'] = row.shapes;
-
-							resolve(r);
-						});
-					};
-					loader.row = row;
-					loader.index = i;
-		
-					var ap = this.add(loader, {
-						angle: row.angle
-					});
 					
-					addedPages.push(ap);
+					var loader = null;
+					
+					if (row && row.kind === 'pdf'){
+						var decoder = row.decoder || 'jpeg';
+						var kind = row.kind || 'pdf';
+						
+						decoder = AbCommon.createDecoder(decoder, kind);
+						
+						loader = AbImageLoader.loadPdf(false, row.image, decoder, row.info, {
+							from: options.from,
+							subTexts: options.subTexts,
+						});
+					}else{
+						loader = this.createLoader(row, i, options);
+					}
+					
+					if (loader){
+						var xmlShapes = this.getXmlShapesByRow(row);
+						
+						var ap = this.add(loader, xmlShapes, {
+							angle: row.angle
+						});
+						
+						addedPages.push(ap);						
+					}
 				}
 				
 				this.exec(function(){
@@ -2214,6 +2638,116 @@ AbImageViewer.prototype = {
 	
 			});			
 		}.bind(this));
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 로드 함수를 생성합니다.
+	 * @param {Server.ImageData} row 이미지 정보
+	 * @param {Number} index 이미지 정보의 시퀀스
+	 * @param {(Object|AbImageLoader.GetListToken)} [options] 옵션
+	 * @property {AbImageLoader.From} [options.from] 이미지 획득처
+	 * @property {AbImage.Metadata} [options.preset] 기준 이미지 메타데이터
+	 * @property {String} [options.decoder] 렌더링 힌트 (jpeg|png)
+	 * @return {Promise} Promise 객체
+	 */
+	createLoader: function (row, index, options){
+		if (!options) options = {};
+
+		var loader = function (){
+			var row =  arguments.callee.row;
+			var index =  arguments.callee.index;
+
+			return new Promise(function (resolve, reject){
+				var img = {};
+				var imageInfo = null;
+
+				if (options.preset)
+					imageInfo = $.extend({}, options.preset);
+				else
+					imageInfo = {};
+				
+				if (row.info){
+					if (row.images && $.isArray(row.images)){
+						var numSubImages = row.images.length;
+						for (var i=0; i < numSubImages; i++){
+							var subInfo = row.images[i].info;
+							
+							if (subInfo)
+								subInfo.originMeta = row.info;
+						}
+						imageInfo = $.extend(imageInfo, row.images[0].info);
+					}else{
+						imageInfo = $.extend(imageInfo, row.info);
+					}
+				}
+
+				var decoder = options.decoder;
+				var kind = options.kind;
+				var images = null;
+				
+				if (AbCommon.isString(row)){
+					img['image'] = row;
+				}else{
+					if (row.images && $.isArray(row.images)){
+						img['images'] = row.images;
+						
+						images = row.images;
+						row = row.images[0];
+					}
+					
+					if (AbCommon.isString(row.image)){
+						img['image'] = row.image;
+					}
+					if (AbCommon.isString(row.thumbnail)){
+						img['thumbnail'] = row.thumbnail;
+					}
+					if (AbCommon.isNumber(row.width) && AbCommon.isNumber(row.height) && (row.width > 0 && row.height > 0)){
+						img['width'] = row.width;
+						img['height'] = row.height;
+					}
+					if (AbCommon.isNumber(row.angle)){
+						img['angle'] = row.angle;
+					}
+					if (row.decoder)
+						decoder = row.decoder;
+					if (row.kind)
+						kind = row.kind;
+				}
+				
+				decoder = AbCommon.createDecoder(decoder, kind);
+
+				var r = null;
+				
+				if (kind === 'video' || kind === 'audio')
+					r = { from: options.from, decoder: decoder, media: img.image, uri: img.image, info: imageInfo };
+				else{
+					r = { from: options.from, decoder: decoder, image: img, info: imageInfo };
+					
+					if (images)
+						r.images = images;
+				}
+
+				resolve(r);
+			});
+		};
+		loader.row = row;
+		loader.index = index;
+		
+		return loader;
+	},
+	
+	/**
+	 * 서브 이미지 정보에 도형 정의 XML 문자열을 가져옵니다.
+	 * @param {Server.ImageData} row 이미지 정보
+	 * @return {String}
+	 */
+	getXmlShapesByRow: function (row){
+		if (row && row.images && $.isArray(row.images)){
+			row = row.images[0];
+		}
+		return row ? row.shapes : null;
 	},
 
 	//-----------------------------------------------------------
@@ -2310,6 +2844,368 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	/**
+	 * 하단 섬네일 목록을 표시하거나 숨깁니다.
+	 * @private
+	 */
+	enableSubImages: function(){
+		var page = this.engine.currentPage;
+
+		var cssClass = 'adv-sub-open', chgClass = false;
+		if (page && page.isMultiple()){
+			chgClass = !this.canvas.hasClass(cssClass);
+
+			this.canvas.addClass(cssClass);
+
+			this.exec(function(){
+				this.loadSubImageThumbnails(page);
+			});
+		}else{
+			chgClass = this.canvas.hasClass(cssClass);
+
+			this.canvas.removeClass(cssClass);
+
+			this.exec(function(){
+				this.clearSubImageThumbnails();
+
+				this.toolbar.set('page.total', this.listView.pages.length(), false);
+			});
+		}
+		if (chgClass) this.engine.resize();
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 서브 이미지를 준비합니다.
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 * @param {Server.ImageList} images 이미지 목록
+	 * @param {AbImageLoader.From} from 이미지 획득처
+	 */
+	prepareSubImageThumbnails: function(pageData, images, from){
+		if (images){
+			var page = pageData.page;
+			var numPages = images.length;
+
+			for (var i=0; i < numPages; i++){
+				var row = images[i];
+
+				if (i == 0){
+					this.addSubRef(pageData, {
+						angle: row.angle,
+					});
+				}else{
+					var loader = null;
+				
+					if (from)
+						loader = this.createLoader(row, i, {
+							from: from,
+						});
+					else
+						loader = this.createLoader(row, i);
+					
+					var xmlShapes = this.getXmlShapesByRow(row);
+	
+					this.addSub(pageData, loader, xmlShapes, {
+						angle: row.angle,
+					});	
+				}
+			}
+		}
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 서브 페이지를 추가합니다.
+	 * @private
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 * @param {Function} promise 이미지 로드 함수
+	 * @param {String} [xmlShapes] 도형 정의 XML 문자열
+	 * <p>* {@link AbImageLoader#load|AbImageLoader.load()}를 참고하세요.
+	 * @param {Object} [options] 옵션 
+	 * @param {Object} [options.history=false] History 기록 여부
+	 * @param {Object} [options.angle=0] 이미지 회전 각도
+	 */
+	addSub: function(pageData, promise, xmlShapes, options){
+		var angle = options && AbCommon.isNumber(options.angle) ? options.angle : 0;
+
+		var subPage = new AbPage({
+			uid: this.subImages.uuid(),
+			status: AbPage.prototype.READY,
+			loader: promise,
+			xmlShapes: xmlShapes,
+			angle: angle,
+		});
+
+		var pageIndex = pageData.page.subPages.length();
+		pageData.page.subPages.push(subPage);
+
+		//var r = { page: subPage, index: pageIndex, ownerPage: pageData.page, ownerPageIndex: pageData.index };
+		//this.notifyObservers('sub.page.add', r);
+
+		//return r;
+	},
+	//-----------------------------------------------------------
+
+	/**
+	 * 참조 서브 페이지를 추가합니다.
+	 * <p>* 페이지 객체를 서브 페이지에 추가합니다.
+	 * @private
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 */
+	addSubRef: function(pageData, options){
+		var angle = options && AbCommon.isNumber(options.angle) ? options.angle : 0;
+
+		pageData.page.subPages.push(pageData.page);
+
+		// var subPage = new AbPage({
+		// 	uid: pageData.page.uid,
+		// 	status: pageData.page.status,
+		// 	source: pageData.page.source,
+		// 	angle: angle,
+		// });
+
+		//var pageIndex = pageData.page.subPages.length();
+		//pageData.page.subPages.push(subPage);
+
+		//var r = { page: subPage, index: pageIndex, ownerPage: pageData.page, ownerPageIndex: pageData.index };
+		//this.notifyObservers('sub.page.add', r);
+
+		//return r;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 하단 리스트뷰를 초기화합니다.
+	 */
+	clearSubImageThumbnails: function(){
+		this.subImages.splice(0, this.subImages.length());
+		this.subListView.clear();
+	},
+
+	/**
+	 * 페이지 객체의 서브 페이지 목록을 하단 리스트뷰에 반영합니다.
+	 * @param {AbPage} page 페이지 객체
+	 */
+	loadSubImageThumbnails: function(page){
+		this.clearSubImageThumbnails();
+
+		if (page.hasSubPages()){
+			var numPages = page.subPages.length();
+
+			for (var i=0; i < numPages; i++){
+				var subPage = page.subPages.get(i);
+
+				this.subImages.push(subPage);
+				this.subListView.insertListItem(subPage);
+
+				if (subPage.status == AbPage.prototype.LOADED)
+					this.subListView.listItemImage(i);
+			}
+		}
+		
+		this.subListView.selectedIndex = this.engine.currentPageIndex;
+		this.updatePagesNotifyObservers(true);
+		
+		//this.subListView.paging(1, this.engine.currentPageIndex >= 0 ? this.engine.currentPageIndex : 'first');
+		//this.toolbar.set('page.total', this.subListView.pages.length(), false);
+		
+		//console.log('@@@@@@@@@@ [loadSubImageThumbnails] ', this.engine.currentPageIndex);
+	},
+
+	//-----------------------------------------------------------
+	
+	/**
+	 * 서브 리스트뷰에서 선택된 아이템이 페이지와 동일한지 확인합니다.
+	 * @param {AbPage} page 페이지 객체
+	 * @return {Boolean}
+	 */
+	isActivateSubPages: function(page){
+		if (this.engine.ownerPage.hasSubPages())
+			return this.engine.ownerPage.subPages.getById(page.uid) != null;
+		return false;
+	},
+
+	/**
+	 * 서브 리스트뷰에서 체크된 아이템 개수를 가져옵니다.
+	 * @return {Number} 체크된 아이템 개수
+	 */
+	getSelectedSubPages: function (){
+		if (this.engine.ownerPage.hasSubPages())
+			return this.subListView.numSelectedPages();
+		return 0;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 서브 페이지를 로드합니다.
+	 * @private
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 */
+	loadSubPage: function (pageData, sync){
+		if (pageData.page.isLoading())
+			return false;
+		
+		var notifing = this.isActivateSubPages(pageData.page);
+
+		pageData.page.status = AbPage.prototype.LOADING;
+		
+		if (notifing)
+			this.notifyObservers('sub.page.loading', pageData.page.uid);
+		
+		var engine = this.engine;
+
+		return pageData.page.loader()
+			.then(function (e){
+				/**
+				 * e = {@link AbImageLoader.LoadedImageInfo} 이미지 로드 정보
+				 */
+//				console.log('[PAGE LOADER]');
+//				console.log(e);
+				
+				return this.creatingShapes(pageData.page, pageData.page.xmlShapes)
+					.then(function (){
+						return e;
+					});
+			}.bind(this))
+			.then(function (e){
+				/**
+				 * e = {@link AbImageLoader.LoadedImageInfo} 이미지 로드 정보
+				 */
+				return this.setSubImage(pageData, e.image, e.info, e.from, e.decoder, e.images);	
+			}.bind(this))
+			.catch(function (e){
+				pageData.page.status = AbPage.prototype.ERROR;
+				pageData.page.error = e;
+
+				console.log(e);
+				
+				if (notifing)
+					this.notifyObservers('sub.page.error', pageData.page.uid);
+			}.bind(this));
+	},
+
+	/**
+	 * 서브 페이지에 로드된 이미지를 설정합니다.
+	 * @private
+	 * @param {AbImageViewer.PageData} pageData 페이지 데이터
+	 * @param {String} image 이미지 Data URL
+	 * @param {AbImage.Metadata} imageInfo 이미지 메타데이터
+	 * @param {AbImageLoader.From} from 이미지 획득처
+	 * @param {(String|AbImageLoader.Result)} decoder 렌더링 힌트 (jpeg|png)
+	 * @param {Array.<AbImageLoader.LoadedImageInfo>} [images] 서브 이미지 목록
+	 */
+	setSubImage: function(pageData, image, imageInfo, from, decoder, images){
+		// 렌더링 디코더
+		var renderDecoder = 'jpeg';
+		if (decoder){
+			if (AbCommon.isString(decoder)){
+				renderDecoder = decoder;
+			}else{
+				if (decoder.hasOwnProperty('render') && AbCommon.isString(decoder.render))
+					renderDecoder = decoder.render;
+				else
+					renderDecoder = 'png';
+			}
+		}
+		
+		var notifing = this.isActivateSubPages(pageData.page);
+
+		// 이미지 객체에 저장될 이미지 정보
+		/**
+		 * @type {AbImage.Info}
+		 */
+		var info = { from: from, data: imageInfo, decoder: renderDecoder };
+		if (images && images.length) info.images = images;
+		/**
+		 * AbImage 옵션
+		 */
+		var options = { info: info };
+		var isThumbnail = false;
+
+		if (AbCommon.isString(image))
+			options.image = image;
+		else if (image && (image.image || image.thumbnail)){
+			if (!image.image)
+				image.image = image.thumbnail;
+			
+			if (image.width && image.height){
+				options.width = image.width;
+				options.height = image.height;
+			}
+
+			if (image.image && image.width && image.height && image.thumbnail)
+				isThumbnail = true;
+
+			if (image.image) options.image = image.image;
+			if (image.thumbnail) options.thumbnail = image.thumbnail;
+		}
+
+		var abimg = new AbImage(options);
+
+		var pageIndex = pageData.index;
+		var page = pageData.page;
+
+		//-----------------------------------------------------------
+
+		var promise = isThumbnail ? abimg.thumbnail() : abimg.image();
+		
+		var engine = this.engine;
+		var thumbnailGenerator = this.thumbnailGenerator;
+
+		return promise
+			.then(function (e){
+				if (!abimg.hasThumbnail()){
+					if (abimg.thumbInfo.url)
+						return abimg.thumbnail();
+					return abimg.generateThumbnail(this.thumbnailGenerator);
+				}
+			}.bind(this))
+			.then(function (e){
+				page.width = abimg.width;
+				page.height = abimg.height;
+				page.source = abimg;
+				
+				if (page.angle){
+					var pr = AbGraphics.angle.point(page.angle, 0, 0, page.width, page.height);
+					page.width = Math.round(Math.abs(pr.x));
+					page.height = Math.round(Math.abs(pr.y));
+				}
+
+				page.error = null;
+				page.status = AbPage.prototype.LOADED;
+				
+				var promise = null;
+				if (page.shapes.length || page.angle){
+					
+					engine.renderThumbnail(thumbnailGenerator, page);
+					
+					var imgData = thumbnailGenerator.toImage(renderDecoder);
+					return page.source.setThumbnailData(imgData);
+				}else{
+					return Promise.resolve();
+				}
+			}.bind(this))
+			.then(function(e){
+				if (notifing)
+					this.notifyObservers('sub.page.loaded', pageData);
+			}.bind(this))
+			.catch(function(e){
+				console.log(e);
+
+				page.status = AbPage.prototype.ERROR;
+				page.error = e;
+
+				if (notifing)
+					this.notifyObservers('sub.page.error', page.uid);
+			}.bind(this));	
+	},
+
+	//-----------------------------------------------------------
+
+	/**
 	 * 로컬 이미지 파일둘을 로드합니다.
 	 */
 	openLocalFile: function(){
@@ -2356,7 +3252,7 @@ AbImageViewer.prototype = {
 
 				var loader = AbImageLoader.load(file);
 				if (loader)
-					this.add(loader, { history: true });
+					this.add(loader, null, { history: true });
 			}
 
 			this.updatePagesNotifyObservers();
@@ -2451,16 +3347,20 @@ AbImageViewer.prototype = {
 
 		var configLocalSaveLimit = this.config('image.local-save-limit');
 
+		var ownerPageIdx = this.engine.ownerPageIndex;
 		var pageIdx = this.engine.currentPageIndex;
 
 		// 체크된 페이지 또는 현재 페이지 수집
 		var collect = this.collectSelectedOrAllPages({
+			target: 'auto',
 			start: pageIdx,
 			end: pageIdx
 		});
 
 		if (!collect.pages.length)
 			return;
+		
+		var accessSubPages = collect.target === 'sub';
 			
 		if (configLocalSaveLimit && configLocalSaveLimit > 0){
 			if (collect.pages.length > configLocalSaveLimit){
@@ -2488,7 +3388,7 @@ AbImageViewer.prototype = {
 					var len = collect.pages.length;
 					for (var i=0; i < len; i++){
 						var page = collect.pages[i];
-						var index = this.images.indexOf(page.uid);
+						var index = accessSubPages ? this.subImages.indexOf(page.uid) : this.images.indexOf(page.uid);
 
 						// 실행 함수
 						var func = function (resolve, reject){
@@ -2503,7 +3403,14 @@ AbImageViewer.prototype = {
 		
 								AbGraphics.canvas.toBlob(ctx, type == 'jpg' ? 'image/jpeg' : null)
 									.then(function (blob){
-										AbVendor.save(blob, 'image_'+(index+1)+'.' + type);
+										var name = 'image_';
+										
+										if (accessSubPages) name += (ownerPageIdx+1) + '_' + (index+1);
+										else name += '' + (index+1);
+										
+										name += '.' + type;
+										
+										AbVendor.save(blob, name);
 										resolve(index);
 									})
 									.catch(function (e){
@@ -2559,12 +3466,19 @@ AbImageViewer.prototype = {
 			target.value = configSave;
 		}
 		
+		var ownerPageIdx = this.engine.ownerPageIndex;
+		var pageIdx = this.engine.currentPageIndex;
+		
 		// 체크된 페이지 또는 전체 페이지 수집
-		var collect = this.collectSelectedOrAllPages();
+		var collect = this.collectSelectedOrAllPages({
+			target: 'auto',
+		});
+		
+		var accessSubPages = collect.target === 'sub';
 
 		var numShapePages = 0, numShapes = 0, msg = null, isAll = false;
 		if (collect.type == 'all'){
-			var rinfo = this.images.numShapes();
+			var rinfo = accessSubPages ? this.subImages.numShapes() : this.images.numShapes();
 
 			numShapes = rinfo.shapes;
 			numShapePages = rinfo.pages;
@@ -2610,21 +3524,26 @@ AbImageViewer.prototype = {
 					for (var i=0; i < numPages; i++){
 						var page = collect.pages[i];
 
+						var index = accessSubPages ? this.subImages.indexOf(page.uid) : this.images.indexOf(page.uid);
+	
 						if (!page.shapes.length)
 							continue;
 
-						var index = this.images.indexOf(page.uid);
-	
-						// 실행 함수
 						var func = function (resolve, reject){
 							var target = arguments.callee.target;
 							var page = arguments.callee.page;
 							var index = arguments.callee.index;
+							var ownerIndex = arguments.callee.ownerIndex;
+							var accessSubPages = arguments.callee.accessSubPages;
 							var self = arguments.callee.self;
 
 							var output = [AbCommon.xmlHeader()];
-
-							output.push('<page index="'+index+'">');
+							
+							if (hasSubPage){
+								output.push('<page index="'+ownerIndex+'" sub-index="'+index+'">');
+							}else{
+								output.push('<page index="'+index+'">');
+							}
 		
 							var nums = page.shapes.length;
 							for (var j=0; j < nums; j++){
@@ -2639,16 +3558,26 @@ AbImageViewer.prototype = {
 							output.push('</page>');
 
 							var blob = new Blob(output, {type: 'text/plain;charset=utf-8'});
-							saveAs(blob, 'image_'+(index+1)+'_shapes.xml');
+							
+							var name = 'image_';
+							
+							if (accessSubPages) name += (ownerIndex+1) + '_' + (index+1);
+							else name += '' + (index+1);
+							
+							name += '.xml';
+							
+							saveAs(blob, name);
 
 							resolve(index);
 						};
 						func.target = target;
 						func.page = page;
 						func.index = index;
+						func.ownerIndex = ownerPageIdx;
+						func.accessSubPages = accessSubPages;
 						func.self = self;
 
-						ps.push(new Promise(func));
+						ps.push(new Promise(func));	
 					}
 
 					//-----------------------------------------------------------
@@ -2677,7 +3606,7 @@ AbImageViewer.prototype = {
 		if (configSave === 'current') collectOptinos = { current: true };
 		
 		// 체크된 페이지 또는 전체 페이지 수집
-		var collect = this.collectSelectedOrAllPages(collectOptinos);
+		var collect = this.collectSelectedOrAllMainPages(collectOptinos);
 		var msg = null, isAll = false;
 		if (collect.type == 'all'){
 			msg = '모든 이미지를 서버로 전송하시겠습니까?';
@@ -2742,6 +3671,8 @@ AbImageViewer.prototype = {
 			selector: '#server-saving',
 			parallels: this.PARALLELS,
 			
+			scanSubPage: true,
+			
 			id: requestID,
 			
 			urls: {
@@ -2791,26 +3722,28 @@ AbImageViewer.prototype = {
 	 * @return {Promise} Promise 객체
 	 */
 	submitProcess: function(sendor, current, data){
+		
 		//-----------------------------------------------------------
 
-		var types = this.IMAGE_TYPES;
+		var index = current.index;
+		var pageInfo = current.pageInfo;
+		var imgInfo = current.imgInfo;
+		var ref = pageInfo.ref;
+		
+		//-----------------------------------------------------------
+
+		var types = ref ? this.REF_IMAGE_TYPES : this.IMAGE_TYPES;
 		var numTypes = types.length;
 		
 		//-----------------------------------------------------------
 
-		var fc = AbCommon.formController('#save-forms', 'modify,id,index,type,info');
+		var fc = AbCommon.formController('#save-forms', 'modify,id,index,mainindex,subindex,type,info');
 		var modify = sendor.work === 'modify';
 		var id = sendor.transferID;
 		
 		//-----------------------------------------------------------
 		// 수정 작업 여부
 		fc.modify.val(modify);
-	
-		//-----------------------------------------------------------
-
-		var index = current.index;
-		var pageInfo = current.pageInfo;
-		var imgInfo = current.imgInfo;
 		
 		//-----------------------------------------------------------
 		// 전송 데이터 수집
@@ -2820,23 +3753,29 @@ AbImageViewer.prototype = {
 			var type = types[itype];
 			
 			datas.push({
+				ref: ref,
 				index: index,
+				mainIndex: pageInfo.index,
+				subIndex: pageInfo.subIndex,
 				type: type,
 				
 				info: pageInfo,
 				page: pageInfo.page,
-				abimg: pageInfo.page.source,
+				abimg: ref ? null : pageInfo.page.source,
 			});
 		}
 
 		// 완료 작업
 		datas.push({
+			ref: ref,
 			index: index,
+			mainIndex: pageInfo.index,
+			subIndex: pageInfo.subIndex,
 			type: 'end',
 			
 			info: pageInfo,
 			page: pageInfo.page,
-			abimg: pageInfo.page.source,
+			abimg: ref ? null : pageInfo.page.source,
 		});
 
 		//-----------------------------------------------------------
@@ -2866,13 +3805,16 @@ AbImageViewer.prototype = {
 					case 'image':
 						promise = Promise.resolve();
 						
-						imgElement = d.abimg.imageElement();
+						imgElement = d.abimg ? d.abimg.imageElement() : null;
 						
 						output.splice(0, output.length);
 						
-						if (d.page.shapes.length){
+						if (!d.ref && d.page.shapes.length){
 							output.push(AbCommon.xmlHeader());
-							output.push('<page index="'+d.index+'">');
+							output.push('<page index="'+d.mainIndex+'"');
+							if (d.subIndex >= 0)
+								output.push(' sub-index="'+d.subIndex+'" ');
+							output.push('>');
 		
 							var nums = d.page.shapes.length;
 							for (var j=0; j < nums; j++){
@@ -2882,15 +3824,18 @@ AbImageViewer.prototype = {
 							output.push('</page>');
 						}
 						
+						var meta = d.page.info();
+						if (d.ref && meta.originMeta) meta = meta.originMeta;
+						
 						// WAS의 AbImagePack.ImageInfo 대응
 						info = JSON.stringify({
 							angle: d.page.angle,
-							width: imgElement.width,
-							height: imgElement.height,
+							width: imgElement ? imgElement.width : 0,
+							height: imgElement ? imgElement.height : 0,
 							shapes: output.length ? output.join('') : null,
 							decoder: decoder,
 							
-							info: d.page.info(),
+							info: meta,
 						});
 						break;
 						
@@ -2959,7 +3904,7 @@ AbImageViewer.prototype = {
 					
 					promise
 						.then(function(r){
-							self.submitContent(fc, id, d.index, d.type, info, content, function (){
+							self.submitContent(fc, id, d.index, d.mainIndex, d.subIndex, d.type, info, content, function (){
 								try
 								{
 									if (dindex + 1 >= dlength){
@@ -3010,6 +3955,8 @@ AbImageViewer.prototype = {
 	 * @param {AbCommon.SplitedDataFormController} formController 분할 전송용 양식 컨트럴러
 	 * @param {String} id 아이디
 	 * @param {Number} index 인덱스
+	 * @param {Number} mainIndex 메인 인덱스
+	 * @param {Number} subIndex 서브 인덱스
 	 * @param {String} type 이미지 저장 작업 (image|image-source|image-result|thumb)
 	 * <p>* {@link AbImageViewer#IMAGE_TYPES}을 참고하세요.
 	 * @param {String} info 정보 문자열 (WAS의 AbImagePack.ImageInfo 대응, WAS의 AbImagePack.ThumbnailInfo 대응)
@@ -3017,12 +3964,14 @@ AbImageViewer.prototype = {
 	 * @param {Function} success 성공 시 호출되는 콜백 함수
 	 * @param {AbImageViewer.SubmitContentErrorCallback} error 오류 시 호출되는 콜백 함수
 	 */
-	submitContent: function (formController, id, index, type, info, content, success, error, delay){
+	submitContent: function (formController, id, index, mainIndex, subIndex, type, info, content, success, error, delay){
 		var saveUrl = this.URLS.SAVE.IMAGE;
 		var splitDataSiz = this.SPLIT_DATA_SIZE;
 	
 		formController.id.val(id);
 		formController.index.val(index);
+		formController.mainindex.val(mainIndex);
+		formController.subindex.val(subIndex);
 		formController.type.val(type);
 		formController.info.val(info);
 		
@@ -3068,14 +4017,32 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	/**
-	 * 리스트뷰에서 체크된 이미지들을 제거합니다.
+	 * 메인 리스트뷰에서 체크된 이미지들을 제거합니다.
 	 * <p>* page.remove가 Notify 됩니다.
 	 */
 	removePage: function (){
 		if (!this.listView) return;
-	
+		
+		// var accessSubPages = false;
+		// var nums = this.getSelectedSubPages();
+		// if (nums > 0){
+		// 	if (this.subImages.length() - nums > 0){
+		// 		accessSubPages = true;
+		// 	}else{
+		// 		this.images
+		// 	}
+		// }
+
+		// if (accessSubPages){
+		// 	this.notifyObservers('sub.page.remove');
+		// }else{
+		// 	this.notifyObservers('page.remove');
+		// }
+
 		this.notifyObservers('page.remove');
 	},
+
+	//-----------------------------------------------------------
 
 	/**
 	 * 현재 리스트뷰의 페이지를 이동하거나 페이지 번호를 가져옵니다.
@@ -3116,7 +4083,45 @@ AbImageViewer.prototype = {
 	//-----------------------------------------------------------
 
 	/**
-	 * 리스튜에서 체크된 이미지들을 가져옵니다.
+	 * 현재 리스트뷰의 페이지를 이동하거나 페이지 번호를 가져옵니다.
+	 * @param {(Number|String)} [value] 페이지 번호
+	 * @return {Number} 현재 리스트뷰의 페이지 번호
+	 */
+	subPage: function (value){
+		if (!this.subListView) return -1;
+
+		if (arguments.length){
+			if (!AbCommon.isNumber(value)) value = parseInt(value);
+
+			if (!this.subListView.go(value - 1)){
+				this.toolbar.set('page.no', this.subListView.selectedIndex + 1, false);
+			}
+		}
+		return this.subListView.pager.page();
+	},
+
+	/**
+	 * 현재 리스트뷰의 이전 페이지로 이동합니다.
+	 */
+	prevSubPage: function (){
+		if (!this.subListView || !this.subListView.canPrev()) return;
+
+		this.subListView.prev();
+	},
+
+	/**
+	 * 현재 리스트뷰의 다음 페이지로 이동합니다.
+	 */
+	nextSubPage: function (){
+		if (!this.subListView || !this.subListView.canNext()) return;
+
+		this.subListView.next();
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 리스트뷰에서 체크된 이미지들을 가져옵니다.
 	 * @param {String} type 리스트뷰 명칭 (pages|bookmarks)
 	 * @return {Array.<AbPage>}
 	 */
@@ -3135,7 +4140,30 @@ AbImageViewer.prototype = {
 				continue;
 
 			var page = this.images.getById(list[i].uid);
-			if (page)
+			if (page && page.mediaType === 'image')
+				a.unshift(page);
+		}
+		return a;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 하단 리스트뷰에서 체크된 이미지들을 가져옵니다.
+	 * @param {String} type 리스트뷰 명칭 (pages|bookmarks)
+	 * @return {Array.<AbPage>}
+	 */
+	selectedSubPages: function (type){
+		var listView = this.subListView;
+
+		var list = listView.selectedPages();
+		var a = [];
+		for (var i = list.length - 1; i >= 0; i--){
+			if (!list[i].uid)
+				continue;
+
+			var page = this.subImages.getById(list[i].uid);
+			if (page && page.mediaType === 'image')
 				a.unshift(page);
 		}
 		return a;
@@ -3146,6 +4174,7 @@ AbImageViewer.prototype = {
 	/**
 	 * 수집 결과 정보
 	 * @typedef {Object} AbImageViewer.CollectedResult
+	 * @property {String} target 메인|서브 페이지 구분 (main|sub)
 	 * @property {String} type (single|range|all)
 	 * @property {Array.<AbPage>} pages 수집된 {@link AbPage|페이지} 배열
 	 */
@@ -3153,26 +4182,62 @@ AbImageViewer.prototype = {
 	// 체크된 페이지 또는 전체 페이지 수집
 
 	/**
-	 * 체크된 페이지 또는 전체 페이지를 수집합니다.
+	 * 체크된 (메인|서브) 페이지 또는 전체 (메인|서브) 페이지를 수집합니다.
+	 * @private
+	 * @param {Object} [options] 옵션
+	 * @param {Object} [options.target] 메인|서브 페이지의 선택 방법 (auto|auto:checked|sub|main)
+	 * @param {Object} [options.start] 페이지 범위의 시작
+	 * @param {Object} [options.end] 페이지 범위의 끝
+	 * @return {AbImageViewer.CollectedResult} 수집 결과 정보
+	 */
+	collectSelectedOrAllPages: function (options){
+		var target = options && AbCommon.isString(options.target) ? options.target : 'auto';
+		
+		var accessSubPages = false;
+		
+		switch (target){
+		case 'auto': // 엔진의 현재 페이지에 서브 페이지가 있으면 서브로 처리
+			accessSubPages = this.engine.ownerPage.hasSubPages();
+			break;
+			
+		case 'auto:checked': // 엔진의 현재 페이지에 서브 페이지가 있고, 서브 리스트뷰에 체크된 아이템이 있는 경우 서브로 처리
+			accessSubPages = this.getSelectedSubPages() > 0;
+			break;
+			
+		case 'sub': // 서브로 처리
+			accessSubPages = true;
+			break;
+			
+		default: // 메인으로 처리
+			break;
+		}
+		
+		if (accessSubPages)
+			return this.collectSelectedOrAllSubPages(options);
+		return this.collectSelectedOrAllMainPages(options);
+	},
+	
+	/**
+	 * 체크된 메인 페이지 또는 전체 메인 페이지를 수집합니다.
 	 * @private
 	 * @param {Object} [options] 옵션
 	 * @param {Object} [options.start] 페이지 범위의 시작
 	 * @param {Object} [options.end] 페이지 범위의 끝
 	 * @return {AbImageViewer.CollectedResult} 수집 결과 정보
 	 */
-	collectSelectedOrAllPages: function (options){
+	collectSelectedOrAllMainPages: function (options){
 		// 현재 페이지만
 		if (options && options.current === true){
-			if (!this.engine.currentPage)
+			if (!this.engine.currentPage || this.engine.currentPage.mediaType !== 'image')
 				return null;
 			
-			return { type: 'single', pages: [ this.engine.currentPage ] };
+			return { target: 'main', type: 'single', pages: [ this.engine.currentPage ] };
 		}
 		
 		// 체크된 페이지가 있는 경우
 		var a = this.selectedPages();
 		if (a.length)
-			return { type: 'range', pages: a };
+			return { target: 'main', type: 'range', pages: a };
 
 		// 기본 전체 페이지 지정
 		var start = 0, end = this.images.length() - 1;
@@ -3189,9 +4254,59 @@ AbImageViewer.prototype = {
 		var source = [], pages = [], urls = [], map = {};
 		for (var i=start; i >= 0 && i <= end; i++){
 			var page = this.images.get(i);
+
+			if (page.mediaType !== 'image')
+				continue;
+
 			a.push(page);
 		}
-		return { type: type, pages: a };
+		return { target: 'main', type: type, pages: a };
+	},
+	
+	/**
+	 * 체크된 페이지 또는 전체 페이지를 수집합니다.
+	 * @private
+	 * @param {Object} [options] 옵션
+	 * @param {Object} [options.start] 페이지 범위의 시작
+	 * @param {Object} [options.end] 페이지 범위의 끝
+	 * @return {AbImageViewer.CollectedResult} 수집 결과 정보
+	 */
+	collectSelectedOrAllSubPages: function (options){
+		// 현재 페이지만
+		if (options && options.current === true){
+			if (!this.engine.currentPage || this.engine.currentPage.mediaType !== 'image')
+				return null;
+			
+			return { target: 'sub', type: 'single', pages: [ this.engine.currentPage ] };
+		}
+		
+		// 체크된 서브 페이지가 있는 경우
+		var a = this.selectedSubPages();
+		if (a.length)
+			return { target: 'sub', type: 'range', pages: a };
+
+		// 기본 전체 페이지 지정
+		var start = 0, end = this.subImages.length() - 1;
+		var type = 'all';
+
+		// 옵션에 따라 범위 지정
+		if (options && (AbCommon.isNumber(options.start) || AbCommon.isNumber(options.end))){
+			if (AbCommon.isNumber(options.start)) start = options.start;
+			if (AbCommon.isNumber(options.end)) end = options.end;
+			type = (start >= 0 || end >= 0) && start === end ? 'single' : 'range';
+		}
+
+		// 페이지 수집
+		var source = [], pages = [], urls = [], map = {};
+		for (var i=start; i >= 0 && i <= end; i++){
+			var page = this.subImages.get(i);
+
+			if (page.mediaType !== 'image')
+				continue;
+
+			a.push(page);
+		}
+		return { target: 'sub', type: type, pages: a };
 	},
 
 	//-----------------------------------------------------------
@@ -3203,13 +4318,18 @@ AbImageViewer.prototype = {
 		if (!this.engine.currentPage)
 			return;
 
+		//var accessSubPages = this.getSelectedSubPages() > 0;
+		var accessSubPages = this.engine.ownerPage.hasSubPages();
+		var ownerPageIdx = this.engine.ownerPageIndex;
+		var pageIdx = this.engine.currentPageIndex;
+		
 		var uid = this.engine.currentPage.uid;
-		var idx = this.images.indexOf(uid);
+		var idx = accessSubPages ? this.subImages.indexOf(uid) : this.images.indexOf(uid);
 
 		if (idx < 0)
 			return;
 
-		var page = this.images.get(idx);
+		var page = accessSubPages ? this.subImages.get(idx) : this.images.get(idx);
 
 		this.exec(function(){
 			this.print([page]);
@@ -3221,7 +4341,9 @@ AbImageViewer.prototype = {
 	 * 전체 페이지 또는 선택된 페이지를 인쇄합니다.
 	 */
 	printAllPages: function (){
-		var collect = this.collectSelectedOrAllPages();
+		var collect = this.collectSelectedOrAllPages({
+			target: 'auto',
+		});
 		var siz = collect.pages.length;
 
 		if (siz > 40){
@@ -3571,46 +4693,256 @@ AbImageViewer.prototype = {
 	 */
 	clearShapes: function(){
 		// 체크된 페이지 또는 전체 페이지 수집
-		var collect = this.collectSelectedOrAllPages();
-		
-		var numShapes = 0, msg = null, isAll = false;
-		if (collect.type == 'all'){
-			numShapes = this.images.numShapes().shapes;
+		var a = this.selectedPages();
+		var collectType = 'main';
+		if (!a.length){
+			collectType = 'all';
+
+			var numPages = this.images.length();
+			for (var i=0; i < numPages; i++){
+				var page = this.images.get(i);
+	
+				if (page.mediaType !== 'image')
+					continue;
+
+				a.push(page);
+			}	
+		}
+
+		// 도형 또는 도형 정의 XML이 있는 페이지 및 서브 페이지 수집
+		var ps = [], tmps = [];
+		var existShapes = false;
+		var numPages = a.length;
+		for (var i=0; i < numPages; i++){
+			var page = a[i];
+			var exists = false;
+
+			if (page.editable()){
+				// 로드된 페이지 수집
+				if (page.hasSubPages()){
+					// 서브 페이지가 있는 페이지 수집
+					var numSubPages = page.subPages.length();
+					for (var j=0; j < numSubPages; j++){
+						var subPage = page.subPages.get(j);
+						var existSub = false;
+						
+						if (subPage.editable()){
+							// 로드된 서브 페이지 수집
+							if (subPage.hasShapes()) existSub = true;
+						}else{
+							// 로드되지 않은 서브 페이지 수집
+							if (subPage.hasXmlShapes()){
+								existSub = true;
+								
+								// 로드 함수 추가
+								var promiseCallback = function (resolve, reject){
+									var index = arguments.callee.index;
+									var page = arguments.callee.page;
+									var self = arguments.callee.self;
+									
+									self.loadSubPage({
+										index: j,
+										page: subPage,									
+									})
+										.then(function(){
+											resolve(index);
+										}.bind(self))
+										.catch(function(e){
+											reject(e);
+										}.bind(self));
+								};
+								promiseCallback.index = j;
+								promiseCallback.page = subPage;
+								promiseCallback.self = this;
+								
+								ps.push(new Promise(promiseCallback));
+							}
+						}
+						
+						if (existSub) exists = true;
+					}
+				}else{
+					// 단일 페이지 수집
+					if (page.hasShapes())
+						exists = true;
+				}
+			}else{
+				// 로드되지 않은 페이지 수집
+				var index = this.images.indexOf(page.uid);
+
+				// 로드 함수 추가
+				var promiseMainCallback = function (resolve, reject){
+					var index = arguments.callee.index;
+					var page = arguments.callee.page;
+					var self = arguments.callee.self;
+					
+					self.loadPage({
+						index: j,
+						page: page,									
+					})
+						.then(function(){
+							resolve(index);
+						}.bind(self))
+						.catch(function(e){
+							reject(e);
+						}.bind(self));
+				};
+				promiseMainCallback.index = index;
+				promiseMainCallback.page = page;
+				promiseMainCallback.self = this;
+
+				// 도형 정의 XML 문자열이 있으면 로드 함수 추가
+				if (page.hasXmlShapes()){
+					ps.push(new Promise(promiseMainCallback));
+					exists = true;
+				}
+
+				if (page.hasSubPages()){
+					// 서브 페이지가 있는 페이지 수집
+					var added = false;
+					var numSubPages = page.subPages.length();
+					for (var j=0; j < numSubPages; j++){
+						var subPage = page.subPages.get(j);
+						var existSub = false;
+						
+						// 도형 정의 XML 문자열이 있으면
+						if (subPage.hasXmlShapes()){
+							existSub = true;
+
+							// 첫 로드 함수를 추가할 경우,
+							// 부모 페이지의 로드 함수도 추가
+							if (!added){
+								added = true;
+								ps.push(new Promise(promiseMainCallback));
+							}
+							
+							// 로드 함수 추가
+							var promiseCallback = function (resolve, reject){
+								var index = arguments.callee.index;
+								var page = arguments.callee.page;
+								var self = arguments.callee.self;
+								
+								self.loadSubPage({
+									index: j,
+									page: subPage,									
+								})
+									.then(function(){
+										resolve(index);
+									}.bind(self))
+									.catch(function(e){
+										reject(e);
+									}.bind(self));
+							};
+							promiseCallback.index = j;
+							promiseCallback.page = subPage;
+							promiseCallback.self = this;
+							
+							ps.push(new Promise(promiseCallback));
+						}
+						
+						if (existSub) exists = true;
+					}
+				}
+			}
+
+			if (exists) existShapes = true;
+		}
+
+		//-----------------------------------------------------------
+
+		// 도형 또는 도형 정의 XML 문자열이 없으면 수행 종료
+		if (!existShapes)
+			return;
+
+		//-----------------------------------------------------------
+
+		var isAll = false;
+		if (collectType == 'all'){
 			msg = '모든 이미지의 주석/마스킹을 삭제하시겠습니까?';
 			isAll = true;
 		}else{
-			for (var i = collect.pages.length - 1; i >= 0; i--)
-				numShapes += collect.pages[i].shapes.length;
 			msg = '선택한 이미지의 주석/마스킹을 삭제하시겠습니까?';
 		}
+
+		//-----------------------------------------------------------
+
+		AbMsgBox.confirm(msg, null, 'warn')
+			.then(function(r){
+				if (r == 'ok' && ps.length){
+					var loader = $('#file-loading');
+					loader.attr('pl-topic', 'proc');
+
+					var view = loader.find('.pl-loading');
+					var bar = view.find('.bar');
+
+					bar.css('width', '0%');
+
+					var prog = {
+						view: view,
+						bar: bar
+					};
+
+					var progressCallback = function (cur, max){
+						var per = cur / max * 100;
 		
-		if (numShapes){
-			AbMsgBox.confirm(msg, null, 'warn')
-				.then(function (r){
-					var callback = function(pageInfos){
-						if (pageInfos){
-							for (var i=0; i < pageInfos.length; i++){
-								var pageInfo = pageInfos[i];
-								//console.log('[CLEAR][SHAPES][' + pageInfo.index + ']');
-								
+						prog.bar.css('width', per.toFixed(1) + '%');				
+					};
+
+					loader.show();
+				
+					return new Promise(function(resolve, reject){
+						AbCommon.sequencePromiseAll(ps, progressCallback, { term: { progress: 10, promise: 10 } })
+							.then(function (){
+								loader.hide();
+
+								resolve(r);
+							})
+							.catch(function(e){
+								loader.hide();
+
+								console.log(e);
+								AbMsgBox.error(e);
+	
+								resolve('cancel');
+							});
+					});
+				}else{
+					return r;
+				}
+			}.bind(this))
+			.then(function (r){
+				var callback = function(pageInfos){
+					if (pageInfos){
+						for (var i=0; i < pageInfos.length; i++){
+							var pageInfo = pageInfos[i];
+							//console.log('[CLEAR][SHAPES][' + pageInfo.index + ']');
+
+							if (pageInfo.ownerPage){
+								if (pageInfo.page.editable())
+									this.renderThumbnail(pageInfo.page, {
+										topicPrefix: 'sub.',
+										refSub: pageInfo.index === 0,
+									});
+							}else{
 								if (pageInfo.page.editable())
 									this.renderThumbnail(pageInfo.page);
 							}
+							
 						}
-					}.bind(this);
-					
-					if (r == 'ok'){
-						if (isAll)
-							this.engine.removeAllPageShapes({
-								end: callback
-							});
-						else
-							this.engine.removeRangePageShapes(collect.pages, {
-								end: callback
-							});
 					}
-				}.bind(this));
-		}
+				}.bind(this);
+				
+				if (r == 'ok'){
+					if (isAll)
+						this.engine.removeAllPageShapes({
+							end: callback
+						});
+					else
+						this.engine.removeRangePageShapes(collect.pages, {
+							end: callback
+						});
+				}
+			}.bind(this));
 
 	},
 
@@ -3620,8 +4952,16 @@ AbImageViewer.prototype = {
 	 * 페이지를 섬네일 이미지로 렌더링합니다.
 	 * <p>* 완료 후 modified가 Notify 됩니다.
 	 * @param {AbPage} page {@link AbPage|페이지} 인스턴스
+	 * @param {Object} [options] 수행 옵션
+	 * @param {String} [options.topicNotify] notify 토픽명 접두사
+	 * @param {String} [options.refSub] 해당 서브 페이지가 참조 페이지인지 여부
 	 */
-	renderThumbnail: function(page){
+	renderThumbnail: function(page, options){
+		if (!options) options = {};
+
+		var topicPrefix = AbCommon.isString(options.topicPrefix) ? options.topicPrefix : '';
+		var refSub = AbCommon.isBool(options.refSub) ? options.refSub : false;
+
 		this.engine.renderThumbnail(this.thumbnailGenerator, page);
 
 		var decoder = page.decoder();
@@ -3629,7 +4969,9 @@ AbImageViewer.prototype = {
 		var imgData = this.thumbnailGenerator.toImage(decoder);
 		page.source.setThumbnailData(imgData);
 
-		this.notifyObservers('modified', { uid: page.uid, data: imgData });		
+		this.notifyObservers(topicPrefix + 'modified', { uid: page.uid, data: imgData });
+
+		if (refSub) this.notifyObservers('modified', { uid: page.uid, data: imgData });
 	},
 
 	//-----------------------------------------------------------

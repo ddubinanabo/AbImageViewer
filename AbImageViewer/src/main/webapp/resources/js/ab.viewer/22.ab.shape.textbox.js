@@ -38,6 +38,13 @@
  */
 
 /**
+ * 텍스트 편집 콜백함수
+ * @callback AbShapeTextBox.TextEditCallback
+ * @param {String} cmd 수행 명령 (focusout|input)
+ * @param {String} status 호출 시점 (enter|measured|end)<p>* enter: 수행 전, measured: measured 수행 후, end: 수행 완료 후
+ */
+
+/**
  * 메모 도형
  * @class
  * @param {Object} [options] 옵션
@@ -58,6 +65,8 @@ function AbShapeTextBox(options){
 	var strokeStyle = style.stroke || {};
 	var textStyle = style.text || {};
 	var textPadding = options.textPadding || { left: 2, top: 2, right: 2, bottom: 2 };
+
+	//-----------------------------------------------------------
 
 	/**
 	 * 명칭
@@ -107,7 +116,14 @@ function AbShapeTextBox(options){
 	 * 편집점 지시자 인스턴스
 	 * @type {AbBoxEditIndicator}
 	 */
-	this.indicator = AbCommon.isDefined(AbBoxEditIndicator) ? new AbBoxEditIndicator({ target: this }) : null;
+	this.indicator = null;
+
+	if (AbCommon.isDefined(AbBoxEditIndicator)){
+		var indicatorOption = $.extend({}, options.indicator);
+		indicatorOption.target = this;
+
+		this.indicator = new AbBoxEditIndicator(indicatorOption);
+	}
 
 	/**
 	 * 텍스트 내용
@@ -198,6 +214,23 @@ function AbShapeTextBox(options){
 
 AbShapeTextBox.prototype = {
 	constructor: AbShapeTextBox,
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 도형 객체 복제 시 복제/참조 여부
+	 * <p>* AbCommon.cloneShape() 호출 시 이 객체를 복제할 지 여부로, true면 객체 복재를 false면 참조합니다.
+	 * @type {Boolean}
+	 * @default
+	 */
+	//$$CLONE: true,
+	/**
+	 * 도형 객체 복제 시 도형 객체 참조 필드
+	 * <p>* AbCommon.cloneShape() 호출 시 이 객체의 $$CHAIN 필드에 도형 객체를 참조합니다.
+	 * @type {String}
+	 * @default
+	 */
+	$$CHAIN: 'target',
 
 	//-----------------------------------------------------------
 
@@ -665,14 +698,18 @@ AbShapeTextBox.prototype = {
 	/**
 	 * 텍스트 편집을 시작합니다.
 	 * @param {AbViewerEngine} engine 엔진 인스턴스
+	 * @param {AbShapeTextBox.TextEditCallback} [endEdit] 텍스트 편집 콜백 함수
 	 */
 	inlineEdit: function(engine, endEdit){
+		var existEndEdit = typeof endEdit == 'function';
 		var textbox = engine.textbox;
 
 		textbox.on('focusout', { engine: engine, shape: this, textbox: textbox }, function (e){
 			var element = $(this);
 			var s = e.data.shape;
 			var text = element.val();
+
+			if (existEndEdit) endEdit('focusout', 'enter');
 
 			textbox.off('focusout');
 			textbox.off('input');
@@ -688,18 +725,24 @@ AbShapeTextBox.prototype = {
 
 			s.textEditMode = false;
 
+			if (existEndEdit) endEdit('focusout', 'measured');
+
 			// end record history
 			e.data.engine.history.end(e.data.engine);
 			e.data.engine.render(true, true);
 
 			setTimeout(function(){
 				textbox.hide();
+
+				if (existEndEdit) endEdit('focusout', 'end');
 			}, 0);
 		});
 
 		textbox.on('input', { engine: engine, shape: this, textbox: textbox }, function (e){
 			var element = $(this);
 			var s = e.data.shape;
+
+			if (existEndEdit) endEdit('input', 'enter');
 
 			var w = null, h = null;
 			if (this.scrollWidth > element.width())
@@ -758,6 +801,10 @@ AbShapeTextBox.prototype = {
 
 				e.data.engine.render();
 			}
+
+			if (existEndEdit) endEdit('focusout', 'measured');
+
+			if (existEndEdit) endEdit('input', 'end');
 		});
 
 		var px = AbCss.pixel(this.style.text.size); 

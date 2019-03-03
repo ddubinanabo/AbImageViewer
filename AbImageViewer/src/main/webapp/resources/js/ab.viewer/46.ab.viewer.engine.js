@@ -64,6 +64,7 @@
  * <tr><td>type</td><td></td></tr>
  * <tr><td>shapeType</td><td></td></tr>
  * <tr><td>shapeStyle</td><td></td></tr>
+ * <tr><td>editMode</td><td></td></tr>
  * <tr><td>token</td><td></td></tr>
  * <tr><td>selected</td><td></td></tr>
  * <tr><td>focused</td><td></td></tr>
@@ -73,6 +74,7 @@
  * 
  * <tr><td>creationSize</td><td>&lt;optinoal&gt;</td></tr>
  * <tr><td>collectPoints</td><td>&lt;optinoal&gt;</td></tr>
+ * <tr><td>collectLines</td><td>&lt;optinoal&gt;</td></tr>
  * 
  * <tr><td>move()</td><td></td></tr>
  * <tr><td>styleDesc()</td><td></td></tr>
@@ -102,6 +104,7 @@
  * <tr><td>restoreMinimumSize()</td><td>&lt;optinoal&gt;</td></tr>
  * <tr><td>addPoint()</td><td>&lt;optinoal&gt;</td></tr>
  * <tr><td>endPoint()</td><td>&lt;optinoal&gt;</td></tr>
+ * <tr><td>isEndPoint()</td><td>&lt;optinoal&gt;</td></tr>
  * <tr><td>creationDraw()</td><td>&lt;optinoal&gt;</td></tr>
  * <tr><td>creationMinimum()</td><td>&lt;optinoal&gt;</td></tr>
  * </tbody>
@@ -115,6 +118,7 @@
  * @property {String} type 구분 (annotation=주석|masking=마스킹)
  * @property {String} shapeType 도형 유형 (shape|polygon|image)
  * @property {String} shapeStyle 도형 스타일 (box|line)
+ * @property {String} editMode 도형 모드 (normal|private)
  * @property {Object} token 토큰 (예약)
  * @property {Boolean} selected 선택 여부
  * @property {Boolean} focused 포커스 여부
@@ -124,6 +128,7 @@
  * 
  * @property {String} [creationSize] 생성 시 크기 설정 여부를 명시합니다.
  * @property {Boolean} [collectPoints] 스트로크를 수집한다는 것을 명시합니다.
+ * @property {Boolean} [collectLines] 라인을 수집한다는 것을 명시합니다.
  * 
  * @property {Function} move() 도형을 이동합니다.
  * @property {Function} styleDesc() 도형의 스타일 편집 정보를 가져옵니다.
@@ -153,6 +158,7 @@
  * @property {Function} [restoreMinimumSize()] 복구 최소 크기를 가져옵니다.
  * @property {Function} [addPoint()] 좌표를 스트로크 경로에 추가합니다.
  * @property {Function} [endPoint()] 스트로크 졍로에 좌표 등록을 마칩니다.
+ * @property {Function} [isEndPoint()] 좌표 수집을 종료해야 하는 지 판단합니다.
  * @property {Function} [creationDraw()] 생성 중 도형을 그립니다.
  * @property {Function} [creationMinimum()] 생성 시 최소 크기를 가져옵니다.
  */
@@ -536,6 +542,11 @@ function AbViewerEngine(options){
 
 	//-----------------------------------------------------------
 
+	this.ownerPageIndex = -1;
+	this.ownerPage = null;
+
+	//-----------------------------------------------------------
+
 	/**
 	 * 클립보드 관리자 인스턴스
 	 * @type {AbClipboard}
@@ -569,6 +580,17 @@ function AbViewerEngine(options){
 	 * @type {AbViewerEngineSelection}
 	 */
 	this.selection = new AbViewerEngineSelection({
+		engine: this
+	});
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 미디어 플레이어 인스턴스
+	 * @type {AbViewerMediaPlayer}
+	 */
+
+	this.mediaPlayer = new AbViewerMediaPlayer({
 		engine: this
 	});
 
@@ -609,6 +631,16 @@ function AbViewerEngine(options){
 	 * @type {Boolean}
 	 */
 	this.mouseTriggered = false;
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 수행 동작에 대한 callback 모음
+	 * <p>* 필드명이 수행 동작, 필드값이 Function인 객체입니다.
+	 * @private
+	 * @type {Object.<String, Array.<Function>>}
+	 */
+	this.behaviorListeners = {};
 }
 	
 //-----------------------------------------------------------
@@ -736,6 +768,8 @@ AbViewerEngine.prototype = {
 		line: new AbShapeLine(),
 		checker: new AbShapeImage({ name: 'checker', source: AbIcons.CHECKER }),
 		stamp: new AbShapeStamp(),
+		polygon: new AbShapePolygon(),
+		memopad: new AbShapeMemoPad({ source: AbIcons.MEMOPAD }),
 	},
 	
 	//-----------------------------------------------------------
@@ -777,6 +811,8 @@ AbViewerEngine.prototype = {
 			});
 	
 			this.panel.append(canvas);
+
+			this.mediaPlayer.install();
 	
 			var viewCanvas = canvas.get(0);
 			this.viewContext = viewCanvas.getContext('2d');
@@ -883,6 +919,26 @@ AbViewerEngine.prototype = {
 			this.observers.notify(topic, value, callback);
 		}else{
 			if (AbCommon.isFunction(callback)) callback(false);
+		}
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 외부에서 notify를 처리했음을 알립니다.
+	 * @param {String} topic 
+	 * @param {*} value 
+	 */
+	endNotify: function(topic, value){
+		switch(topic){
+		case 'page':
+			if (value === 'select')
+				this.execBehaviorListeners('selectPage');
+			break;
+		case 'sub.page':
+			if (value === 'select')
+				this.execBehaviorListeners('selectSubPage');
+			break;
 		}
 	},
 
@@ -1061,6 +1117,16 @@ AbViewerEngine.prototype = {
 	//-----------------------------------------------------------
 	
 	/**
+	 * 현재 페이지가 미디어 페이지인지 확인합니다.
+	 * @return {Boolean}
+	 */
+	isMediaPage: function(){
+		return this.currentPage && (this.currentPage.mediaType == 'video' || this.currentPage.mediaType == 'audio');
+	},
+	
+	//-----------------------------------------------------------
+	
+	/**
 	 * 도형을 화면에 표시할 수 있는 지 확인합니다.
 	 * @param {String} type 도형 구분 (annotation=주석/masking=마스킹)
 	 * @return {Boolean}
@@ -1219,7 +1285,7 @@ AbViewerEngine.prototype = {
 	 */
 	execCommand: function(cmd, value){
 		if (!this.maniplatable()) return;
-
+		
 		var f = function(){
 			var cmd = arguments.callee.cmd;
 
@@ -1238,6 +1304,254 @@ AbViewerEngine.prototype = {
 
 		this.exec(f);
 	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 동작 수행 후에 실행될 리스너를 등록합니다.
+	 * @private
+	 * @param {String} behavior 수행 동작
+	 * @param {Function} listener 리스너
+	 */
+	addBehaviorListeners: function (behavior, listener){
+		if (!listener || !AbCommon.isFunction(listener))
+			return;
+
+		if (this.behaviorListeners[behavior]){
+			this.behaviorListeners[behavior].push(listener);
+		}else{
+			this.behaviorListeners[behavior] = [listener];
+		}
+	},
+
+	/**
+	 * 동작 수행 리스너를 수행합니다.
+	 * @param {String} behavior 수행 동작
+	 */
+	execBehaviorListeners: function (behavior){
+		var bl = this.behaviorListeners[behavior];
+		if (bl){
+			for (var i=bl.length - 1; i >= 0; i--){
+				var listener = bl[0];
+				bl.splice(0, 1);
+
+				if (listener)
+					listener();
+			}
+
+			delete this.behaviorListeners[behavior];
+		}
+	},
+
+	//-----------------------------------------------------------
+	// 외부(history 등)에서 엔진의 정보를 가져오거나 설정할 떄 사용하는 기능 모음입니다.
+	// <p>* 저수준 함수로, 에디터의 편집 상태 등을 검색하지 않습니다.
+	//-----------------------------------------------------------
+
+	/**
+	 * 엔진의 정보를 질의하고, 결과를 가져옵니다.
+	 * <p>* 하단 섬네일 목록이 추가되면서 이 기능이 추가되었습니다.
+	 * @param {String} commandName 명령어
+	 */
+	query: function(){
+		var cmd = arguments[0];
+		if (!cmd) return null;
+
+		var idx = -1, ownerIdx = -1;
+		switch (cmd){
+		case 'page':
+			idx = arguments[1];
+			if (arguments.length >= 3 && AbCommon.isNumber(arguments[2])) ownerIdx = arguments[2];
+
+			if (ownerIdx >= 0){
+				var page = this.pages.get(ownerIdx);
+				if (page.hasSubPages())
+					return page.subPages.get(idx);
+				return page;
+			}
+			return this.pages.get(idx);
+		}
+		return null;
+	},
+
+	/**
+	 * 엔진의 정보를 설정하거나, 동작을 수행합니다.
+	 * <p>* execCommand() 함수에 비해 저수준으로, 보다 상세한 정보 또는 동작을 처리합니다.
+	 * <p>* 하단 섬네일 목록이 추가되면서 이 기능이 추가되었습니다.
+	 * @param {String} commandName 명령어
+	 */
+	command: function (){
+		var cmd = arguments[0];
+		if (!cmd) return null;
+
+		var idx = -1, ownerIdx = -1;
+		var forcibly = false;
+		switch (cmd){
+		case 'page.select':
+			idx = arguments[1];
+			if (arguments.length >= 3 && AbCommon.isNumber(arguments[2])) ownerIdx = arguments[2];
+			if (arguments.length >= 4 && AbCommon.isBool(arguments[3])) forcibly = arguments[3];
+
+			if (ownerIdx >= 0){
+				if (this.ownerPageIndex !== ownerIdx){
+					this.selectPage(ownerIdx, forcibly, function(){
+						this.selectSubPage(idx, forcibly);
+					}.bind(this));
+				}else{
+					this.selectSubPage(idx, forcibly);
+				}
+			}else{
+				this.selectPage(idx, forcibly);
+			}
+			break;
+
+		case 'page.render':
+			idx = arguments[1];
+			if (arguments.length >= 3 && AbCommon.isNumber(arguments[2])) ownerIdx = arguments[2];
+			if (arguments.length >= 4 && AbCommon.isBool(arguments[3])) forcibly = arguments[3];
+
+			if (ownerIdx >= 0){
+				if (this.ownerPageIndex !== ownerIdx){
+					this.selectPage(ownerIdx, forcibly, function(){
+						this.selectSubPage(idx, forcibly, function(){
+							this.render();
+						}.bind(this));
+					}.bind(this));
+				}else{
+					if (idx !== this.currentPageIndex){
+						this.selectSubPage(idx, forcibly, function(){
+							this.render();
+						}.bind(this));
+					}else
+						this.render();
+				}
+			}else{
+				if (idx !== this.currentPageIndex)
+					this.selectPage(idx, forcibly, function(){
+						this.render();
+					}.bind(this));
+				else
+					this.render();
+			}
+			break;
+			
+		case 'history.sync':
+			if (arguments.length >= 6){
+				var topic = arguments[1];
+				var cmd = arguments[2];
+				var docmd = arguments[3];
+				var ownerIndex = AbCommon.isNumber(arguments[4]) ? arguments[4] : -1;
+				var data = arguments[5];
+				var callback = arguments.length >= 7 && AbCommon.isFunction(arguments[6]) ? arguments[6] : null;
+				
+				if (ownerIndex >= 0){
+					if (this.ownerPageIndex !== ownerIndex)
+						callback();
+					else
+						this.subPageHistorySync(topic, cmd, docmd, data, callback);
+				}else{
+					this.historySync(topic, cmd, docmd, data, callback);
+				}
+			}
+			break;
+		}
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * History State와의 동기화 처리를 위해 history.sync를 Notify합니다.
+	 * <p>* {@link AbImageListView|이미지 리스트뷰}에서 처리합니다.
+	 * <table>
+	 * <thead>
+	 * <tr>
+	 * 	<th>topic</th><th>cmd</th><th>docmd</th><th>data</th><th>설명</th>
+	 * </tr>
+	 * </thead>
+	 * <tbody>
+	 * <tr>
+	 * 	<td>page</td><td>add</td><td>undo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 제거해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>add</td><td>redo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 추가해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>update</td><td>undo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>update</td><td>redo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>remove</td><td>undo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 추가해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>remove</td><td>redo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 제거해야 합니다.</td>
+	 * </tr>
+	 * </tbody>
+	 * </table>
+	 * @param {String} topic 토픽 (shape|page)
+	 * @param {String} cmd 명령어 (add|remove|update 등등)
+	 * @param {String} docmd 수행명령어 (undo|redo)
+	 * @param {AbHistory.HistorySyncArgs} data 데이터
+	 * <p>* 동작에 따라 유형이 달라집니다
+	 * @param {AbViewerEngineObservers.NotifyCallback} callback Notify 후 호출되는 콜백 함수
+	 */
+	historySync: function (topic, cmd, docmd, data, callback){
+		this.notifyObservers('history.sync', {
+			topic: topic,
+			cmd: cmd,
+			docmd: docmd,
+			data: data
+		}, callback);
+	},
+
+	/**
+	 * History State와의 동기화 처리를 위해 history.sync를 Notify합니다.
+	 * <p>* {@link AbImageSubListView|이미지 서브 리스트뷰}에서 처리합니다.
+	 * <table>
+	 * <thead>
+	 * <tr>
+	 * 	<th>topic</th><th>cmd</th><th>docmd</th><th>data</th><th>설명</th>
+	 * </tr>
+	 * </thead>
+	 * <tbody>
+	 * <tr>
+	 * 	<td>page</td><td>add</td><td>undo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 제거해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>add</td><td>redo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 추가해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>update</td><td>undo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>update</td><td>redo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>remove</td><td>undo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 추가해야 합니다.</td>
+	 * </tr>
+	 * <tr>
+	 * 	<td>page</td><td>remove</td><td>redo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 제거해야 합니다.</td>
+	 * </tr>
+	 * </tbody>
+	 * </table>
+	 * @param {String} topic 토픽 (shape|page)
+	 * @param {String} cmd 명령어 (add|remove|update 등등)
+	 * @param {String} docmd 수행명령어 (undo|redo)
+	 * @param {AbHistory.HistorySyncArgs} data 데이터
+	 * <p>* 동작에 따라 유형이 달라집니다
+	 * @param {AbViewerEngineObservers.NotifyCallback} callback Notify 후 호출되는 콜백 함수
+	 */
+	subPageHistorySync: function (topic, cmd, docmd, data, callback){
+		this.notifyObservers('sub.history.sync', {
+			topic: topic,
+			cmd: cmd,
+			docmd: docmd,
+			data: data
+		}, callback);
+	},
+
+	//-----------------------------------------------------------
 
 	/**
 	 * 키 입력 이벤트를 처리합니다.
@@ -1322,7 +1636,7 @@ AbViewerEngine.prototype = {
 		if (!e.data.currentPage || !e.data.maniplatable()) return;
 
 		var isRightKey = e.which == 3;
-		if (isRightKey) return;
+		//if (isRightKey) return;
 			
 		if (e.target == e.data.viewContext || e.target == e.data.viewContext.canvas){
 			e.data.mouse(true, e.type, e);
@@ -1348,6 +1662,7 @@ AbViewerEngine.prototype = {
 	canvasBlurEvent: function (e){
 		e.data.exec(function(){
 			this.selection.reset();
+			if (this.selection.focusOutEditOut()) this.render();
 		});
 	},
 
@@ -1698,9 +2013,8 @@ AbViewerEngine.prototype = {
 			if (AbCommon.wannaCollectPoints(targetShape))
 				targetShape.addPoint(this.selection.end.x, this.selection.end.y);
 
-			if (!AbCommon.supportCreationDraw(targetShape))
+			if (!AbCommon.supportCreationDraw(targetShape) || this.selection.isForciblyRestore())
 				this.restoreSelection();
-				//console.log('aa');
 			
 			if (!AbCommon.hasCreationStyleShape(targetShape) || targetShape.creationStyle() != 'click')
 				this.drawCreation();
@@ -1808,6 +2122,8 @@ AbViewerEngine.prototype = {
 			if (this.selection.editTarget && this.selection.edit){
 				this.selection.mode = 'resize';
 			}else if (targetShape){
+				this.selection.editOut();
+
 				this.unselect(false);
 				this.selection.mode = 'creation';
 	
@@ -1816,7 +2132,7 @@ AbViewerEngine.prototype = {
 				}
 	
 				this.runtime = true;
-				// console.log('[RUNTIME][ON] ' + this.runtime);
+				//console.log('[RUNTIME][ON] ' + this.runtime);
 			}else{
 				var s = null;
 	
@@ -1841,6 +2157,9 @@ AbViewerEngine.prototype = {
 				if (!this.selection.mode){
 					s = this.getShape(states.x, states.y);
 					if (s){
+						if (this.selection.isInShape() && !this.selection.equalsInShape(s))
+							this.selection.editOut();
+
 						if (s.selected){
 							if (states.additional){
 								this.unselectShape(s);
@@ -1858,7 +2177,8 @@ AbViewerEngine.prototype = {
 							this.selection.mode = 'move';
 							this.render();
 						}
-					}
+					}else if (this.selection.isInShape())
+						this.selection.editOut();
 				}
 	
 				if (!this.selection.mode){
@@ -1873,7 +2193,12 @@ AbViewerEngine.prototype = {
 			// begin record history
 			switch(this.selection.mode){
 			case 'resize':
-				this.history.begin('shape', 'update', this, ['angle', 'x', 'y', 'width', 'height', 'x1', 'y1', 'x2', 'y2', 'textWidth', 'textHeight', 'text'], this.selection.edit);
+				var resizeProps = ['angle', 'x', 'y', 'width', 'height', 'x1', 'y1', 'x2', 'y2', 'textWidth', 'textHeight', 'text', 'points'];
+				if (this.selection.editTarget.shapeType === 'polygon'){
+					resizeProps.push('points', 'minPointX', 'minPointY', 'maxPointX', 'maxPointY');
+				}
+
+				this.history.begin('shape', 'update', this, resizeProps, this.selection.edit);
 				break;
 			case 'move':
 				this.history.begin('shape', 'update', this, ['angle', 'x', 'y', 'x1', 'y1', 'x2', 'y2']);
@@ -1922,10 +2247,24 @@ AbViewerEngine.prototype = {
 		
 			break;
 		case 'creation':
-			this.runtime = false;
-			// console.log('[RUNTIME][OFF] ' + this.runtime);
-
 			var targetShape = this.shapeObject(this.selection.target);
+
+			var ended = false;
+			if (AbCommon.wannaCollectLines(targetShape)){
+				if (states.arg.button === 'left'){
+					if (AbCommon.supportEndPointCheck(targetShape) && targetShape.isEndPoint(this.selection.end.x, this.selection.end.y)){
+						ended = true;
+					}else{
+						targetShape.addPoint(this.selection.end.x, this.selection.end.y);
+						break;
+					}
+				}else{
+					if (states.arg.button === 'right') ended = true;
+				}
+			}
+
+			if (ended) targetShape.endPoint();
+			this.runtime = false;
 			
 			// record end point
 			if (AbCommon.wannaCollectPoints(targetShape)){
@@ -1990,10 +2329,12 @@ AbViewerEngine.prototype = {
 			targetShape.notify('measured');
 			
 			// log
-			//var tbox = targetShape.box();
-			//console.log('[ADD] x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height);
-			//var trect = targetShape.rect();
-			//console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
+			// var tbox = targetShape.box();
+			// console.log('[ADD] { x: ' + tbox.x + ', y: ' + tbox.y + ', width: ' + tbox.width + ', height: ' + tbox.height + ' }');
+			// if (targetShape.points) for (var i=0; i < targetShape.points.length; i++) console.log('{ x: ' + targetShape.points[i].x + ', y: ' + targetShape.points[i].y + ' },');
+			// var trect = targetShape.rect();
+			// console.log('\t x1: ' + trect.x1 + ', y1: ' + trect.y1 + ', x2: ' + trect.x2 + ', y2: ' + trect.y2);
+			// console.log('-----------------------------------------------');
 
 			//-----------------------------------------------------------
 			// end record history
@@ -2048,6 +2389,9 @@ AbViewerEngine.prototype = {
 				}
 
 				if (this.selectedShapes.length == 1 && fs && AbCommon.isSupportInlineEditShape(fs) && fs.testInlineEdit(this.viewContext, this.selection.end.x, this.selection.end.y)){
+					if (this.selection.equalsInShape(fs)){
+						this.selection.ignoreFocusOutEditOut = true;
+					}
 					this.selection.reset();
 					this.selection.mode = 'inline';
 					this.selection.clickTarget = fs;
@@ -2100,8 +2444,12 @@ AbViewerEngine.prototype = {
 					return;
 			}
 
-			if (this.cancelAnyClick)
-				this.selection.reset();
+			if (this.cancelAnyClick){
+				var privateMode = this.selection.clickTarget && this.selection.clickTarget.editMode === 'private';
+
+				if (!privateMode)
+					this.selection.reset();
+			}
 			break;
 		}
 	},
@@ -2126,6 +2474,16 @@ AbViewerEngine.prototype = {
 				this.notifyObservers('shape', 'inline');
 			});
 			break;
+		default:
+			if (this.selection.clickTarget && this.selection.clickTarget.editMode === 'private'){
+				this.exec(function(){
+					this.selection.editIn();
+					this.render();
+
+					this.selection.clickTarget = null;
+				});
+			}
+			break;
 		}
 	},
 	
@@ -2144,7 +2502,34 @@ AbViewerEngine.prototype = {
 			// Notify
 			this.notifyObservers('page', 'move');
 			break;
+		default:
+			this.viewNormalMouseOperation(e, states);
+			break;
 		}
+	},
+
+	/**
+	 * 보기모드 mousemove 이벤트의 동작 중 단순 마우스 조작에 대한 처리를 수행합니다.
+	 * @param {jQueryEventObject} e jQuery Event 객체
+	 * @param {AbViewerEngine.ActionStates} [states] 마우스 동작 상태 정보
+	 */
+	viewNormalMouseOperation: function(e, states){
+		var page = this.currentPage;
+		var shapes = page.shapes;
+
+		var x = states.x, y = states.y;
+		for (var i = shapes.length - 1; i >= 0; i--){
+			var s = shapes[i];
+
+			if (s.editMode === 'private' && s.contains(x, y, this.viewContext)){
+				this.selection.editIn(s);
+				this.render();
+				return;
+			}
+		}
+
+		this.selection.editOut();
+		this.render();
 	},
 
 	/**
@@ -2227,6 +2612,13 @@ AbViewerEngine.prototype = {
 	 * @param {jQueryEventObject} e jQuery Event 객체
 	 */
 	mouseWheelEvent: function(e){
+		if (this.runtime){
+			e.preventDefault();
+			e.stopPropagation(); 
+	
+			return false;
+		}
+
 		//var delta = (e.wheelDeltaY || (e.originalEvent && (e.originalEvent.wheelDeltaY || e.originalEvent.wheelDelta)) || e.wheelDelta || 0);
 		//console.log('[BODY LOCK] ' + e.type + ', delta='+delta+', target=' + e.target);
 		//var body = $(e.data.headers[idx].listSelector());
@@ -2518,7 +2910,12 @@ AbViewerEngine.prototype = {
 				if (ctoken && ctoken.fited)
 					page.fitTo = ctoken.to;
 				
+				var bkpage = this.currentPage;
+				this.currentPage = page;
+				
 				this.rotatePage(c.angle, false);
+				
+				this.currentPage = bkpage;
 			}, { fited: imgpos && imgpos.fited, to: imgpos && imgpos.to });
 			//-----------------------------------------------------------
 
@@ -2606,12 +3003,26 @@ AbViewerEngine.prototype = {
 		page.width = Math.round(Math.abs(pr.x));
 		page.height = Math.round(Math.abs(pr.y));
 
+		/**
+		 * 이전 각도 화면 좌표 보정치
+		 */
 		var pp = AbGraphics.angle.correctDisplayCoordinate(prevAngle, pageWidth, pageHeight, false);
+		/**
+		 * 새 각도 화면 좌표 보정치
+		 */
 		var cp = AbGraphics.angle.correctDisplayCoordinate(page.angle, pageWidth, pageHeight, false);
 		
 		// console.log('[PAGE][ROTATE] page( angle: ' + page.angle + ', stepDegree='+stepDegree+', width: ' + pageWidth + ', height: ' + pageHeight+' )');
 		// console.log('[PAGE][ROTATE][PRE] correct(x: '+pp.x+', y: ' + pp.y + ')');
 		// console.log('[PAGE][ROTATE][NEW] correct(x: '+cp.x+', y: ' + cp.y + ')');
+
+		var notifyData = {
+			prevPageAngle: prevAngle,
+			pageAngle: page.angle,
+			stepDegree: stepDegree,
+			prevPagePoint: pp,
+			pagePoint: cp
+		};
 	
 		var slen = page.shapes.length;
 		for (var i=0; i < slen; i++){
@@ -2624,19 +3035,33 @@ AbViewerEngine.prototype = {
 				s.rect(r.x1 - cp.x, r.y1 - cp.y, r.x2 - cp.x, r.y2 - cp.y);
 			}else{
 				var c = s.center();
-				var cr = AbGraphics.angle.point(-prevAngle, 0, 0, c.x + pp.x, c.y + pp.y);
-				var sr = AbGraphics.angle.point(-prevAngle, 0, 0, s.x + pp.x, s.y + pp.y);
+				var ns = AbGraphics.rotate.shapePosByPage(prevAngle, page.angle, stepDegree, pp.x, pp.y, cp.x, cp.y, s.x, s.y, c.x, c.y);
 
-				cr = AbGraphics.angle.point(page.angle, 0, 0, cr.x, cr.y);
-				sr = AbGraphics.angle.point(page.angle, 0, 0, sr.x, sr.y);
-
-				sr = AbGraphics.angle.point(-stepDegree, cr.x, cr.y, sr.x, sr.y);
-
-				//console.log('\t\t['+s.shapeStyle+'] sr.x: '+sr.x + ', sr.y: '+sr.y+', cr.x: '+cr.x+', cr.y: '+cr.y);
-
-				s.box(sr.x - cp.x, sr.y - cp.y, s.width, s.height);
-	
+				s.box(ns.x, ns.y, s.width, s.height);
 				s.setAngle(AbGraphics.angle.increase(s.angle, stepDegree));
+				s.notify('page.rotate', notifyData);
+
+				// var cr = AbGraphics.angle.point(-prevAngle, 0, 0, c.x + pp.x, c.y + pp.y);
+				// var sr = AbGraphics.angle.point(-prevAngle, 0, 0, s.x + pp.x, s.y + pp.y);
+
+				// cr = AbGraphics.angle.point(page.angle, 0, 0, cr.x, cr.y);
+				// sr = AbGraphics.angle.point(page.angle, 0, 0, sr.x, sr.y);
+
+				// sr = AbGraphics.angle.point(-stepDegree, cr.x, cr.y, sr.x, sr.y);
+
+				// //console.log('\t\t['+s.shapeStyle+'] sr.x: '+sr.x + ', sr.y: '+sr.y+', cr.x: '+cr.x+', cr.y: '+cr.y);
+
+				// s.box(sr.x - cp.x, sr.y - cp.y, s.width, s.height);
+				// s.setAngle(AbGraphics.angle.increase(s.angle, stepDegree));
+				// s.notify('page.rotate', {
+				// 	prevAngle: prevAngle,
+				// 	angle: page.angle,
+				// 	stepDegree: stepDegree,
+				// 	pp: pp,
+				// 	cp: cp,
+				// 	x: sr.x - cp.x,
+				// 	y: sr.y - cp.y,
+				// });
 
 				//console.log('\t['+s.shapeStyle+'] x: '+s.x + ', y: '+s.y+', width: '+s.width+', height: '+s.height+', angle: '+s.angle + ', sr(x=' + sr.x + ', y=' + sr.y + ')');
 			}
@@ -3141,6 +3566,8 @@ AbViewerEngine.prototype = {
 	 */
 	copy: function (){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
+		
 		this.clipboard.copy(this, this.currentPage, this.selectedShapes);
 
 		// Notify
@@ -3153,6 +3580,8 @@ AbViewerEngine.prototype = {
 	 */
 	cut: function(){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
+		
 		this.clipboard.cut(this, this.currentPage, this.selectedShapes);
 
 		// Notify
@@ -3166,6 +3595,8 @@ AbViewerEngine.prototype = {
 	 */
 	paste: function (callback){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
+		
 		this.clipboard.paste(this, this.currentPage, function(){
 			// Notify
 			this.notifyObservers('clipboard', 'paste');
@@ -3188,7 +3619,7 @@ AbViewerEngine.prototype = {
 		if (this.history.canUndo()){
 			// Notify
 			this.notifyObservers('history', 'undoing');
-			
+
 			this.history.undo(this);
 
 			// Notify
@@ -3245,6 +3676,8 @@ AbViewerEngine.prototype = {
 	 */
 	deleteShapes: function (rendering){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
+		
 		if (!arguments.length) rendering = true;
 
 		//-----------------------------------------------------------
@@ -3255,8 +3688,12 @@ AbViewerEngine.prototype = {
 		var page = this.currentPage;
 		for (var i = page.shapes.length - 1; i >= 0; i--){
 			var s = page.shapes[i];
-			if (s.selected)
+			if (s.selected){
+				if (this.selection.equalsInShape(s))
+					this.selection.editOut();
+
 				page.shapes.splice(i, 1);
+			}
 		}
 
 		this.selectedShapes.splice(0, this.selectedShapes.length);
@@ -3392,17 +3829,19 @@ AbViewerEngine.prototype = {
 					continue;
 
 				if (this.selection.edit == 'A'){
-					s.setAngle(AbGraphics.angle.increase(s.angle, ret));
+					s.setAngle(AbGraphics.angle.increase(s.angle, ret), 'relative');
 				}else if (resizable && this.resizableShape(s)){
 					var ep = s.editPos(this.selection.edit);
-					var center = s.center();
-					center = page.toCanvas(center.x, center.y);
+					if (ep){
+						var center = s.center();
+						center = page.toCanvas(center.x, center.y);
 
-					//console.log('\t[SHAPE] ep(x=' + ep.x + ', y=' + ep.y + ') result(x=' + (ep.x + rpos.x) + ', y='+(ep.y + rpos.y) + ')');
+						//console.log('\t[SHAPE] ep(x=' + ep.x + ', y=' + ep.y + ') result(x=' + (ep.x + rpos.x) + ', y='+(ep.y + rpos.y) + ')');
 
-					var rotatedPx = AbGraphics.angle.point(s.angle, center.x, center.y, ep.x + rpos.x, ep.y + rpos.y);
-					rotatedPx = page.fromCanvas(rotatedPx.x, rotatedPx.y);
-					s.resize(this.selection.edit, rotatedPx.x, rotatedPx.y);
+						var rotatedPx = AbGraphics.angle.point(s.angle, center.x, center.y, ep.x + rpos.x, ep.y + rpos.y);
+						rotatedPx = page.fromCanvas(rotatedPx.x, rotatedPx.y);
+						s.resize(this.selection.edit, rotatedPx.x, rotatedPx.y, 'relative');
+					}
 				}
 			}
 		}
@@ -3611,8 +4050,11 @@ AbViewerEngine.prototype = {
 	 */
 	selectAll: function(rendering){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
 		
 		if (!AbCommon.isBool(rendering)) rendering = true;
+
+		this.selection.editOut();
 
 		this.selectedShapes.splice(0, this.selectedShapes.length);
 		this.focusedShape = null;
@@ -3639,54 +4081,6 @@ AbViewerEngine.prototype = {
 			// Notify
 			this.notifyObservers('shape', 'selectAll');
 		}
-	},
-
-	//-----------------------------------------------------------
-
-	/**
-	 * History State와의 동기화 처리를 위해 history.sync를 Notify합니다.
-	 * <p>* {@link AbImageListView|이미지 리스트뷰}에서 처리합니다.
-	 * <table>
-	 * <thead>
-	 * <tr>
-	 * 	<th>topic</th><th>cmd</th><th>docmd</th><th>data</th><th>설명</th>
-	 * </tr>
-	 * </thead>
-	 * <tbody>
-	 * <tr>
-	 * 	<td>page</td><td>add</td><td>undo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 제거해야 합니다.</td>
-	 * </tr>
-	 * <tr>
-	 * 	<td>page</td><td>add</td><td>redo</td><td>Array.&lt;{@link AbPage}&gt;</td><td>추가된 페이지들을 추가해야 합니다.</td>
-	 * </tr>
-	 * <tr>
-	 * 	<td>page</td><td>update</td><td>undo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
-	 * </tr>
-	 * <tr>
-	 * 	<td>page</td><td>update</td><td>redo</td><td>Number (페이지 인덱스)</td><td>해당 페이지의 정보가 변경되었습니다.</td>
-	 * </tr>
-	 * <tr>
-	 * 	<td>page</td><td>remove</td><td>undo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 추가해야 합니다.</td>
-	 * </tr>
-	 * <tr>
-	 * 	<td>page</td><td>remove</td><td>redo</td><td>Array.&lt;{@link AbHistoryRemovePageState.PageIndexInfo}&gt;</td><td>삭제된 페이지들을 제거해야 합니다.</td>
-	 * </tr>
-	 * </tbody>
-	 * </table>
-	 * @param {String} topic 토픽 (shape|page)
-	 * @param {String} cmd 명령어 (add|remove|update 등등)
-	 * @param {String} docmd 수행명령어 (undo|redo)
-	 * @param {AbHistory.HistorySyncArgs} data 데이터
-	 * <p>* 동작에 따라 유형이 달라집니다
-	 * @param {AbViewerEngineObservers.NotifyCallback} callback Notify 후 호출되는 콜백 함수
-	 */
-	historySync: function (topic, cmd, docmd, data, callback){
-		this.notifyObservers('history.sync', {
-			topic: topic,
-			cmd: cmd,
-			docmd: docmd,
-			data: data
-		}, callback);
 	},
 
 	//-----------------------------------------------------------
@@ -3721,6 +4115,8 @@ AbViewerEngine.prototype = {
 	 * 모든 페이지들을 제거합니다.
 	 */
 	clearPages: function(){
+		this.selection.editOut();
+
 		this.selectedShapes.splice(0, this.selectedShapes.length);
 		this.focusedShape = null;
 
@@ -3729,6 +4125,8 @@ AbViewerEngine.prototype = {
 		this.currentPage = null;
 		this.currentPageIndex = -1;
 	},
+
+	//-----------------------------------------------------------
 
 	/**
 	 * 페이지 인덱스 배열의 페이지들을 제거합니다.
@@ -3820,6 +4218,76 @@ AbViewerEngine.prototype = {
 		this.removePages([this.currentPageIndex], history);
 	},
 
+	//-----------------------------------------------------------
+	
+	/**
+	 * 페이지 인덱스 배열의 페이지들을 제거합니다.
+	 * <p>* 완료 후 page.remove가 Notify 됩니다.
+	 * @param {Array.<Number>} pageIndexArray 페이지 인덱스 배열
+	 * @param {Boolean} [history=true] History 기록 여부
+	 */
+	removeSubPages: function (pageIndexArray, history){
+		if (!this.maniplatable()) return;
+		if (!pageIndexArray || !$.isArray(pageIndexArray)) return;
+		
+		if (!AbCommon.isBool(history)) history = true;
+
+		var ownerPage = this.ownerPage;
+		var cindex = this.currentPageIndex;
+		var cdel = false;
+	
+		//-----------------------------------------------------------
+		// begin record history
+		if (history)
+			this.history.begin('page', 'remove', this, {
+				ownerIndex: this.ownerPageIndex,
+				pages: pageIndexArray
+			});
+		//-----------------------------------------------------------
+
+		pageIndexArray.sort(function (a, b){ return a - b; });
+
+		var pages = [];
+		for (var i=pageIndexArray.length - 1; i >= 0; i--){
+			var idx = pageIndexArray[i];
+			if (idx == cindex) cdel = true;
+
+			var page = ownerPage.subPages.splice(idx, 1);
+
+			pages.push({
+				index: idx,
+				page: page
+			});
+		}
+
+		//-----------------------------------------------------------
+		// end record history
+		if (history) this.history.end(this);
+		//-----------------------------------------------------------
+
+		// Notify
+		this.notifyObservers('sub.page.remove', pages);
+
+		if (cdel){
+			if (ownerPage.subPages.length()){
+				this.currentPage = null;
+				this.currentPageIndex = -1;
+	
+				if (cindex >= ownerPage.subPages.length())
+					cindex = ownerPage.subPages.length() - 1;
+
+				this.selectSubPage(cindex);
+	
+			}else{
+				this.unselectSubPage();
+			}
+		}
+
+		return pages;
+	},
+
+	//-----------------------------------------------------------
+
 	/**
 	 * 페이지를 추가합니다.
 	 * <p>* 완료 후 page의 add가 Notify 됩니다.
@@ -3868,12 +4336,39 @@ AbViewerEngine.prototype = {
 	/**
 	 * 페이지 인덱스가 유효한지 확인합니다.
 	 * @param {Number} idx 페이지 인덱스
+	 * @param {Number} [ownerIdx] 부모 페이지 인덱스
 	 * @return {Boolean}
 	 */
-	selectable: function(idx){
+	selectable: function(idx, ownerIdx){
 		if (!AbCommon.isNumber(idx)) idx = parseInt(idx);
-		//return idx >= 0 && idx < this.pages.length() && !this.pages.get(idx).isError();
-		return idx >= 0 && idx < this.pages.length();
+		if (AbCommon.isSetted(ownerIdx)){
+			if (!AbCommon.isNumber(ownerIdx)) ownerIdx = parseInt(ownerIdx);
+
+			if (ownerIdx < 0 || ownerIdx > this.pages.length())
+				return false;
+			
+			var page = this.pages.get(ownerIdx);
+			return idx >= 0 && idx < page.subPages.length();
+		}else{
+			return idx >= 0 && idx < this.pages.length();	
+		}
+	},
+
+	/**
+	 * 페이지 인덱스가 현재 페이지인지 확인합니다.
+	 * @param {Number} idx 페이지 인덱스
+	 * @param {Number} [ownerIdx] 부모 페이지 인덱스
+	 * @return {Boolean}
+	 */
+	isCurrentPageIndex: function (idx, ownerIdx){
+		if (!AbCommon.isNumber(idx)) idx = parseInt(idx);
+		if (AbCommon.isSetted(ownerIdx)){
+			if (!AbCommon.isNumber(ownerIdx)) ownerIdx = parseInt(ownerIdx);
+
+			return this.ownerPageIndex === ownerIdx && this.currentPageIndex === idx;
+		}else{
+			return this.currentPageIndex === idx;	
+		}
 	},
 
 	/**
@@ -3883,32 +4378,57 @@ AbViewerEngine.prototype = {
 	 * @param {Boolean} [forcibly] 강제 선택 여부입니다.
 	 * <p>* 엔진은 페이지 인덱스가 현재 페이지와 다른 경우에만 상태를 확인해 request.select를 Notify를 합니다.
 	 * <p>forcibly 옵션은 현재 페이지도 페이지 상태를 확인하게 합니다.
+	 * @param {Number} [listener] 수행 동작 후 수행될 리스너
 	 * @return {AbPage} 현재 페이지 인스턴스
 	 */
 	selectPage: function(){
 		if (arguments.length && this.maniplatable()){
 			var idx = arguments[0];
 			var forcibly = arguments[1] === true;
+			var listener = arguments.length >= 3 && AbCommon.isFunction(arguments[2]) ? arguments[2] : null;
 			
+			if (listener)
+				this.addBehaviorListeners('selectPage', listener);
+
 			if (this.pages.length() < 1){
-				this.currentPage = null;
-				this.currentPageIndex = -1;
+				this.ownerPage = this.currentPage = null;
+				this.ownerPageIndex = this.currentPageIndex = -1;
 			}else{
 				if (!AbCommon.isNumber(idx)) idx = parseInt(idx);
 
 				if (this.selectable(idx)){
-					var checked = forcibly || this.currentPageIndex != idx;
+					var checked = forcibly || this.ownerPageIndex != idx;
 
 					if (checked){
 						var page = this.pages.get(idx);
 
 						if (!page.error && !page.editable()){
 							this.notifyObservers('request.select', idx);
+
+							// Notify
+							if (this.enableNotifySelectPage === true)
+								this.notifyObservers('page', 'select');
 						}else{
-							this.currentPageIndex = idx;
-							this.currentPage = page;
-	
+							var cmt = this.currentPage ? this.currentPage.mediaType : null;
+							var nmt = page ? page.mediaType : null;
+
+							var cidx = this.currentPageIndex;
+							var nidx = idx;
+
+							if (page.hasSubPages()){
+								this.ownerPageIndex = idx;
+								this.ownerPage = page;	
+
+								this.currentPageIndex = 0;
+								this.currentPage = page.subPages.get(0);
+							}else{
+								this.ownerPageIndex = this.currentPageIndex = idx;
+								this.ownerPage = this.currentPage = page;	
+							}
+							
 							this.focusedShape = null;
+
+							this.selection.editOut();
 							this.selectedShapes.splice(0, this.selectedShapes.length);
 	
 							if (this.currentPage.shapes.length){
@@ -3923,14 +4443,28 @@ AbViewerEngine.prototype = {
 										this.focusedShape = s;
 								}
 							}
-		
-							this.imagePositioning();
-							this.render();
+
+							if (cmt !== nmt)
+								this.switchScreen(nmt);
+
+							if (nmt === 'video' || nmt === 'audio'){
+								this.mediaPlayer.set(nmt, page.mimeType(), page.mediaURI());
+							}else{
+								this.imagePositioning();
+								this.render();
+							}
+
+							// Notify
+							if (this.enableNotifySelectPage === true)
+								this.notifyObservers('page', 'select');
+							else
+								this.execBehaviorListeners('selectPage');
 						}
+					}else{
+						// Notify
+						if (this.enableNotifySelectPage === true)
+							this.notifyObservers('page', 'select');
 					}
-					// Notify
-					if (this.enableNotifySelectPage === true)
-						this.notifyObservers('page', 'select');
 				}
 			}
 		}
@@ -3945,13 +4479,130 @@ AbViewerEngine.prototype = {
 	unselectPage: function(rendering){
 		if (!AbCommon.isBool(rendering)) rendering = true;
 
-		this.currentPage = null;
-		this.currentPageIndex = -1;
+		this.ownerPage = this.currentPage = null;
+		this.ownerPageIndex = this.currentPageIndex = -1;
 
 		if (rendering)
 			this.render();
 
 		this.notifyObservers('page', 'unselect');
+	},
+
+	hasSubPage: function(){
+		return this.ownerPage && this.ownerPage.hasSubPages();
+	},
+
+	/**
+	 * 페이지를 선택하거나 현재 페이지를 가져옵니다.
+	 * <p>* 완료 후 page의 select가 Notify 됩니다. 단, enableNotifySelectPage 필드가 false면 Notify 하지 않습니다.
+	 * @param {Number} [index] 페이지 인덱스
+	 * @param {Boolean} [forcibly] 강제 선택 여부입니다.
+	 * <p>* 엔진은 페이지 인덱스가 현재 페이지와 다른 경우에만 상태를 확인해 request.select를 Notify를 합니다.
+	 * <p>forcibly 옵션은 현재 페이지도 페이지 상태를 확인하게 합니다.
+	 * @param {Number} [listener] 수행 동작 후 수행될 리스너
+	 * @return {AbPage} 현재 페이지 인스턴스
+	 */
+	selectSubPage: function(){
+		if (arguments.length && this.maniplatable()){
+			var idx = arguments[0];
+			var forcibly = arguments[1] === true;
+			var listener = arguments.length >= 3 && AbCommon.isFunction(arguments[2]) ? arguments[2] : null;
+			
+			if (listener)
+				this.addBehaviorListeners('selectSubPage', listener);
+
+			var pages = this.ownerPage.subPages;
+
+			if (pages.length() < 1){
+				this.currentPage = this.ownerPage;
+				this.currentPageIndex = this.ownerPageIndex;
+			}else{
+				if (!AbCommon.isNumber(idx)) idx = parseInt(idx);
+
+				if (this.selectable(idx, this.ownerPageIndex)){
+					var checked = forcibly || this.currentPageIndex != idx;
+					//var checked = forcibly || !this.isCurrentPageIndex(idx, this.ownerPageIndex);
+
+					if (checked){
+						var page = pages.get(idx);
+
+						if (!page.error && !page.editable()){
+							this.notifyObservers('sub.request.select', idx);
+
+							// Notify
+							if (this.enableNotifySelectPage === true)
+								this.notifyObservers('sub.page', 'select');
+						}else{
+							var cmt = this.currentPage ? this.currentPage.mediaType : null;
+							var nmt = page ? page.mediaType : null;
+
+							var cidx = this.currentPageIndex;
+							var nidx = idx;
+
+							this.currentPageIndex = idx;
+							this.currentPage = page;
+	
+							this.focusedShape = null;
+
+							this.selection.editOut();
+							this.selectedShapes.splice(0, this.selectedShapes.length);
+	
+							if (this.currentPage.shapes.length){
+								var siz = this.currentPage.shapes.length;
+								for (var i=0; i < siz; i++){
+									var s = this.currentPage.shapes[i];
+	
+									if (s.selected)
+										this.selectedShapes.push(s);
+	
+									if (s.focused)
+										this.focusedShape = s;
+								}
+							}
+
+							if (cmt !== nmt)
+								this.switchScreen(nmt);
+
+							if (nmt === 'video' || nmt === 'audio'){
+								this.mediaPlayer.set(nmt, page.mimeType(), page.mediaURI());
+							}else{
+								this.imagePositioning();
+								this.render();
+							}
+
+							// Notify
+							if (this.enableNotifySelectPage === true)
+								this.notifyObservers('sub.page', 'select');
+							else
+								this.execBehaviorListeners('selectSubPage');
+
+						}
+					}else{
+						// Notify
+						if (this.enableNotifySelectPage === true)
+							this.notifyObservers('sub.page', 'select');
+					}
+				}
+			}
+		}
+		return this.currentPage;
+	},
+
+	/**
+	 * 페이지를 선택 해제합니다.
+	 * <p>* 완료 후 page의 unselect가 Notify 됩니다.
+	 * @param {Boolean} [rendering=true] 화면 표시 여부
+	 */
+	unselectSubPage: function(rendering){
+		if (!AbCommon.isBool(rendering)) rendering = true;
+
+		this.currentPage = this.ownerPage;
+		this.currentPageIndex = this.ownerPageIndex;
+
+		if (rendering)
+			this.render();
+
+		this.notifyObservers('sub.page', 'unselect');
 	},
 
 	/**
@@ -3992,23 +4643,67 @@ AbViewerEngine.prototype = {
 			//-----------------------------------------------------------
 			// begin record history
 			if (history) this.history.begin('shape', 'all', this);
+			//this.history.clear();
 			//-----------------------------------------------------------
 			
 			var pageInfos = [];
 
+			this.selection.editOut();
+
 			for (var i = this.pages.length() - 1; i >= 0; i--){
 				var page = this.pages.get(i);
-				var shapes = page.shapes;
 				
 				//console.log('[remove][all][' + i + '] shapes=' + shapes.length);
-				
-				if (shapes.length){
-					shapes.splice(0, shapes.length);
-					
-					pageInfos.unshift({
-						index: i,
-						page: page
-					});
+
+				var numSubPages = page.subPages.length();
+				if (numSubPages){
+					for (var j=0; j < numSubPages; j++){
+						var subPage = page.subPages.get(j);
+						
+						if (subPage.editable()){
+							if (subPage.shapes.length){
+								subPage.shapes.splice(0, subPage.shapes.length);
+								
+								pageInfos.unshift({
+									index: j,
+									page: subPage,
+									ownerIndex: i,
+									ownerPage: page,
+								});							
+							}
+						}else{
+							if (subPage.xmlShapes){
+								subPage.xmlShapes = null;
+								
+								pageInfos.unshift({
+									index: j,
+									page: subPage,
+									ownerIndex: i,
+									ownerPage: page,
+								});								
+							}
+						}
+					}	
+				}else{
+					if (page.editable()){
+						if (page.shapes.length){
+							page.shapes.splice(0, page.shapes.length);
+							
+							pageInfos.unshift({
+								index: i,
+								page: page
+							});
+						}
+					}else{
+						if (page.xmlShapes){
+							page.xmlShapes = null;
+							
+							pageInfos.unshift({
+								index: i,
+								page: page
+							});
+						}
+					}
 				}
 			}
 
@@ -4052,22 +4747,68 @@ AbViewerEngine.prototype = {
 			//-----------------------------------------------------------
 			// begin record history
 			if (history) this.history.begin('shape', 'range', this, pages);
+			//this.history.clear();
 			//-----------------------------------------------------------
 
 			var pageInfos = [];
 
 			for (var i = pages.length - 1; i >= 0; i--){
 				var page = pages[i];
-				var shapes = page.shapes;
+
+				if (this.currentPageIndex === i)
+					this.selection.editOut();
 				
-				if (shapes.length){
-					shapes.splice(0, shapes.length);
-					
-					pageInfos.unshift({
-						index: i,
-						page: page
-					});
+				var numSubPages = page.subPages.length();
+				if (numSubPages){
+					for (var j=0; j < numSubPages; j++){
+						var subPage = page.subPages.get(j);
+						
+						if (subPage.editable()){
+							if (subPage.shapes.length){
+								subPage.shapes.splice(0, subPage.shapes.length);
+								
+								pageInfos.unshift({
+									index: j,
+									page: subPage,
+									ownerIndex: i,
+									ownerPage: page,
+								});							
+							}
+						}else{
+							if (subPage.xmlShapes){
+								subPage.xmlShapes = null;
+								
+								pageInfos.unshift({
+									index: j,
+									page: subPage,
+									ownerIndex: i,
+									ownerPage: page,
+								});								
+							}
+						}
+					}	
+				}else{
+					if (page.editable()){
+						if (page.shapes.length){
+							page.shapes.splice(0, page.shapes.length);
+							
+							pageInfos.unshift({
+								index: i,
+								page: page
+							});
+						}
+					}else{
+						if (page.xmlShapes){
+							page.xmlShapes = null;
+							
+							pageInfos.unshift({
+								index: i,
+								page: page
+							});
+						}
+					}
 				}
+				
 			}
 
 			//-----------------------------------------------------------
@@ -4184,27 +4925,38 @@ AbViewerEngine.prototype = {
 			var ctx = this.viewContext;
 			ctx.save();
 
-			var box = this.selection.drawed;
-			box.x += this.margin.left;
-			box.y += this.margin.top;
+			var a = null;
+			if (this.selection.drawed.hasOwnProperty('items')){
+				a = this.selection.drawed.items;
+			}else{
+				a = [this.selection.drawed];
+			}
 
 			var alpha = ctx.globalAlpha;
 			ctx.globalAlpha = 1;
 
-			var page = this.currentPage;
+			var len = a.length;
+			for (var i=0; i < len; i++){
+				var box = a[i];
+				box.x += this.margin.left;
+				box.y += this.margin.top;
+	
+				var page = this.currentPage;
+					
+				var strokeSize = this.selection.style && this.selection.style.stroke ? this.selection.style.stroke.width : 1;
+				var pbox = AbGraphics.box.inflate(box.x, box.y, box.width, box.height, strokeSize);
+	
+				//pbox = page.toCanvasBox(pbox);
 				
-			var strokeSize = this.selection.style && this.selection.style.stroke ? this.selection.style.stroke.width : 1;
-			var pbox = AbGraphics.box.inflate(box.x, box.y, box.width, box.height, strokeSize);
-
-			//pbox = page.toCanvasBox(pbox);
-			
-			this.paintRect(pbox.x, pbox.y, pbox.width, pbox.height);
-			//this.paintRect(pbox.x + page.x, pbox.y + page.y, pbox.width, pbox.height);
+				this.paintRect(pbox.x, pbox.y, pbox.width, pbox.height);
+				//this.paintRect(pbox.x + page.x, pbox.y + page.y, pbox.width, pbox.height);	
+			}
 
 			this.selection.drawed = null;
 
 			ctx.globalAlpha = alpha;
 			ctx.restore();
+			
 		}
 
 	},
@@ -4259,8 +5011,12 @@ AbViewerEngine.prototype = {
 		var direct = AbCommon.supportCreationDraw(targetShape);
 		//var direct = false;
 
+		//console.log('runtime=' + this.runtime);
+
+		var drawed = null;
+
 		if (direct){
-			targetShape.creationDraw(ctx, page, this.selection);
+			drawed = targetShape.creationDraw(ctx, page, this.selection);
 		}else{
 			if (targetShape.hasOwnProperty('creationAlpha'))
 				ctx.globalAlpha = targetShape.creationAlpha;
@@ -4278,18 +5034,20 @@ AbViewerEngine.prototype = {
 		}	
 
 		// 가상 좌표계 좌표
-		if (targetShape && AbCommon.supportRestoreMinimumSize(targetShape)){
-			var minimum = targetShape.restoreMinimumSize();
+		if (!drawed){
+			if (targetShape && AbCommon.supportRestoreMinimumSize(targetShape)){
+				var minimum = targetShape.restoreMinimumSize();
 
-			minimum.width *= page.scale.x;
-			minimum.height *= page.scale.y;
+				minimum.width *= page.scale.x;
+				minimum.height *= page.scale.y;
 
-			var tbox = page.toCanvasBox(targetShape.box());
-			this.selection.drawed = AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, minimum.width, minimum.height);
-
-			//this.selection.drawed = targetShape.restoreRect(targetShape.box());
+				var tbox = page.toCanvasBox(targetShape.box());
+				this.selection.setDrawed(AbGraphics.box.inflate(tbox.x, tbox.y, tbox.width, tbox.height, minimum.width, minimum.height));
+			}else{
+				this.selection.setDrawed(targetShape.box(), page);
+			}
 		}else{
-			this.selection.drawed = page.toCanvasBox(targetShape.box());
+			this.selection.setDrawed(drawed, page);
 		}
 
 		ctx.restore();
@@ -4378,7 +5136,8 @@ AbViewerEngine.prototype = {
 			if (this.isVisibleShapeType())
 				page.drawOrigin(ctx, {
 					scale: gen.ratio,
-					showingShapeTypeMap: this.showingShapeTypeMap
+					showingShapeTypeMap: this.showingShapeTypeMap,
+					mode: 'image',
 				});
 			
 			// this.margin.left = marginLeft;
@@ -4460,7 +5219,8 @@ AbViewerEngine.prototype = {
 
 			if (drawShapes)
 				page.drawOrigin(ctx, {
-					showingShapeTypeMap: showingShapeTypeMap
+					showingShapeTypeMap: showingShapeTypeMap,
+					mode: 'image'
 				});
 
 			// this.margin.left = marginLeft;
@@ -4661,7 +5421,7 @@ AbViewerEngine.prototype = {
 	
 				if (this.isVisibleShapeType())
 					page.drawShapes(ctx, {
-						showingShapeTypeMap: this.showingShapeTypeMap
+						showingShapeTypeMap: this.showingShapeTypeMap,
 					});
 
 				ctx.restore();
@@ -4835,6 +5595,8 @@ AbViewerEngine.prototype = {
 	 */
 	zIndex: function (cmd){
 		if (!this.currentPage || !this.maniplatable()) return;
+		if (this.isMediaPage()) return;
+		
 		if (!this.selectedShapes.length && !this.focusedShape) return;
 
 		// validation command
@@ -4911,5 +5673,19 @@ AbViewerEngine.prototype = {
 		this.exec(function(){
 			this.render();
 		});
+	},
+
+	switchScreen: function(mode){
+		switch (mode){
+		case 'video': case 'audio':
+			$(this.viewContext.canvas).hide();
+			this.mediaPlayer.show(mode);
+			break;
+
+		default:
+			this.mediaPlayer.hide();
+			$(this.viewContext.canvas).show();
+			break;
+		}
 	},
 };

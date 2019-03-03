@@ -15,9 +15,13 @@ var AbImageInfoRenderer = {
 	 * @see {@link AbImageLoader.From} 이미지 획득처
 	 * @memberof AbImageInfoRenderer
 	 * @param {AbPage} page {@link AbPage|페이지} 인스턴스
+	 * @param {Object} [options] 옵션
+	 * @param {Boolean} [options.origin] 정보 데이터의 원본 데이터 사용 여부
 	 * @return {AbImageInfoRenderer.RenderData} 정보 화면 렌더링 정보
 	 */
-	render: function (page){
+	render: function (page, options){
+		if (!options) options = {};
+
 		/**
 		 * @type {AbImageLoader.From}
 		 */
@@ -26,7 +30,11 @@ var AbImageInfoRenderer = {
 		 * @type {AbImage.Metadata}
 		 */
 		var info = page.info();
-		
+		if (options.origin === true){
+			if (info.originMeta) info = info.originMeta;
+			if (info.from) from = info.from;
+		}
+
 		var method = this['render$' + from];
 		if (AbCommon.isFunction(method)){
 			return method.bind(this)(page, info);

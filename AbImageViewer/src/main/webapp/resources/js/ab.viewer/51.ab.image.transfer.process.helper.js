@@ -232,6 +232,14 @@ var AbImageTransferProcessHelper = function(options){
 	//-----------------------------------------------------------
 	
 	/**
+	 * 서브 페이지 스캔 여부
+	 * @type {Boolean}
+	 */
+	this.scanSubPage = AbCommon.isBool(options.scanSubPage) ? options.scanSubPage : false;
+
+	//-----------------------------------------------------------
+	
+	/**
 	 * 병렬 개수
 	 * @type {Number}
 	 * @default 6
@@ -562,31 +570,22 @@ AbImageTransferProcessHelper.prototype = {
 
 		var src = null, pageLength = pages.length;
 		var source = [], pageInfos = [], imgInfos = [], map = {};
-		var bookmark = null, bookmarkIdx = -1;
 		
 		var collectedBookmarks = []; // 수집된 북마크 목록
 		
-		for (var i=0; i < pageLength; i++){
-			var page = pages[i];
-
-			if (page.isError()){
-				if (this.errorImageExit === true){
-					pageInfos.splice(0, pageInfos.length);
-					return this.msgs.errorImage.replace(/#{IDX}/g, '' + i);
-				}
-				continue;
-			}
-
+		//-----------------------------------------------------------
+		
+		function collectMain(ref, index, page){
 			var type = 0;
-			if (!page.editable()){
+			if (!ref && !page.editable()){
 				type |= 1;
 			}
-			if (page.angle || viewer.drawableWaterMark() || (page.hasShapes() && printShapes) ){
+			if (!ref && (page.angle || viewer.drawableWaterMark() || (page.hasShapes() && printShapes)) ){
 				type |= 2;
 			}
 			
-			bookmarkIdx = bookmarks.indexOf(page.uid);
-			bookmark = null;
+			var bookmarkIdx = bookmarks.indexOf(page.uid);
+			var bookmark = null;
 			
 			if (bookmarkIdx >= 0){
 				bookmark = {
@@ -603,17 +602,72 @@ AbImageTransferProcessHelper.prototype = {
 			map[page.uid] = imgInfos.length;
 			
 			imgInfos.push({
-				width: type ? 0 : page.source.width,
-				height: type ? 0 : page.source.height,
-				url: type ? null : page.source.imgInfo.url
+				width: ref || type ? 0 : page.source.width,
+				height: ref || type ? 0 : page.source.height,
+				url: ref || type ? null : page.source.imgInfo.url
 			});
 
-			var dat = { type: type, index: i, page: page, bookmark: bookmark };
+			var dat = { ref: ref, type: type, index: index, subIndex: -1, page: page, bookmark: bookmark };
 
 			if (type)
 				pageInfos.push(dat);
 
 			source.push(dat);
+		}
+		
+		function collectSub(index, subIndex, page){
+			var type = 0;
+			if (!page.editable()){
+				type |= 1;
+			}
+			if (page.angle || viewer.drawableWaterMark() || (page.hasShapes() && printShapes) ){
+				type |= 2;
+			}
+
+			map[page.uid] = imgInfos.length;
+			
+			imgInfos.push({
+				width: type ? 0 : page.source.width,
+				height: type ? 0 : page.source.height,
+				url: type ? null : page.source.imgInfo.url
+			});
+
+			var dat = { ref: false, type: type, index: index, subIndex: subIndex, page: page, bookmark: null };
+
+			if (type)
+				pageInfos.push(dat);
+
+			source.push(dat);
+		}
+		
+		//-----------------------------------------------------------
+		
+		for (var i=0; i < pageLength; i++){
+			var page = pages[i];
+
+			if (page.mediaType !== 'image')
+				continue;
+
+			if (page.isError()){
+				if (this.errorImageExit === true){
+					pageInfos.splice(0, pageInfos.length);
+					return this.msgs.errorImage.replace(/#{IDX}/g, '' + i);
+				}
+				continue;
+			}
+			
+			if (this.scanSubPage && page.hasSubPages()){
+				collectMain(true, i, page);
+				
+				var numSubPages = page.subPages.length();
+				for (var j=0; j < numSubPages; j++){
+					var subPage = page.subPages.get(j);
+					
+					collectSub(i, j, subPage);
+				}
+			}else{
+				collectMain(false, i, page);
+			}
 		}
 		
 		// 북마크 수집된 목록 내 인덱스 재부여 처리
@@ -749,7 +803,10 @@ AbImageTransferProcessHelper.prototype = {
 		
 		var promise = null;
 		if (AbCommon.flag(pageInfo.type, 1)){
-			promise = viewer.loadPage(pageInfo, true);
+			if (pageInfo.subIndex >= 0)
+				promise = viewer.loadSubPage(pageInfo, true);
+			else
+				promise = viewer.loadPage(pageInfo, true);
 		}else{
 			promise = Promise.resolve();
 		}

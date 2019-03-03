@@ -29,11 +29,13 @@ var iAbViewer = {
 	 * @type {Object}
 	 * @property {String} FOLDER=api/ext/folder 서버 폴더 내 이미지 조회 API 주소
 	 * @property {String} FILE=api/ext/file 특정 경로의 이미지 조회 API 주소
+	 * @property {String} FILE_EX=api/ext/fileEx 특정 파일 경로의 이미지 조회 API 주소
 	 * @memberof iAbViewer#
 	 */
 	URLS: {
 		FOLDER: 'api/ext/folder',
 		FILE: 'api/ext/file',
+		FILE_EX: 'api/ext/fileEx',
 	},
 
 	//-----------------------------------------------------------
@@ -254,6 +256,69 @@ var iAbViewer = {
 						
 						resolve();
 					}
+				}.bind(self),
+				
+				error: function(xhr, textStatus, errorThrown){
+					var e = new Error(options.errorMessage);
+					
+					if (AbCommon.isFunction(options.reject))
+						options.reject(e);
+					
+					reject(e);
+				}
+			});
+		})
+			.then(function(){
+				// exec
+			});
+	},
+
+	/**
+	 * 서버 파일을 이미지 뷰어로 로드합니다.
+	 * <p>이 함수로 변경된 사항은 History에 기록되지 않습니다.
+	 * <p>
+	 * @static
+	 * @memberof iAbViewer
+	 * @param {String} filePath 서버의 파일 경로
+	 * @param {String} [combinedDisplayText] 이미지 표시명 목록(|로 구분)
+	 * @param {String} [combinedSubDisplayText] 하단 이미지 표시명 목록(|로 구분)
+	 * @param {Object} [options] 처리 옵션
+	 * @param {String} [options.errorMessage=원격 이미지 정보(들)를 조회하는 데 실패했습니다] 오류시 화면에 표시할 오류 메시지
+	 * @param {String} [options.name] 이미지 뷰어 인스턴스 구분명
+	 * @param {iAbViewer.Resolve} [options.resolve] 성공시 호출되는 콜백
+	 * @param {iAbViewer.Reject} [options.reject] 오류시 호출되는 콜백
+	 */
+	viewFile: function (filePath, combinedDisplayText, combinedSubDisplayText, options){
+		if (!options) options = {};
+		if (!options.errorMessage) options.errorMessage = '원격 이미지 정보(들)를 조회하는 데 실패했습니다';
+		
+		var self = this;
+		
+		return new Promise(function(resolve, reject){
+			AbCommon.ajax({
+				url: self.URLS.FILE_EX,
+				data: {
+					q: filePath,
+					t: combinedDisplayText,
+					st: combinedSubDisplayText,
+				},
+				
+				success: function(r){
+					this.get(options.name).addImages(r, {
+						subTexts: combinedSubDisplayText,
+					})
+						.then(function(){
+							if (AbCommon.isFunction(options.resolve))
+								options.resolve();
+							
+							resolve();
+						})
+						.catch(function(e){
+							if (AbCommon.isFunction(options.reject))
+								options.reject(e);
+							
+							reject(e);
+						});
 				}.bind(self),
 				
 				error: function(xhr, textStatus, errorThrown){

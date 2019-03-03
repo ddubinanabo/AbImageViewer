@@ -37,13 +37,13 @@ function AbViewerEngineObservers(options){
 	/**
 	 * 토픽별 옵저버 리스너 맵
 	 * <p>* 필드명이 토픽, 필드값이 {@link AbViewerEngineObservers.ObserveListener|배열}인 객체입니다.
-	 * @type {Object.<String, Array<AbViewerEngineObservers.ObserveListener>>}
+	 * @type {Object.<String, Array.<AbViewerEngineObservers.ObserveListener>>}
 	 */
 	this.listeners = {};
 	/**
 	 * 전체 옵저버 리스너 목록
 	 * <p>* 모든 토픽에 대한 옵저브
-	 * @type {Array<AbViewerEngineObservers.ObserveListener>}
+	 * @type {Array.<AbViewerEngineObservers.ObserveListener>}
 	 */
 	this.all = [];
 }

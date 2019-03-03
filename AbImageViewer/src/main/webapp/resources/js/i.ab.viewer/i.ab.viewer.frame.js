@@ -219,6 +219,26 @@ var iAbViewerFrame = {
 								}, source);
 							}.bind(this));
 						break;
+
+					case 'viewFile':
+						iAbViewer.viewFile(data.args.filePath, data.args.combinedDisplayText, data.args.combinedSubDisplayText, data.args.options)
+							.then(function(){
+								this.sendReturn({
+									key: key,
+									type: 'return',
+									command: 'viewFile',
+									success: true,
+								}, source);
+							}.bind(this))
+							.catch(function(e){
+								this.sendReturn({
+									key: key,
+									command: 'viewFile',
+									success: false,
+									message: e ? e.message : '',
+								}, source);
+							}.bind(this));
+						break;
 					}
 				}else if (data.type === 'event'){
 					this.trigger(data.name, data.data);
@@ -328,7 +348,34 @@ var iAbViewerFrame = {
 			},
 		});
 	},
-	
+
+	/**
+	 * 서버 파일을 이미지 뷰어로 로드합니다.
+	 * <p>이 함수로 변경된 사항은 History에 기록되지 않습니다.
+	 * <p>
+	 * @static
+	 * @memberof iAbViewer
+	 * @param {String} filePath 서버의 파일 경로
+	 * @param {String} [combinedDisplayText] 이미지 표시명 목록(|로 구분)
+	 * @param {String} [combinedSubDisplayText] 하단 이미지 표시명 목록(|로 구분)
+	 * @param {Object} [options] 처리 옵션
+	 * @param {String} [options.errorMessage=원격 이미지 정보(들)를 조회하는 데 실패했습니다] 오류시 화면에 표시할 오류 메시지
+	 * @param {String} [options.name] 이미지 뷰어 인스턴스 구분명
+	 * @param {iAbViewer.Resolve} [options.resolve] 성공시 호출되는 콜백
+	 * @param {iAbViewer.Reject} [options.reject] 오류시 호출되는 콜백
+	 */
+	viewFile: function (filePath, combinedDisplayText, combinedSubDisplayText, options){
+		return this.exec({
+			type: 'call',
+			command: 'viewFile',
+			args: {
+				filePath: filePath,
+				combinedDisplayText: combinedDisplayText,
+				combinedSubDisplayText: combinedSubDisplayText,
+			},
+		});
+	},
+
 	/**
 	 * 리스너 맵
 	 * @static

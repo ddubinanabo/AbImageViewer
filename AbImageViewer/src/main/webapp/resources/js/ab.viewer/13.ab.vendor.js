@@ -117,6 +117,24 @@
  */
 
 /**
+ * PDF 문서 렌더링 후 호출되는 콜백함수
+ * @callback AbVendor.PDFCallback
+ * @param {PDFDocumentProxy} doc PDF 문서 객체<p>* PDF.js API 문서 {@link https://mozilla.github.io/pdf.js/api/draft/PDFDocumentProxy.html|PDFDocumentProxy} 참고
+ * @param {Array.<AbVendor.PDFPageInfo>} pages PDF 문서 페이지 정보 배열
+ */
+
+/**
+ * PDF 문서 페이지 정보
+ * @typedef {Object} AbVendor.PDFPageInfo
+ * @property {CanvasRenderingContext2D} ctx 페이지가 그려진 CANVAS 2D Context
+ * @property {PDFPageProxy} page PDF 페이지 객체<p>* PDF.js API 문서 {@link https://mozilla.github.io/pdf.js/api/draft/PDFPageProxy.html|PDFPageProxy} 참고
+ * @property {Number} width 페이지의 폭 크기
+ * @property {Number} height 페이지의 높이 크기
+ * @property {String} image 페이지 이미지의 DATA URL 형식 문자열
+ * @property {String} thumbnail 섬네일 이미지의 DATA URL 형식 문자열
+ */
+
+/**
  * 외부 라이브러리 링커
  * @namespace
  */
@@ -183,4 +201,119 @@ var AbVendor = {
 		});
 	},
 
+	/**
+	 * PDF 문서를 렌더링 합니다.
+	 * <p>* PDF.js가 필요합니다.
+	 * @memberof AbVendor
+	 * @see {@link https://mozilla.github.io/pdf.js/|PDF.js} PDF Reader in JavaScript
+	 * @see {@link https://mozilla.github.io/pdf.js/api/draft/index.html|PDF.js API}
+	 * @param {String} blob PDF 파일 URI
+	 * @param {String} render 렌더링 힌트 (jpeg|png)
+	 * @param {AbVendor.PDFCallback} callback 렌더링 후 호출되는 콜백 함수
+	 */
+	pdf: function (blob, render, callback){
+		if (!render) render = 'jpeg';
+		if (!AbCommon.isFunction(callback)) callback = function(){};
+
+		var task = pdfjsLib.getDocument(blob);
+		task.promise
+			.then(function(pdf){
+				//console.log(pdf);
+
+				var pdfData = {
+					doc: pdf,
+					pages: [],
+				};
+
+				var ps = [];				
+				for (var i=0; i < pdf.numPages; i++){
+					ps.push(pdf.getPage(i + 1));
+				}
+
+				var numPages = pdf.numPages;
+
+				Promise.all(ps)
+					.then(function(pages){
+						//console.log(pages);
+
+						var ps = [];
+						for (var i=0; i < numPages; i++){
+							var page = pages[i];
+
+							var viewport = page.getViewport(1);
+							var ctx = AbGraphics.canvas.createContext(viewport.width, viewport.height);
+
+							pdfData.pages[i] = {
+								ctx: ctx,
+								page: page,
+								width: viewport.width,
+								height: viewport.height,
+								image: null,
+								thumbnail: null,
+							};
+
+							ps.push(page.render({
+								canvasContext: ctx,
+								viewport: viewport,
+							}));
+						}
+
+						// render all
+						Promise.all(ps)
+							.then(function(){
+								var ps = [];
+								for (var i=0; i < numPages; i++){
+									var p = pdfData.pages[i];
+
+									var gen = new AbThumbnailGenerator({
+										width: p.width,
+										height: p.height,
+									});
+
+									gen.draw(p.ctx.canvas);
+
+									p.thumbnail = gen.toImage(render);
+									p.image = AbGraphics.canvas.toImage(p.ctx, render);
+
+									//ps.push(AbCommon.loadImage(p.uri));
+								}
+
+								callback(pdfData);
+
+								// Promise.all(ps)
+								// 	.then(function(){
+								// 		callback(pdfData);
+								// 	})
+								// 	.catch(function(e){
+								// 		callback(e);
+								// 	});
+
+								//callback(pdfData);
+							})
+							.catch(function(e){
+								callback(e);
+							});
+					})
+					.catch(function(e){
+						callback(e);
+					});
+
+				// 
+				// 
+
+
+				
+			}, function (reason) {
+				// PDF loading error
+				//console.error(reason);
+
+				if (AbCommon.isString(reason))
+					throw new Error(reason);
+				else
+					throw reason;
+			})
+			.catch(function(e){
+				callback(e);
+			});
+	},
 };

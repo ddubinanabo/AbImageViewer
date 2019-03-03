@@ -61,6 +61,7 @@ AbPageCollection.prototype = {
 	 * @typedef {Object} NumShapesResult
 	 * @property {Number} shapes 전체 페이지의 도형 개수
 	 * @property {Number} pages 도형이 있는 페이지 개수
+	 * @property {Number} subPages 도형이 있는 서브 페이지 개수
 	 */
 
 	/**
@@ -71,12 +72,21 @@ AbPageCollection.prototype = {
 		var info = {
 			shapes: 0,
 			pages: 0,
+			subPages: 0,
 		};
 
-		var nums = 0;
+		var nums = 0, subNum = 0;
 
+		// 여기서 source는 AbPage 배열
 		for (var i = this.source.length - 1; i >= 0; i--){
-			nums = this.source[i].shapes.length;
+			var page = this.source[i];
+			nums = page.shapes.length;
+
+			subNum = page.numSubPageShapes();
+			if (subNum){
+				info.subPages++;
+				nums += subNum;
+			}
 
 			if (nums > 0){
 				info.shapes += nums;

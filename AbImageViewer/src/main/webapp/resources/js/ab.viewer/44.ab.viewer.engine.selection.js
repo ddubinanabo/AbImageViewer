@@ -15,6 +15,17 @@
  * @property {Point} prev 선택영역 끝점의 이전 좌표
  */
 
+ /**
+ * RestoreInfo 정보
+ * <p>* items 필드가 세트되어 있으면, x/y/width/height 필드는 무시됩니다.
+ * @typedef {Object} RestoreInfo
+ * @property {Number} [x] 복구 영역 X축 값
+ * @property {Number} [y] 복구 영역 Y축 값
+ * @property {Number} [width] 복구 영역 폭
+ * @property {Number} [height] 복구 영역 높이
+ * @property {Boolean} [forcibly] 필수 복구 여부
+ * @property {Array.<Box>} [items] 복구 영역 배열
+ */
 
 /**
  * 엔진 선택영역 정보
@@ -116,6 +127,25 @@ function AbViewerEngineSelection(options){
 		prev: { x: 0, y: 0 },
 	};
 
+	// 드로잉 한 좌표 (화면 좌표)
+	/**
+	 * 화면에 그린 영역의 크기 (캔버스 좌표계)
+	 * <p>* 엔진은 이 크기로 화면을 복구합니다.
+	 * @type {RestoreInfo}
+	 */
+	this.drawed = null;
+
+	/**
+	 * 배경 도형
+	 * @private
+	 * @type {ShapeObject}
+	 */
+	this.groundShape = null;
+
+	/**
+	 * 엔진의 포커스아웃 이벤트 시 
+	 */
+	this.ignoreFocusOutEditOut = false;
 };
 
 AbViewerEngineSelection.prototype = {
@@ -139,13 +169,10 @@ AbViewerEngineSelection.prototype = {
 	 */
 	box: function(){ return AbGraphics.box.rect(this.start.x, this.start.y, this.end.x, this.end.y); },
 
-	// 드로잉 한 좌표 (화면 좌표)
 	/**
-	 * 화면에 그린 영역의 크기 (캔버스 좌표계)
-	 * <p>* 엔진은 이 크기로 화면을 복구합니다.
-	 * @type {Box}
+	 * drawed 필드가 세트되어 있는 경우, 도형 객체의 creationDraw() 지원 여부와 관계없이 복구 처리할 지 여부입니다.
 	 */
-	drawed: null,
+	isForciblyRestore: function(){ return this.drawed && this.drawed.hasOwnProperty('forcibly') && this.drawed.forcibly === true; },
 
 	/**
 	 * 선택을 초기화합니다.
@@ -163,4 +190,87 @@ AbViewerEngineSelection.prototype = {
 		this.clickTarget = null;
 	},
 
+	/**
+	 * 복구 영역을 설정합니다.
+	 * @param {RestoreInfo} data 페이지 좌표계 복구 영역 정보
+	 * @param {AbPage} [page] 페이지 정보, 세트되면 복구영역 정보를 캔버스 좌표계로 변환합니다.
+	 */
+	setDrawed: function(data, page){
+		if (data.hasOwnProperty('items')){
+			var len = data.items.length;
+			var a = [];
+			for (var i=0; i < len; i++){
+				var box = data.items[i];
+				if (page) a.push(page.toCanvasBox(box));
+				else a.push(box);
+			}
+
+			this.drawed = {
+				items: a,
+			};
+		}else{
+			if (page) this.drawed = page.toCanvasBox(data);
+			else this.drawed = data;
+		}
+
+		if (data.hasOwnProperty('forcibly'))
+			this.drawed.forcibly = data.forcibly;
+	},
+
+	/**
+	 * 현재 내부 편집 중인지 확인합니다.
+	 * @return {Boolean}
+	 */
+	isInShape: function(){ return this.groundShape != null; },
+	/**
+	 * 내부 편집 중인 도형 객체인지 확인합니다.
+	 * @param {ShapeObject} s 도형 객체
+	 * @return {Boolean}
+	 */
+	equalsInShape: function(s) { return this.groundShape === s; },
+
+	/**
+	 * 내부 편집을 시작합니다.
+	 * @param {ShapeObject} s 내부 편집 도형 객체
+	 */
+	editIn: function (s){
+		var nextShape = s || this.clickTarget;
+
+		if (this.groundShape && this.groundShape === nextShape)
+			return;
+	
+		this.editOut();
+
+		this.groundShape = nextShape;
+		if (this.groundShape){
+			this.groundShape.notify('edit.in');
+		}
+	},
+
+	/**
+	 * 내부 편집을 종료합니다.
+	 * @return {Boolean} 내부 편집을 종료했으면 true
+	 */
+	editOut: function(){
+		var r = false;
+		if (this.groundShape){
+			this.groundShape.notify('edit.out');
+			r = true;
+		}
+		this.groundShape = null;
+
+		return r;
+	},
+
+	/**
+	 * 엔진의 포커스아웃 시 수행됩니다.
+	 * @return {Boolean} 내부 편집을 종료했으면 true
+	 */
+	focusOutEditOut: function(){
+		if (this.ignoreFocusOutEditOut){
+			this.ignoreFocusOutEditOut = false;
+			return false;
+		}
+		return this.editOut();
+	},
 };

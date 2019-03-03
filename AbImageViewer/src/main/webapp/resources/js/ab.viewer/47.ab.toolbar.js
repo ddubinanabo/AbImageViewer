@@ -696,4 +696,44 @@ AbToolbar.prototype = {
 			enableElemnent(this.topics[topic], enabled);
 		}
 	},
+
+	/**
+	 * 종류별 툴바를 활성화하거나 비활성화합니다.
+	 * @param {String} kind 종류
+	 * @param {Boolean} enabled 활성화 여부
+	 */
+	enableKind: function(kind, enabled){
+		var requestKinds = $.isArray(kind) ? kind : [kind];
+
+		var kindTopics = this.e.find('[tb-kind]');
+
+		var numKindTopics = kindTopics.length;
+		for (var i=0; i < numKindTopics; i++){
+			var he = kindTopics.get(i);
+			var e = $(he);
+			
+			var kindTopic = e.attr('tb-kind');
+
+			var accept = false;
+			
+			var topics = kindTopic.trim().split(/\s*,\s*/g);
+			var numTopics = topics.length;
+			for (var j=0; j < numTopics; j++){
+				var item = topics[j];
+				
+				if ($.inArray(item, requestKinds) >= 0){
+					accept = true;
+					break;
+				}
+			}
+
+			if (accept){
+				if (enabled)
+					e.show();
+				else
+					e.hide();
+			}
+		}
+
+	},
 };

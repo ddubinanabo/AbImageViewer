@@ -2,6 +2,7 @@ package com.abrain.wiv.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -11,9 +12,13 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import javax.activation.MimetypesFileTypeMap;
+
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 /**
  * 파일 관련 도구
@@ -424,4 +429,71 @@ public class FileUtil {
 			}
 		}
 	}
+	
+	/**
+	 * 파일을 와일드 카드 패턴으로 검색합니다. 파일이 없거나 디렉터리면 null을 리턴합니다.
+	 * @param dir 디렉터리 경로
+	 * @param pattern 와일드 카드 패턴
+	 * @return 파일 객체
+	 */
+	public static File searchFile (String dir, String pattern) {
+		File dirFile = new File(dir);
+		FileFilter filter = new WildcardFileFilter(pattern);
+		File[] files = dirFile.listFiles(filter);
+		
+		int numFiles = files != null ? files.length : 0;
+		for (int i=0; i < numFiles; i++) {
+			File file = files[i];
+			
+			if (file.isDirectory())
+				continue;
+			
+			return file;
+		}		
+		return null;
+	}
+	
+	/**
+	 * 와일드 카드 패턴으로 파일들을 검색합니다. 파일이 없거나 디렉터리면 null을 리턴합니다.
+	 * @param dir 디렉터리 경로
+	 * @param pattern 와일드 카드 패턴
+	 * @return 파일 객체
+	 */
+	public static File[] searchFiles (String dir, String pattern) {
+		File dirFile = new File(dir);
+		FileFilter filter = new WildcardFileFilter(pattern);
+		File[] files = dirFile.listFiles(filter);
+		
+		List<File> r = new ArrayList<>();
+		
+		int numFiles = files != null ? files.length : 0;
+		for (int i=0; i < numFiles; i++) {
+			File file = files[i];
+			
+			if (file.isDirectory())
+				continue;
+			
+			r.add(file);
+		}		
+		return r.toArray(new File[r.size()]);
+	}
+
+	/**
+	 * 파일 객체를 가져옵니다. 파일이 없거나 디렉터리면 null을 리턴합니다.
+	 * @param dir 디렉터리 경로
+	 * @param filename 파일명
+	 * @return 파일 객체
+	 */
+	public static File getFile (String dir, String filename) {
+		File file = new File(FileUtil.combinePath(dir, filename));
+		
+		if (!file.exists())
+			return null;
+		
+		if (file.isDirectory())
+			return null;
+		
+		return file;
+	}
+	
 }

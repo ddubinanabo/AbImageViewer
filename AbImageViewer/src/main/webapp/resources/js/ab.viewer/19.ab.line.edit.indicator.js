@@ -44,7 +44,7 @@ function AbLineEditIndicator(options){
 		/**
 		 * 회전 편집점 사용 여부
 		 */
-		angle: controls.angle || true,
+		angle: AbCommon.isBool(controls.angle) ? controls.angle : true,
 		/**
 		 * 도형과 회전 편집점의 거리
 		 */
@@ -53,11 +53,11 @@ function AbLineEditIndicator(options){
 		/**
 		 * 시작점 편집점 사용여부
 		 */
-		left: controls.left || true,
+		left: AbCommon.isBool(controls.left) ? controls.left : true,
 		/**
 		 * 끝점 편집점 사용여부
 		 */
-		right: controls.right || true,
+		right: AbCommon.isBool(controls.right) ? controls.right : true,
 	};
 
 	var style = controls.style || {};

@@ -26,6 +26,7 @@
  * @class
  * @param {Object} options 옵션
  * @param {AbImageLoader.loader} options.loader 이미지 로드 수행 함수
+ * @param {String} [options.xmlShapes] 도형 정의 XML 문자열
  * @param {String} [options.uid] 페이지 UUID
  * @param {AbPage.Status} [options.status=AbPage.prototype.LOADED] 로드상태 (0|1|2|3)
  * @param {Number} [options.angle] 페이지 회전 각도
@@ -44,6 +45,11 @@ function AbPage(options){
 	 * @type {Function}
 	 */
 	this.loader = options.loader;
+	/**
+	 * 도형 정의 XML 문자열
+	 * <p>* 이 정보를 이용해 도형을 생성하고, shapes 필드의 데이터를 채웁니다.
+	 */
+	this.xmlShapes = options.xmlShapes;
 
 	/**
 	 * 페이지 UUID
@@ -96,6 +102,12 @@ function AbPage(options){
 	this.fitTo = 'in';
 
 	/**
+	 * 미디어 타입 (image|vedeo|audio)
+	 * @type {String}
+	 */
+	this.mediaType = 'image';
+
+	/**
 	 * 화면 확대/축소 비율
 	 * @type {Point}
 	 */
@@ -115,6 +127,12 @@ function AbPage(options){
 	 * @type {Array.<ShapeObject>}
 	 */
 	this.shapes = [];
+
+	/**
+	 * 서브 페이지 목록
+	 * @type {AbPageCollection}
+	 */
+	this.subPages = new AbPageCollection();
 };
 	
 //-----------------------------------------------------------
@@ -222,6 +240,11 @@ AbPage.prototype = {
 	 * @return {Boolean}
 	 */
 	hasShapes: function () { return this.shapes.length > 0; },
+	/**
+	 * 페이지에 도형 정의 문자열이 있는 지 확인합니다.
+	 * @return {Boolean}
+	 */
+	hasXmlShapes: function () { return this.xmlShapes != null; },
 
 	//-----------------------------------------------------------
 
@@ -277,7 +300,7 @@ AbPage.prototype = {
 	 * @return {Image} 이미지 HTML 엘리먼트
 	 */
 	image: function(options){
-		if (this.source instanceof AbImage){
+		if (this.source instanceof AbImage || this.source instanceof AbMedia){
 			if (this.source.hasImage())
 				return this.source.imageElement();
 			else if (this.source.hasThumbnail()){
@@ -295,7 +318,7 @@ AbPage.prototype = {
 	 * @return {Image} 이미지 HTML 엘리먼트
 	 */
 	thumbnail: function(){
-		if (this.source instanceof AbImage){
+		if (this.source instanceof AbImage || this.source instanceof AbMedia){
 			if (this.source.hasThumbnail())
 				return this.source.thumbnailElement();
 		}
@@ -307,11 +330,88 @@ AbPage.prototype = {
 	 * @return {Image} 이미지 HTML 엘리먼트
 	 */
 	originThumbnail: function(){
-		if (this.source instanceof AbImage){
+		if (this.source instanceof AbImage || this.source instanceof AbMedia){
 			if (this.source.hasThumbnail())
 				return this.source.originThumbnailElement();
 		}
 		return null;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 이미지/미디어 정보에서 MIME 정보를 가져옵니다.
+	 * @return {String} MIME
+	 */
+	mimeType: function(){
+		var info = this.info();
+		if (info) return info.type;
+		return null;
+	},
+
+	/**
+	 * 미디어 정보에서 미디어 URI를 가져옵니다.
+	 * @return {String} 미디어 URI
+	 */
+	mediaURI: function(){
+		if (this.source instanceof AbMedia)
+			return this.source.mediaInfo.uri;
+		return null;
+	},
+
+	/**
+	 * 미디어 정보에서 미디어 소스를 가져옵니다.
+	 * @return {String} 미디어 소스 (URL이거나 DATA URI)
+	 */
+	mediaSource: function(){
+		if (this.source instanceof AbMedia)
+			return this.source.mediaInfo.data;
+		return null;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 초기 설정에 서브 이미지 정보가 존재 하는 지 확인합니다.
+	 * @return {Boolean}
+	 */
+	isMultiple: function(){
+		return this.source && this.source.info && this.source.info.images && this.source.info.images.length;
+	},
+
+	/**
+	 * 초기 설정 정보에서 서브 이미지 정보를 가져옵니다.
+	 * @return {Array}
+	 */
+	subImages: function(){
+		if (this.isMultiple())
+			return this.source.info.images;
+		return null;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 서브 페이지가 존재 하는 지 확인합니다.
+	 * @return {Boolean}
+	 */
+	hasSubPages: function(){
+		return this.subPages.length() > 0;
+	},
+
+	//-----------------------------------------------------------
+
+	/**
+	 * 서브 페이지들의 도형 정보 개수를 가져옵니다.
+	 * @return {Number}
+	 */
+	numSubPageShapes: function(){
+		var numSubPages = this.subPages.length(), nums = 0;
+		for (var i=0; i < numSubPages; i++){
+			var p = this.subPages.get(i);
+			nums += p.shapes.length;
+		}
+		return nums;
 	},
 
 	//-----------------------------------------------------------
@@ -322,7 +422,7 @@ AbPage.prototype = {
 	 * @return {Promise}
 	 */
 	changeImage: function(src){
-		if (this.source instanceof AbImage){
+		if (this.source instanceof AbImage || this.source instanceof AbMedia){
 			return this.source.changeImage(src)
 				.then(function(imgElement){
 					this.width = imgElement.width;
@@ -579,14 +679,17 @@ AbPage.prototype = {
 	 * @param {CanvasRenderingContext2D} ctx Canvas 2D Context
 	 * @param {Object} [options] 옵션
 	 * @param {Boolean} [options.indicator] 편집점 지시자를 그릴 지 여부입니다.
+	 * @param {String} [options.mode=null] 드로잉 목적입니다. <p>* null이면 화면을 말하며, 이미지 생성은 image로 입력됩니다.
 	 * @param {Object.<String, Boolean>} [options.showingShapeTypeMap] 도형 구분(type 필드)별 그릴 지 여부로<p>필드명이 구분(annotation/masking), 필드값이 부울형인 객체입니다.
 	 */
 	drawShapes: function (ctx, options){
 		var indicator = true;
+		var mode = null;
 		var showingShapeTypeMap = {};
 		
 		if (options && AbCommon.isBool(options.indicator)) indicator = options.indicator;
 		if (options && options.showingShapeTypeMap) showingShapeTypeMap = options.showingShapeTypeMap;
+		if (options && options.mode) mode = options.mode;
 
 		var len = this.shapes.length;
 		var sels = [], fsel = null;
@@ -610,7 +713,7 @@ AbPage.prototype = {
 				s.focused = false;
 			}
 
-			s.draw(ctx, this);
+			s.draw(ctx, this, false, mode);
 
 			if (indicator === false){
 				s.selected = bak.selected;
@@ -618,12 +721,20 @@ AbPage.prototype = {
 			}
 		}
 		if (sels.length && indicator){
-			for (var i = sels.length - 1; i >= 0; i--)
-				sels[i].indicator.draw(ctx);
+			for (var i = sels.length - 1; i >= 0; i--){
+				var s = sels[i];
+				if (typeof s.drawIndicator == 'function')
+					s.drawIndicator(ctx, this);
+				else
+					s.indicator.draw(ctx);
+			}
 		}
 
 		if (fsel && indicator){
-			fsel.indicator.draw(ctx);
+			if (typeof fsel.drawIndicator == 'function')
+				fsel.drawIndicator(ctx, this);
+			else
+				fsel.indicator.draw(ctx);
 		}
 	},
 
@@ -632,6 +743,7 @@ AbPage.prototype = {
 	 * @param {CanvasRenderingContext2D} ctx Canvas 2D Context
 	 * @param {Object} [options] 옵션
 	 * @param {Number} [options.scale=1] 확대/축소 비율
+	 * @param {String} [options.mode=null] 드로잉 목적입니다. <p>* null이면 화면을 말하며, 이미지 생성은 image로 입력됩니다.
 	 * @param {Object.<String, Boolean>} [options.showingShapeTypeMap] 도형 구분(type 필드)별 그릴 지 여부로<p>필드명이 구분(annotation/masking), 필드값이 부울형인 객체입니다.
 	 */
 	drawOrigin: function(ctx, options){
@@ -648,6 +760,7 @@ AbPage.prototype = {
 		this.drawShapes(ctx, {
 			indicator: false,
 			showingShapeTypeMap: options ? options.showingShapeTypeMap : null,
+			mode: options ? options.mode : null,
 		});
 
 		this.scale.x = scaleX;

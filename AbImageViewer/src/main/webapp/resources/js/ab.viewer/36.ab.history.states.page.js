@@ -171,6 +171,11 @@ function AbHistoryUpdatePageState(){
 
 	/**
 	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
+	/**
+	 * 페이지 인덱스
 	 * @private
 	 * @type {Number}
 	 */
@@ -232,6 +237,7 @@ AbHistoryUpdatePageState.prototype = {
 		this.setter = setter;
 
 		this.pageIndex = engine.currentPageIndex;
+		this.pageOwnerIndex = engine.ownerPageIndex;
 
 		this.un = AbCommon.copyProp(engine.currentPage, {}, this.props);
 		this.unToken = token;
@@ -242,7 +248,7 @@ AbHistoryUpdatePageState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	end: function(engine, token){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
 		this.re = AbCommon.copyProp(page, {}, this.props);
 		this.reToken = token;
@@ -255,9 +261,9 @@ AbHistoryUpdatePageState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	undo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 
 		if (AbCommon.isFunction(this.setter)) this.setter.call(engine, this.un, this.re, this.unToken, this.reToken);
 		else{
@@ -265,7 +271,7 @@ AbHistoryUpdatePageState.prototype = {
 			engine.render();
 		}
 
-		engine.historySync('page', 'update', 'undo', this.pageIndex);
+		engine.command('history.sync', 'page', 'update', 'undo', this.pageOwnerIndex, this.pageIndex);
 
 		// Notify modified
 		engine.modified();
@@ -276,9 +282,9 @@ AbHistoryUpdatePageState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 
 		if (AbCommon.isFunction(this.setter)) this.setter.call(engine, this.re, this.un, this.reToken, this.unToken);
 		else {
@@ -286,7 +292,7 @@ AbHistoryUpdatePageState.prototype = {
 			engine.render();
 		}
 
-		engine.historySync('page', 'update', 'redo', this.pageIndex);
+		engine.command('history.sync', 'page', 'update', 'redo', this.pageOwnerIndex, this.pageIndex);
 
 		// Notify modified
 		engine.modified();
@@ -316,6 +322,14 @@ AbHistoryUpdatePageState.prototype = {
  */
 
 /**
+ * 서브 페이지 인덱스 정보
+ * @typedef {Object} AbHistoryRemovePageState.SubPageIndexInfo
+ * @property {Number} ownerIndex 부모 페이지 인덱스
+ * @property {Array.<Number>} pages 페이지 인덱스 배열
+ */
+
+
+/**
  * 페이지 삭제 History 상태
  * <p>* 삭제 전/후의 정보를 담습니다.
  * @class
@@ -336,6 +350,11 @@ function AbHistoryRemovePageState(){
 
 	/**
 	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
+	/**
+	 * 페이지 인덱스
 	 * @private
 	 * @type {Number}
 	 */
@@ -353,24 +372,45 @@ function AbHistoryRemovePageState(){
 AbHistoryRemovePageState.prototype = {
 	constructor: AbHistoryRemovePageState,
 	
+	getPages: function(engine){
+		var abpages = null;
+		if (this.pageOwnerIndex >= 0){
+			var abpage = engine.pages.get(this.pageOwnerIndex);
+			return abpage.subPages;
+		}
+		return engine.pages;
+	},
+	
 	/**
 	 * 기록을 시작합니다.
 	 * @param {AbViewerEngine} engine 엔진
-	 * @param {Array.<Number>} pages 페이지 인덱스 배열
+	 * @param {(Array.<Number>|AbHistoryRemovePageState.SubPageIndexInfo)} reqInfo 페이지 인덱스 배열 또는 서브 페이지 인덱스 정보
 	 */
-	begin: function(engine, pages){
+	begin: function(engine, reqInfo){
+		var hasSubPages = false;
+		var pages = null;
+		if ($.isArray(reqInfo)){
+			pages = reqInfo;
+		}else{
+			hasSubPages = AbCommon.isNumber(reqInfo.ownerIndex) && reqInfo.ownerIndex >= 0;
+			pages = reqInfo.pages;
+		}
+		
 		this.pageIndex = engine.currentPageIndex;
-
-		if (!pages) pages = [engine.currentPageIndex];
+		this.pageOwnerIndex = hasSubPages ? reqInfo.ownerIndex : -1;
+		
+		if (!pages) pages = [this.pageIndex];
 
 		if (!pages.length)
 			return false;
+		
+		var abpages = this.getPages(engine);
 
 		var siz = pages.length;
 		for (var i=0; i < siz; i++){
 			this.pages.push({
 				index: pages[i],
-				source: engine.pages.get(pages[i]),
+				source: abpages.get(pages[i]),
 			});
 		}
 	},
@@ -390,18 +430,21 @@ AbHistoryRemovePageState.prototype = {
 	 */
 	undo: function(engine){
 		if (!this.pages.length) return;
+		
+		var abpages = this.getPages(engine);
 
 		var len = this.pages.length;
 		if (len > 0){
 			for (var i=0; i < len; i++){
 				var d = this.pages[i];
-	
-				engine.pages.splice(d.index, 0, d.source);
+
+				abpages.splice(d.index, 0, d.source);
 				engine.pageInserted(d.index);
 			}
-	
-			engine.historySync('page', 'remove', 'undo', this.pages, function(){
-				engine.selectPage(this.pages[len-1].index, true);
+
+			engine.command('history.sync', 'page', 'remove', 'undo', this.pageOwnerIndex, this.pages, function(){
+				var d = this.pages[len-1];
+				engine.command('page.select', d.index, this.pageOwnerIndex, true);
 			}.bind(this));
 		}
 	},
@@ -412,6 +455,8 @@ AbHistoryRemovePageState.prototype = {
 	 */
 	redo: function(engine){
 		if (!this.pages.length) return;
+		
+		var abpages = this.getPages(engine);
 
 		var cindex = engine.currentPageIndex;
 		var ocindex = cindex;
@@ -420,23 +465,23 @@ AbHistoryRemovePageState.prototype = {
 		if (len){
 			for (var i=len - 1; i >= 0; i--){
 				var d = this.pages[i];
-	
-				engine.pages.splice(d.index, 1);
+
+				abpages.splice(d.index, 1);
 				engine.pageRemoved(d.index);
 			}
 				
-			if (cindex >= engine.pages.length())
-				cindex = engine.pages.length() - 1;
+			if (cindex >= abpages.length())
+				cindex = abpages.length() - 1;
 			
-			engine.historySync('page', 'remove', 'redo', this.pages, function (){
+			engine.command('history.sync', 'page', 'remove', 'redo', this.pageOwnerIndex, this.pages, function(){
 				if (cindex >= 0){
-					engine.selectPage(cindex, true);
+					engine.command('page.select', cindex, this.pageOwnerIndex, true);
 				}else{
-					engine.selectPage(engine.pages.length() - 1, true);
+					engine.command('page.select', abpages.length() - 1, this.pageOwnerIndex, true);
 				}
 			}.bind(this));
 
-			if (engine.pages.length() == 0)
+			if (abpages.length() == 0)
 				engine.render();
 		}
 	},

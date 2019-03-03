@@ -1,6 +1,7 @@
 package com.abrain.wiv.services;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -73,6 +74,8 @@ public class DocService {
 	 * 이미지를 임시 등록합니다.
 	 * @param id 이미지 목록 ID
 	 * @param seq 이미지 목록의 인덱스
+	 * @param mainSeq 메인 인덱스
+	 * @param subSeq 서브 인덱스
 	 * @param ip 아이피
 	 * @param imageInfo 이미지 전송 정보 중 이미지 정보
 	 * @param imageSource 이미지 바이너리 데이터
@@ -85,6 +88,8 @@ public class DocService {
 	public Object record(
 			String id,
 			int seq,
+			int mainSeq,
+			int subSeq,
 			String ip,
 			AbImagePack.ImageInfo imageInfo,
 			byte[] imageSource,
@@ -95,7 +100,7 @@ public class DocService {
 		
 		try
 		{
-			dao.record(id, seq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource, bookmark);
+			dao.record(id, seq, mainSeq, subSeq, ip, imageInfo, imageSource, imageResult, thumbInfo, thumbSource, bookmark);
 			return null;
 		}
 		catch (Exception e)
@@ -168,7 +173,30 @@ public class DocService {
 	 * @return 이미지 DB 정보 목록
 	 */
 	public List<AbImageDbData> select (String id){
-		return dao.select(id);
+		List<AbImageDbData> results = new ArrayList<>();
+		
+		List<AbImageDbData> r = dao.select(id);
+		
+		int manSeq = -1;
+		int nums = r != null ? r.size() : 0;
+		for (int i=0; i < nums; i++) {
+			AbImageDbData d = r.get(i);
+			
+			if (d.subSeq >= 0) {
+				for (int j = results.size() - 1; j >= 0; j--) {
+					AbImageDbData rd = results.get(j);
+					
+					if (rd.manSeq == d.manSeq) {
+						rd.children.add(d);
+						break;
+					}
+				}				
+			}else {
+				results.add(d);
+			}
+		}
+		
+		return results;
 	}
 	
 	/**

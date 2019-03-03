@@ -451,6 +451,8 @@ public class AbPartialFile {
 	 */
 	public static String readText(HttpServletRequest request, String middleName, String id, String filename) throws Exception {
 		File file = read(request, middleName, id, filename);
+		if (!file.exists())
+			return null;
 		
 		byte[] r = FileUtil.read(file);
 		return new String(r, "UTF-8");
@@ -469,6 +471,8 @@ public class AbPartialFile {
 	 */
 	public static String readTextWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename) throws Exception {
 		File file = readWithSession(request, sessionId, middleName, id, filename);
+		if (!file.exists())
+			return null;
 		
 		byte[] r = FileUtil.read(file);
 		return new String(r, "UTF-8");
@@ -487,6 +491,9 @@ public class AbPartialFile {
 	 */
 	public static byte[] readBytes(HttpServletRequest request, String middleName, String id, String filename) throws Exception {
 		String text = readText(request, middleName, id, filename);
+		if (text == null)
+			return null;
+		
 		return Base64.getDecoder().decode(text);
 	}
 
@@ -503,6 +510,9 @@ public class AbPartialFile {
 	 */
 	public static byte[] readBytesWithSession(HttpServletRequest request, String sessionId, String middleName, String id, String filename) throws Exception {
 		String text = readTextWithSession(request, sessionId, middleName, id, filename);
+		if (text == null)
+			return null;
+		
 		return Base64.getDecoder().decode(text);
 	}
 	

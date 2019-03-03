@@ -1,5 +1,7 @@
 package com.abrain.wiv.data;
 
+import java.util.List;
+
 /**
  * 이미지 정보
  * <p>* 브라우저에 제공하는 이미지 정보입니다.
@@ -46,6 +48,10 @@ public class AbImageData {
 	//-----------------------------------------------------------
 	
 	/**
+	 * 파일정보 종류 (def|tif|pdf|video|audio)
+	 */
+	private String kind = "def";
+	/**
 	 * 이미지 회전 각도
 	 */
 	private int angle;
@@ -74,6 +80,10 @@ public class AbImageData {
 	 */
 	private String shapes;
 	//private int bookmark;
+	/**
+	 * 서브 이미지 정보 목록 
+	 */
+	private List<AbImageData> images;
 	
 	//-----------------------------------------------------------
 	
@@ -83,6 +93,17 @@ public class AbImageData {
 	private AbImageMetadata info;
 
 	//-----------------------------------------------------------
+	
+	/**
+	 * 파일정보 종류(을)를 가져옵니다.
+	 * @return 파일정보 종류
+	 */
+	public String getKind() { return kind; }
+	/**
+	 * 파일정보 종류(을)를 설정합니다.
+	 * @param value 파일정보 종류
+	 */
+	public void setKind(String value) { kind = value; }
 	
 	/**
 	 * 이미지 회전 각도(을)를 가져옵니다.
@@ -188,7 +209,50 @@ public class AbImageData {
 
 	//-----------------------------------------------------------
 
+	/**
+	 * 서브 이미지 정보 목록(을)를 가져옵니다.
+	 * @return 서브 이미지 정보 목록
+	 */
+	public List<AbImageData> getImages() { return images; }
+	/**
+	 * 서브 이미지 정보 목록(을)를 설정합니다.
+	 * @param value 서브 이미지 정보 목록
+	 */
+	public void setImages(List<AbImageData> value) { images = value; }
+
+	//-----------------------------------------------------------
+
 //	public int getBookmark() { return bookmark; }
 //	public void setBookmark(int value) { bookmark = value; }
+	
+	//-----------------------------------------------------------
+	//-----------------------------------------------------------
+	//-----------------------------------------------------------
+	
+	/***
+	 * 이미지 정보 객체를 생성합니다.
+	 * @param kind 파일정보 종류 (def|tif|pdf|video|audio)
+	 * @return 이미지 정보 인스턴스
+	 */
+	public static AbImageData create(String kind){
+		AbImageData d = new AbImageData();
+		d.kind = kind;
+		
+		return d;
+	}
+
+	/**
+	 * 이미지 정보 객체를 생성합니다.
+	 * @param kind 파일정보 종류 (def|tif|pdf|video|audio)
+	 * @param image 이미지 URL
+	 * @return 이미지 정보 인스턴스
+	 */
+	public static AbImageData create(String kind, String image){
+		AbImageData d = new AbImageData();
+		d.kind = kind;
+		d.image = image;
+		
+		return d;
+	}
 
 }

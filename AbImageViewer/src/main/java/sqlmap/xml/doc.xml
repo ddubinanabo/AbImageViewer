@@ -31,7 +31,9 @@
 	<![CDATA[
 		INSERT INTO AB_DOC
 			(
-				ID, SEQ, IP,
+				ID,
+				SEQ, MAN_SEQ, SUB_SEQ,
+				IP,
 				IMG_ROT, IMG_DEC,
 				IMG_WID, IMG_HGT,
 				IMG_SRC, IMG_SRC_SIZ,
@@ -62,7 +64,9 @@
 			)
 		VALUES
 			(
-				#{ID, jdbcType=VARCHAR}, #{SEQ}, #{IP, jdbcType=VARCHAR},
+				#{ID, jdbcType=VARCHAR},
+				#{SEQ}, #{MAN_SEQ}, #{SUB_SEQ},
+				#{IP, jdbcType=VARCHAR},
 				#{ROT}, #{IMG_DEC, jdbcType=VARCHAR},
 				#{WID}, #{HGT},
 				#{IMG_SRC, jdbcType=VARCHAR}, #{IMG_SRC_SIZ},
@@ -112,6 +116,8 @@
 		SELECT
 			ID,
 			SEQ,
+			MAN_SEQ,
+			SUB_SEQ,
 			IP,
 			IMG_ROT,
 			IMG_DEC,

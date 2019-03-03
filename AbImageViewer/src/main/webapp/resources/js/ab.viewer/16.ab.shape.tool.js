@@ -10,7 +10,7 @@ var AbShapeTool = {
 	 * @memberof AbShapeTool
 	 * @param {ShapeObject} shape 도형 객체
 	 * @param {CanvasRenderingContext2D} ctx Canvas 2D Context
-	 * @param {AbPage} page 
+	 * @param {AbPage} page 페이지(=이미지) 정보 객체
 	 */
 	beginRectDraw: function (shape, ctx, page, mode){
 		var scaleX = page ? page.scale.x : 1, scaleY = page ? page.scale.y : 1;
@@ -39,7 +39,9 @@ var AbShapeTool = {
 	 * @param {ShapeObject} shape 도형 객체
 	 * @param {CanvasRenderingContext2D} ctx Canvas 2D Context
 	 */
-	endDraw: function (shape, ctx){
+	endDraw: function (shape, ctx, drawIndicator){
+		if (!AbCommon.isBool(drawIndicator)) drawIndicator = true;
+
 		// var box = shape.box();
 		// ctx.strokeStyle = 'black';
 		// ctx.lineWidth = 1;
@@ -59,7 +61,7 @@ var AbShapeTool = {
 		ctx.restore();
 		*/
 
-		if (shape.selected)
+		if (shape.selected && drawIndicator)
 			shape.indicator.draw(ctx);
 	},
 };

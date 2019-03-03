@@ -19,6 +19,12 @@ function AbHistoryAddShapeState(){
 
 	/**
 	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
+	/**
+	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 서브 페이지의 인덱스
 	 * @private
 	 * @type {Number}
 	 */
@@ -51,6 +57,7 @@ AbHistoryAddShapeState.prototype = {
 		var page = engine.currentPage;
 
 		this.pageIndex = engine.currentPageIndex;
+		this.pageOwnerIndex = engine.ownerPageIndex;
 		this.start = page.shapes.length;
 	},
 
@@ -59,7 +66,7 @@ AbHistoryAddShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	end: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 		
 		var shapes = null;
 		if (this.start >= 0)
@@ -78,10 +85,10 @@ AbHistoryAddShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	undo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 		if (!this.shapes.length) return;
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 		
 		var len = this.shapes.length;
@@ -101,9 +108,9 @@ AbHistoryAddShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 
 		var len = this.shapes.length;
@@ -165,6 +172,11 @@ function AbHistoryUpdateShapeState(){
 
 	/**
 	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
+	/**
+	 * 페이지 인덱스
 	 * @private
 	 * @type {Number}
 	 */
@@ -214,6 +226,7 @@ AbHistoryUpdateShapeState.prototype = {
 		this.props = props;
 		this.editPoint = editPoint;
 		this.pageIndex = engine.currentPageIndex;
+		this.pageOwnerIndex = engine.ownerPageIndex;
 
 		var page = engine.currentPage;
 		var idxes = AbCommon.indexArrayOf(page.shapes, engine.selectedShapes, true);
@@ -237,7 +250,7 @@ AbHistoryUpdateShapeState.prototype = {
 		if (!engine.selectedShapes.length)
 			return false;
 
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
 		var idxes = AbCommon.indexArrayOf(page.shapes, engine.selectedShapes, true);
 		var len = idxes.length;
@@ -270,9 +283,9 @@ AbHistoryUpdateShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	undo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 		
 		var len = this.un.length;
@@ -282,6 +295,7 @@ AbHistoryUpdateShapeState.prototype = {
 			
 			$.extend(s, d.prop, true);
 			//s.measure();
+			s.notify('history', 'undo', 'update', page);
 			engine.selectShape(s);
 		}
 
@@ -298,9 +312,9 @@ AbHistoryUpdateShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 		
 		var len = this.re.length;
@@ -310,6 +324,7 @@ AbHistoryUpdateShapeState.prototype = {
 			
 			$.extend(s, d.prop, true);
 			//s.measure();
+			s.notify('history', 'redo', 'update', page);
 			engine.selectShape(s);
 		}
 
@@ -357,6 +372,11 @@ function AbHistoryRemoveShapeState(){
 
 	/**
 	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
+	/**
+	 * 페이지 인덱스
 	 * @private
 	 * @type {Number}
 	 */
@@ -388,6 +408,7 @@ AbHistoryRemoveShapeState.prototype = {
 			return false;
 		
 		this.pageIndex = engine.currentPageIndex;
+		this.pageOwnerIndex = engine.ownerPageIndex;
 		this.shapes = AbCommon.indexArrayOf(page.shapes, shapes, true);
 	},
 
@@ -405,9 +426,9 @@ AbHistoryRemoveShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	undo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 
 		var len = this.shapes.length;
@@ -431,10 +452,10 @@ AbHistoryRemoveShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 		if (!this.shapes.length) return;
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 		
 		var len = this.shapes.length;
@@ -517,17 +538,34 @@ AbHistoryRemoveAllShapeState.prototype = {
 		for (var i=0; i < siz; i++){
 			var page = engine.pages.get(i);
 
-			if (!page.shapes.length)
-				continue;
-			
-			var shapes = page.shapes.slice(0);
+			var numSubPages = page.subPages.length();
+			if (numSubPages){
+				for (var j=0; j < numSubPages; j++){
+					var subPage = page.subPages.get(j);
+	
+					if (!subPage.shapes.length)
+						continue;
+	
+					var shapes = subPage.shapes.slice(0);
+	
+					this.pages.push({
+						index: j,
+						ownerIndex: i,
+						source: shapes
+					});
+	
+					this.numAllShapes += shapes.length;
+				}	
+			}else if (page.shapes.length){
+				var shapes = page.shapes.slice(0);
 
-			this.pages.push({
-				index: i,
-				source: shapes
-			});
+				this.pages.push({
+					index: i,
+					source: shapes
+				});
 
-			this.numAllShapes += shapes.length;
+				this.numAllShapes += shapes.length;
+			}
 		}
 	},
 
@@ -547,21 +585,19 @@ AbHistoryRemoveAllShapeState.prototype = {
 	undo: function(engine){
 		var mod = engine.unselect(false);
 
-		var len = this.pages.length, last = -1;
+		var len = this.pages.length, last = -1, lastOwner = -1;
 		for (var i=0; i < len; i++){
 			var d = this.pages[i];
 
-			var page = engine.pages.get(d.index);
+			var page = engine.query('page', d.index, d.ownerIndex);
 			Array.prototype.push.apply(page.shapes, d.source);
 
 			last = d.index;
+			lastOwner = d.ownerIndex;
 		}
 
 		if (last >= 0){
-			if (last == engine.currentPageIndex){
-				engine.render();
-			}else
-				engine.selectPage(last);
+			engine.command('page.render', last, lastOwner);
 			
 			// Notify modified
 			engine.modified('all');
@@ -573,21 +609,19 @@ AbHistoryRemoveAllShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var len = this.pages.length, last = -1;
+		var len = this.pages.length, last = -1, lastOwner = -1;
 		for (var i=0; i < len; i++){
 			var d = this.pages[i];
 
-			var page = engine.pages.get(d.index);
+			var page = engine.query('page', d.index, d.ownerIndex);
 			page.shapes.splice(0, page.shapes.length);
 
 			last = d.index;
+			lastOwner = d.ownerIndex;
 		}
 
 		if (last >= 0){
-			if (last == engine.currentPageIndex)
-				engine.render();
-			else
-				engine.selectPage(last);
+			engine.command('page.render', last, lastOwner);
 			
 			// Notify modified
 			engine.modified('all');
@@ -663,20 +697,35 @@ AbHistoryRemoveRangeShapeState.prototype = {
 		for (var i=0; i < siz; i++){
 			var page = pages[i];
 
-			if (!page.shapes.length)
-				continue;
-			
-			var shapes = page.shapes.slice(0);
-			var index = engine.pages.indexOf(page.uid);
-
-			this.pageShapes.push({
-				index: index,
-				source: shapes
-			});
-
-			this.pages.push(index);
-
-			this.numShapes += shapes.length;
+			var numSubPages = page.subPages.length();
+			if (numSubPages){
+				for (var j=0; j < numSubPages; j++){
+					var subPage = page.subPages.get(j);
+	
+					if (!subPage.shapes.length)
+						continue;
+	
+					var shapes = subPage.shapes.slice(0);
+	
+					this.pages.push({
+						index: j,
+						ownerIndex: i,
+						source: shapes
+					});
+				}
+			}else if (page.shapes.length){
+				var shapes = page.shapes.slice(0);
+				var index = engine.pages.indexOf(page.uid);
+	
+				this.pageShapes.push({
+					index: index,
+					source: shapes
+				});
+	
+				this.pages.push(index);
+	
+				this.numShapes += shapes.length;
+			}
 		}
 	},
 
@@ -700,17 +749,15 @@ AbHistoryRemoveRangeShapeState.prototype = {
 		for (var i=0; i < len; i++){
 			var d = this.pageShapes[i];
 
-			var page = engine.pages.get(d.index);
+			var page = engine.query('page', d.index, d.ownerIndex);
 			Array.prototype.push.apply(page.shapes, d.source);
 
 			last = d.index;
+			lastOwner = d.ownerIndex;
 		}
 
 		if (last >= 0){
-			if (last == engine.currentPageIndex)
-				engine.render();
-			else
-				engine.selectPage(last);
+			engine.command('page.render', last, lastOwner);
 			
 			// Notify modified
 			engine.modified(this.pages);
@@ -726,17 +773,15 @@ AbHistoryRemoveRangeShapeState.prototype = {
 		for (var i=0; i < len; i++){
 			var d = this.pageShapes[i];
 
-			var page = engine.pages.get(d.index);
+			var page = engine.query('page', d.index, d.ownerIndex);
 			page.shapes.splice(0, page.shapes.length);
 
 			last = d.index;
+			lastOwner = d.ownerIndex;
 		}
 
 		if (last >= 0){
-			if (last == engine.currentPageIndex)
-				engine.render();
-			else
-				engine.selectPage(last);
+			engine.command('page.render', last, lastOwner);
 			
 			// Notify modified
 			engine.modified(this.pages);
@@ -776,6 +821,11 @@ function AbHistoryZIndexShapeState(){
 	 */
 	this.cmd = 'zindex';
 
+	/**
+	 * 페이지 인덱스
+	 * <p>* 서브 페이지가 있는 경우, 부모 페이지의 인덱스
+	 */
+	this.pageOwnerIndex = -1;
 	/**
 	 * 페이지 인덱스
 	 * @private
@@ -828,6 +878,7 @@ AbHistoryZIndexShapeState.prototype = {
 		this.moveCmd = cmd;
 		this.direction = cmd === 'top' || cmd === 'up' ? 1 : -1;
 		this.pageIndex = engine.currentPageIndex;
+		this.pageOwnerIndex = engine.ownerPageIndex;
 
 		var page = engine.currentPage;
 
@@ -846,7 +897,7 @@ AbHistoryZIndexShapeState.prototype = {
 		if (!engine.selectedShapes.length)
 			return false;
 
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
 		for (var i=page.shapes.length - 1; i >= 0; i--){
 			if (page.shapes[i].selected){
@@ -875,9 +926,9 @@ AbHistoryZIndexShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	undo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 
 		var a = [];
@@ -908,9 +959,9 @@ AbHistoryZIndexShapeState.prototype = {
 	 * @param {AbViewerEngine} engine 엔진
 	 */
 	redo: function(engine){
-		var page = engine.pages.get(this.pageIndex);
+		var page = engine.query('page', this.pageIndex, this.pageOwnerIndex);
 
-		engine.selectPage(this.pageIndex);
+		engine.command('page.select', this.pageIndex, this.pageOwnerIndex);
 		var mod = engine.unselect(false);
 		
 		var a = [];

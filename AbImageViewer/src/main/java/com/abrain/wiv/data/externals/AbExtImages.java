@@ -8,11 +8,14 @@ import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import com.abrain.wiv.config.AbImageConfig;
+import com.abrain.wiv.converters.TIFFImageConverter;
 import com.abrain.wiv.data.AbImageData;
 import com.abrain.wiv.data.AbImageMetadata;
 import com.abrain.wiv.data.SplayTree;
@@ -58,6 +61,11 @@ public class AbExtImages {
 		annoPath = imgPath + "/annotation";
 		annoDir = new File(annoPath);
 	}
+	
+	//-----------------------------------------------------------
+	
+	public static final String URL_IMG = "ext/img?";
+	public static final String URL_IMG_THUMB = "ext/img?t=thumb&";
 	
 	//-----------------------------------------------------------
 	
@@ -112,6 +120,7 @@ public class AbExtImages {
 	 * @return
 	 */
 	private FileFilter imageFilter() {
+		//if (imageFilter == null && config != null && config.ACCEPTS != null)
 		if (imageFilter == null)
 			imageFilter = new ImageFileFilter(config.ACCEPTS);
 		return imageFilter;
@@ -235,8 +244,8 @@ public class AbExtImages {
 			//-----------------------------------------------------------
 		
 			AbImageData img = new AbImageData(
-				"ext/img?" + cgi,
-				"ext/img?t=thumb&" + thumbCgi
+				URL_IMG + cgi,
+				URL_IMG_THUMB + thumbCgi
 			);
 			if (annotation != null)
 				img.setShapes(annotation);
@@ -359,10 +368,196 @@ public class AbExtImages {
 
 		return img;
 	}
+
+	//-----------------------------------------------------------
+	
+	/**
+	 * 이미지 또는 미디어 파일의 정보를 가져옵니다.
+	 * @param config 이미지 파일 설정 정보
+	 * @param path 이미지 또는 미디어 파일의 경로
+	 * @return 이미지 파일 정보
+	 * @throws Exception 예외
+	 */
+	public static AbImageData fileEx(AbImageConfig config, String path) throws Exception {
+		File file = new File(path);
+		if (!file.exists())
+			throw new NotFoundFileException(path);
+		
+		if (file.isDirectory())
+			throw new NotFoundFileException(path);
+		
+		//-----------------------------------------------------------
+	
+		String dir = file.getParent();
+		String filename = file.getName();
+		String basename = FilenameUtils.getBaseName(filename);
+		String extension = FilenameUtils.getExtension(filename);
+		
+		//-----------------------------------------------------------
+		
+		String encDirPath = URLEncoder.encode(dir, "UTF-8");
+		String encFilename = URLEncoder.encode(filename, "UTF-8");
+		
+		//-----------------------------------------------------------
+		
+		String cgi = "q=" + encDirPath + "&n=" + encFilename;
+		
+		//-----------------------------------------------------------
+		
+		String mimeType = FileUtil.contentType(file);
+		String kind = imageKind(mimeType);
+		String decoder = AbImageDecoder.renderingHint(extension, mimeType);
+		
+		//-----------------------------------------------------------
+		
+		AbExif exif = null;
+		
+		//-----------------------------------------------------------
+		
+		AbImageMetadata imgInfo = new AbImageMetadata();
+		imgInfo.setName(filename);
+		imgInfo.setText(filename);
+		imgInfo.setType(mimeType);
+		imgInfo.setSize(file.length());
+		
+		//-----------------------------------------------------------
+		
+		AbImageData img = null;
+		
+		if (kind.equalsIgnoreCase("tif")) {
+			try
+			{
+				exif = AbExifReader.read(file);
+			}
+			catch(Exception e)
+			{
+				exif = null;
+			}
+			
+			if (exif != null)
+				imgInfo.setExif(exif);
+			
+			List<AbImageData> subImages = TIFFImageConverter.convert(config, path);
+			
+			img = AbImageData.create(kind);
+			img.setImages(subImages);
+			img.setInfo(imgInfo);
+			img.setDecoder(decoder);
+			
+			return img;
+		}else if (!kind.equalsIgnoreCase("def")) {
+			img = AbImageData.create(kind, URL_IMG + cgi);
+			img.setInfo(imgInfo);
+			img.setDecoder(decoder);
+			
+			return img;
+		}else {
+			try
+			{
+				exif = AbExifReader.read(file);
+			}
+			catch(Exception e)
+			{
+				exif = null;
+			}
+			
+			if (exif != null)
+				imgInfo.setExif(exif);			
+		}
+		
+		//-----------------------------------------------------------
+
+		String thumbCgi = "c=Y&" + cgi;
+		
+		//-----------------------------------------------------------
+		
+		String annoDir = FileUtil.combinePath(dir, "annotation");
+		String thumbDir = FileUtil.combinePath(dir, "thumbnail");
+		
+		//-----------------------------------------------------------
+	
+		File annoFile = FileUtil.getFile(annoDir, basename + ".xml");
+		File thumbFile = FileUtil.searchFile(thumbDir, basename + ".*");
+		
+		//-----------------------------------------------------------
+		
+		if (thumbFile != null) {
+			String thumbFilename = thumbFile.getName();
+			String thName = URLEncoder.encode(thumbFilename, "UTF-8");
+			thumbCgi = "q=" + encDirPath + "&n=" + thName;
+		}
+		
+		String annotation = null;
+		if (annoFile != null) {
+			annotation = new String(FileUtil.read(annoFile), "UTF-8");
+		}
+		
+		img = new AbImageData(
+			URL_IMG + cgi,
+			URL_IMG_THUMB + thumbCgi
+		);
+	
+		if (annotation != null)
+			img.setShapes(annotation);
+		img.setInfo(imgInfo);
+		img.setDecoder(decoder);
+		
+		//-----------------------------------------------------------
+		
+		return img;
+	}
 	
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
 	//-----------------------------------------------------------
+	
+	/***
+	 * MIME 타입으로 이미지 파일정보 종류를 가져옵니다.
+	 * @param mimeType
+	 * @return 파일정보 종류 (def|tif|pdf|video|audio)
+	 */
+	private static String imageKind(String mimeType) {
+		if (mimeType != null && !mimeType.isEmpty()) {
+			mimeType = mimeType.toLowerCase();
+			
+			if (mimeType.equalsIgnoreCase("application/pdf"))
+				return "pdf";
+			else if (mimeType.equalsIgnoreCase("image/tiff"))
+				return "tif";
+			
+			String[] mimeTypes = mimeType.split("/");
+			
+			if (mimeTypes[0].equalsIgnoreCase("video"))
+				return "video";
+			else if (mimeTypes[0].equalsIgnoreCase("audio"))
+				return "audio";
+		}
+		return "def";
+	}
+
+	//-----------------------------------------------------------
+	//-----------------------------------------------------------
+	//-----------------------------------------------------------
+
+	/**
+	 * 이미지 파일 경로 정보
+	 * @author Administrator
+	 *
+	 */
+	public class ImageFilePathInfo {
+		/**
+		 * 이미지 파일 경로
+		 */
+		public String filePath;
+		/**
+		 * 주석 파일 경로
+		 */
+		public String annoPath;
+		/**
+		 * 섬네일 파일 경로
+		 */
+		public String thumbPath;
+	}
 	
 	/**
 	 * 이미지 파일 필터

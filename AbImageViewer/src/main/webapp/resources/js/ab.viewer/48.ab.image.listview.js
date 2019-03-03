@@ -1050,6 +1050,25 @@ AbImageListView.prototype = {
 	},
 
 	/**
+	 * 체크된 아이템 개수를 가져옵니다.
+	 * @return {Number} 체크된 아이템 개수
+	 */
+	numSelectedPages: function (){
+		var siz = this.renderedChildren.length;
+		var nums = 0;
+		for (var i=0; i < siz; i++){
+			var e = this.renderedChildren[i];
+			var ce = this.topic(e, 'check');
+
+			if (!ce.is(':checked'))
+				continue;
+
+			nums++;
+		}
+		return nums;
+	},
+
+	/**
 	 * 체크된 아이템들을 제거합니다.
 	 * <p>* 완료 후 page.remove.list가 Notify 됩니다.
 	 */
@@ -1577,6 +1596,8 @@ AbImageListView.prototype = {
 
 		var info = page.info();
 		if (info){
+			if (info.originMeta) info = info.originMeta;
+
 			name = info.name;
 			text = info.text;
 		}

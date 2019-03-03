@@ -15,6 +15,7 @@
 	<script type="text/javascript" src="resources/js/jquery-3.3.1.min.js"></script>
 	
 	<%/*
+	<jsp:include page="/WEB-INF/debug/js-viewer.jsp"></jsp:include>
 	<jsp:include page="/WEB-INF/debug/js-i-viewer.jsp"></jsp:include>
 	*/%>
 	
@@ -22,10 +23,14 @@
 	<script type="text/javascript" src="resources/js/i.ab.viewer.min.js"></script>
 	
 	<script>
+	var folder1 = 'C:/Users/Administrator/Desktop/원앙';
+	var folder = 'C:/Users/Administrator/Desktop/닭/';
+	var viewFileCalled = 0;
+	
 	$(function(){
 		$('#btn-folder').click(function(){
 			iAbViewerFrame.view(
-				'C:/Users/Administrator/Desktop/원앙',
+				folder1,
 				'행복|천사'
 			)
 		});
@@ -33,9 +38,28 @@
 		$('#btn-chg-file').click(function(){
 			iAbViewerFrame.viewMain(
 				1,
-				'C:/Users/Administrator/Desktop/닭/c1.jpg',
-				'C:/Users/Administrator/Desktop/닭/c1.xml'
+				folder + 'c1.jpg',
+				folder + 'c1.xml'
 			)
+		});
+		
+		$('[tst-cmd="viewFile"]').click(function(){
+			var e = $(this);
+			
+			var path = e.attr('path');
+			var file = e.attr('file');
+			
+			if (!path && !file) return;
+			
+			if (file) path = folder + file;
+			
+			viewFileCalled++;
+			
+			iAbViewerFrame.viewFile(
+				path,
+				'테스트-' + viewFileCalled,
+				'첫페이지|두번째'
+			);
 		});
 
 		//-----------------------------------------------------------
@@ -89,6 +113,12 @@
 			<span>IFRAME: </span>
 			<input id="btn-folder" type="button" value="원격 폴더"/>
 			<input id="btn-chg-file" type="button" value="두번째 이미지 변경"/>
+			<input tst-cmd="viewFile" file="viewFile/a.png" type="button" value="파일 - PNG 파일"/>
+			<input tst-cmd="viewFile" file="viewFile/a.jpg" type="button" value="파일 - JPEG 파일"/>
+			<input tst-cmd="viewFile" file="viewFile/a.tiff" type="button" value="파일 - TIFF 파일"/>
+			<input tst-cmd="viewFile" file="viewFile/a.pdf" type="button" value="파일 - PDF 파일"/>
+			<input tst-cmd="viewFile" file="viewFile/a.mp3" type="button" value="파일 - MP3 파일"/>
+			<input tst-cmd="viewFile" file="viewFile/a.mp4" type="button" value="파일 - MP4 파일"/>
 			<!--
 			<a href="/wiv/F88D41F3DBB44B1FB6E24A8FBEC78DC9" target="main">체크</a>
 			-->

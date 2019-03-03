@@ -16,11 +16,25 @@
  */
 
 /**
+ * 서브 이미지 메타데이터
+ * @typedef {Object} AbImage.SubImageMetadata
+ * @property {String} name 파일명
+ * @property {String} text 표시명
+ * @property {String} type 파일 타입 (mime-type)
+ * @property {AbImage.Metadata} originMeta 원본 이미지 메타데이터
+ * @property {Number} originIndex 원본(문서)의 인덱스
+ * @property {String} originName 원본(문서) 파일명
+ * @property {Number} originPages 원본(문서) 이미지 개수
+ * @property {Number} originSize 원본(문서) 파일크기 (단위: 바이트)
+ */
+
+/**
  * 이미지 정보
  * @typedef {Object} AbImage.Info
  * @property {AbImageLoader.From} from 이미지 획득처
  * @property {String} decoder 렌더링 힌트 (jpeg|png)
  * @property {AbImage.Metadata} data 이미지 메타데이터
+ * @property {Array.<AbImageLoader.LoadedImageInfo>} [images] 이미지 목록
  */
 
 /**

@@ -31,49 +31,58 @@
 <script type="text/javascript" src="resources/js/ab.viewer/16.ab.shape.tool.js"></script>
 
 <script type="text/javascript" src="resources/js/ab.viewer/17.ab.box.edit.indicator.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/18.ab.line.edit.indicator.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/18.ab.polygon.edit.indicator.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/19.ab.line.edit.indicator.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/19.ab.shape.image.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/20.ab.shape.rect.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/21.ab.shape.textbox.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/22.ab.shape.ellipse.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/23.ab.shape.line.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/24.ab.shape.arrow.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/25.ab.shape.pen.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/26.ab.shape.stamp.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/27.ab.shape.highlight.pen.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/20.ab.shape.image.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/21.ab.shape.rect.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/22.ab.shape.textbox.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/23.ab.shape.ellipse.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/24.ab.shape.line.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/25.ab.shape.arrow.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/26.ab.shape.pen.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/27.ab.shape.stamp.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/28.ab.shape.highlight.pen.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/29.ab.shape.polygon.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/30.ab.shape.polygon.point.updater.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/31.ab.shape.memopad.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/28.ab.page.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/29.ab.page.collection.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/32.ab.page.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/33.ab.page.collection.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/30.ab.clipboard.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/31.ab.history.states.shape.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/32.ab.history.states.page.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/33.ab.history.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/34.ab.clipboard.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/35.ab.history.states.shape.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/36.ab.history.states.page.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/37.ab.history.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/34.ab.image.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/35.ab.thumbnail.generator.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/38.ab.image.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/39.ab.media.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/36.ab.viewer.engine.observers.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/37.ab.viewer.engine.animateStates.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/38.ab.viewer.engine.selection.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/39.ab.viewer.engine.textbox.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/40.ab.viewer.engine.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/40.ab.thumbnail.generator.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/41.ab.toolbar.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/42.ab.image.listview.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/41.ab.viewer.meida.player.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/43.ab.image.loader.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/42.ab.viewer.engine.observers.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/43.ab.viewer.engine.animateStates.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/44.ab.viewer.engine.selection.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/45.ab.viewer.engine.textbox.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/46.ab.viewer.engine.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/44.ab.image.transfer.process.helper.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/45.ab.image.info.renderer.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/47.ab.toolbar.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/48.ab.image.listview.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/49.ab.image.sub.listview.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/46.ab.image.viewer.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/50.ab.image.loader.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/47.ab.print.js"></script>
-<script type="text/javascript" src="resources/js/ab.viewer/48.ab.watermark.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/51.ab.image.transfer.process.helper.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/52.ab.image.info.renderer.js"></script>
 
-<script type="text/javascript" src="resources/js/ab.viewer/49.ab.noop.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/53.ab.image.viewer.js"></script>
+
+<script type="text/javascript" src="resources/js/ab.viewer/54.ab.print.js"></script>
+<script type="text/javascript" src="resources/js/ab.viewer/55.ab.watermark.js"></script>
+
+<script type="text/javascript" src="resources/js/ab.viewer/56.ab.noop.js"></script>
 
 <!-- ab.viewer 끝 -->
 

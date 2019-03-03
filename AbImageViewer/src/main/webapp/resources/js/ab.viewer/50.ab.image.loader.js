@@ -75,6 +75,7 @@
  * @property {AbImageLoader.Result} decoder 파일 분석 결과
  * @property {String} image 이미지 Data URL
  * @property {AbImage.Metadata} info 이미지 메타데이터
+ * @property {Array.<AbImageLoader.LoadedImageInfo>} [images] 이미지 목록
  */
 
 /**
@@ -179,6 +180,7 @@ var AbImageLoader = {
 		}
 		
 		var makeInfo = this.makeResultInfoByFileData;
+		var cloneInfo = this.cloneOriginMetadata;
 
 		var kind = decoder ? decoder.kind : null;
 		var loader = null;
@@ -186,6 +188,10 @@ var AbImageLoader = {
 		case 'doc':
 			this.docs.push({ decoder: decoder, data: data});
 			return null;
+
+		case 'pdf':
+			loader = this.loadPdf(true, data, decoder.render);
+			return loader;
 
 		case 'tif':
 			//this.multiImages.push({ decoder: decoder, data: data});
@@ -255,6 +261,39 @@ var AbImageLoader = {
 			}
 
 			return loader;
+
+		case 'video':
+		case 'audio':
+			loader = function(){
+				var data = arguments.callee.data;
+				var decoder = arguments.callee.decoder;
+
+				return new Promise(function (resolve, reject){
+					var reader = new FileReader();
+					reader.onload = function(event){
+						makeInfo(data)
+							.then(function(info){
+								var r = { from: 'local', decoder: decoder, media: event.target.result, uri: null, info: info };
+								r.uri = URL.createObjectURL(data);
+
+								setTimeout(resolve.bind(null, r), 0);
+							})
+							.catch(function(e){
+								setTimeout(reject.bind(null,e), 0);
+							});
+					};
+					reader.onerror = function (e){
+						reader.abort();
+						setTimeout(reject.bind(null,e), 0);
+					};
+
+					reader.readAsArrayBuffer(data);
+				});
+			};
+			loader.data = data;
+			loader.decoder = decoder;
+
+			return loader;
 		}
 
 		loader = function(){
@@ -265,6 +304,113 @@ var AbImageLoader = {
 			});
 		};
 		loader.data = data;
+
+		return loader;
+	},
+
+	/**
+	 * PDF 문서를 로드합니다.
+	 * @param {Boolean} useObjectUrl data 인자값을 URL로 변환할 지 여부입니다.
+	 * @param {(String|File)} data PDF 문서 URI 또는 {@link https://developer.mozilla.org/en-US/docs/Web/API/File|File} 인스턴스
+	 * @param {(String|AbImageLoader.Result)} decoder 렌더링 힌트 또는 파일 분석 결과
+	 * @param {AbImage.Metadata} info 문서 메타데이터
+	 * @param {Object} [options] 옵션
+	 * @param {AbImageLoader.From} [options.from=local] 문서 획득처
+	 * @param {String} [options.subTexts] 페이지 표시명 목록(|로 구분)
+	 * @return {Function} 이미지 로드 함수
+	 */
+	loadPdf: function (useObjectUrl, data, decoder, info, options){
+		if (!options) options = {};
+		var subTexts = options.subTexts ? options.subTexts.split('|') : null;
+		var from = options.from ? options.from : null;
+		
+		var loader = function(){
+			var data = arguments.callee.data;
+			var decoder = arguments.callee.decoder;
+			var info = arguments.callee.info;
+			var subTexts = arguments.callee.subTexts;
+			var from = arguments.callee.from;
+
+			return new Promise(function (resolve, reject){
+				try
+				{									
+					AbVendor.pdf(useObjectUrl ? URL.createObjectURL(data) : data, AbCommon.isString(decoder) ? decoder : decoder.render, function(pdfData){
+						if (pdfData && pdfData instanceof Error){
+							setTimeout(reject.bind(null,pdfData), 0);
+							return;
+						}
+
+						var promise = info ? Promise.resolve(info) : AbImageLoader.makeResultInfoByFileData(data);
+
+						promise
+							.then(function(info){
+								var r = null;
+
+								if (pdfData.pages.length){
+									var images = [];
+									var numPages = pdfData.pages.length;
+									for (var i=0; i < numPages; i++){
+										var p = pdfData.pages[i];
+										var subInfo = AbImageLoader.cloneOriginMetadata(info, i, numPages, decoder.render);
+										
+										if (subTexts && i < subTexts.length){
+											var text = $.trim(subTexts[i]);
+											if (text) subInfo.text = text;
+										}
+	
+										images.push({
+											index: i,
+
+											from: from || 'local',
+											decoder: decoder,
+											image: p.image,
+
+											width: p.width,
+											height: p.height,
+											
+											thumbnail: p.thumbnail,
+											info: subInfo,
+										});
+									}
+
+									var f = images[0];
+
+									r = {
+										from: from || 'local',
+										decoder: decoder,
+										image: f.image,
+										thumbnail: f.thumbnail,
+										//info: info,
+										info: f.info,
+										images: images,
+									};
+								}else{
+									r = {
+										from: from || 'local',
+										decoder: decoder,
+										image: null,
+										info: info
+									};
+								}
+	
+								setTimeout(resolve.bind(null, r), 0);
+							})
+							.catch(function(e){
+								setTimeout(reject.bind(null,e), 0);
+							});
+					});
+				}
+				catch (e)
+				{
+					setTimeout(reject.bind(null,e), 0);
+				}	
+			});
+		};
+		loader.data = data;
+		loader.decoder = decoder;
+		loader.info = info;
+		loader.subTexts = subTexts;
+		loader.from = from;
 
 		return loader;
 	},
@@ -314,6 +460,34 @@ var AbImageLoader = {
 	},
 
 	/**
+	 * 메타데이터를 기반으로 서브 이미지 메타데이터를 생성합니다.
+	 * @param {AbImage.Metadata} meta 원본 이미지 메타데이터
+	 * @param {Number} index 원본(문서)의 인덱스
+	 * @param {Number} nums 원본(문서) 이미지 개수
+	 * @param {String} render 렌더링 힌트 (jpeg|png)
+	 * @return {AbImage.SubImageMetadata} 서브 이미지 메타데이터
+	 */
+	cloneOriginMetadata: function (meta, index, nums, render){
+		var m = meta.name.split(/\./g);
+		if (m.length) m.splice(m.length - 1);
+		var basename = m.join('.');
+
+		var name = basename + '_' + index;
+
+		return {
+			name: name,
+			text: name,
+			type: render == 'png' ? 'image/png' : 'image/jpeg',
+			originMeta: meta,
+
+			originIndex: index,
+			originName: meta.name,
+			originPages: nums,
+			originSize: meta.origin ? meta.origin.size : 0,
+		};
+	},
+
+	/**
 	 * 파일 타입 및 확장자를 확입합니다.
 	 * @memberof AbImageLoader
 	 * @private
@@ -326,23 +500,39 @@ var AbImageLoader = {
 
 		name = name.toLowerCase();
 
+		if (type === 'application/pdf'){
+			return { kind: 'pdf', render: 'jpeg' };
+		}
+
 		if (name.match('\.jp2$|\.j2x$|\.j2k$|\.j2c$')){
 			return { kind: 'j2k', render: 'jpeg' };
 		}
 		if (name.match('\.doc$|\.docx$|\.xls$|\.xlsx$|\.ppt$|\.pptx$|\.hwp$|\.pdf$')){
 			return { kind: 'doc', render: 'jpeg' };
 		}
+
 		if (type === 'image/tiff'){
 			return { kind: 'tif', render: 'jpeg' };
 		}
 		if (type === 'image/svg+xml'){
 			return { kind: 'svg', render: 'png' };
 		}
+
 		switch(type){
 		case 'image/jpeg': case 'image/bmp':
 			return { kind: 'def', render: 'jpeg' };
 		case 'image/png': case 'image/apng': case 'image/gif':
 			return { kind: 'def', render: 'png' };
+		}
+
+		if (type){
+			var types = type.split('/');
+
+			if (types[0] === 'video')
+				return { kind: 'video', render: 'video' };
+
+			if (types[0] === 'audio')
+				return { kind: 'audio', render: 'audio' };
 		}
 
 		// if (!type.match('image.*')){
@@ -359,6 +549,41 @@ var AbImageLoader = {
 		// - bmp ico (image/vnd.microsoft.icon, image/x-icon, image/ico, image/icon, text/ico, application/ico)
 
 		return null;
+	},
+
+	/**
+	 * 파일이 PDF 문서인지 확인합니다.
+	 * @param {String} name 파일명
+	 * @param {String} type 파일타입 (mime-type)
+	 * @return {Boolean}
+	 */
+	testPdf: function (name, type){
+		if (type === 'application/pdf'){
+			return true;
+		}
+
+		if (!name) return false;
+
+		name = name.toLowerCase();
+
+		if (name.match('\.pdf$')){
+			return true;
+		}
+
+		return false;
+	},
+
+	/**
+	 * 파일이 TIFF 이미지인지 확인합니다.
+	 * @param {String} name 파일명
+	 * @param {String} type 파일타입 (mime-type)
+	 * @return {Boolean}
+	 */
+	testTiff: function (name, type){
+		if (type === 'image/tiff'){
+			return true;
+		}
+		return false;
 	},
 
 	/**

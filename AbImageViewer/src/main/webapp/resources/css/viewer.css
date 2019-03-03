@@ -381,22 +381,13 @@ img.thumb {
 }
 
 .abv-thumbnails ol li.ground {
-	display: -webkit-box;
-	display: -moz-box;
-	display: -ms-flexbox;
-	display: -webkit-flex;
-	display: flex;
-	display: flexbox;
-	display: box;
-
-	-webkit-align-items: center;
-	align-items: center;
+	display: inline-block;
 
 	width: 140px;
 	height: 140px;
 
 	text-align: center;
-	vertical-align: middle;
+	vertical-align: top;
 
 	background: #fff;
 	border: 1px solid #E9E9EA;
@@ -410,8 +401,25 @@ img.thumb {
 }
 
 .abv-thumbnails ol li.ground .cover {
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+
+	-webkit-align-items: center;
+	align-items: center;
+
 	text-align: center;
 	
+	height: 100%;
+	width: 100%;
+}
+
+.abv-thumbnails ol li.ground .cover > .wrap {
+	display: inline-block;
 	width: 100%;
 }
 
@@ -568,6 +576,264 @@ img.thumb {
 }
 
 .abv-thumbnails>section>nav .custom-select {
+	position: absolute;
+	right: 4px;
+	top: 4px;
+
+	float2: right;
+	margin2: 4px 0 0 0;
+	
+	background: #fff;
+	border: 0;
+	
+	-webkit-box-shadow: none;
+	-moz-box-shadow: none;
+	box-shadow: none;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;	
+}
+
+/* ------------------------------------------------------------------------------- */
+/* 하단 Thumbnail Layout */
+/* ------------------------------------------------------------------------------- */
+
+.abv-btm-thumbnails {
+	height: 0;
+}
+
+.abv-btm-thumbnails li {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	
+	position: relative;
+	text-align: center;
+}
+
+.abv-btm-thumbnails ol {
+	display: inline-block;
+	position: relative;
+	margin: 5px 5px 15px 25px;
+}
+
+.abv-btm-thumbnails ol li {
+	text-align: center;
+}
+
+.abv-btm-thumbnails ol li.no {
+	position: absolute;
+	left: -25px;
+	width: 20px;
+	height: 20px;
+	z-index: 1;
+	text-align: right;
+	font-size: 12px;
+	color: black;
+	padding: 0;
+	word-wrap: break-word;
+	word-break: break-all;
+}
+
+.abv-btm-thumbnails ol li.ground {
+	display: inline-block;
+
+	width: 140px;
+	height: 140px;
+
+	text-align: center;
+	vertical-align: top;
+
+	background: #fff;
+	border: 1px solid #E9E9EA;
+	border2: 1px solid #C6C6C6;
+
+	/*
+	-webkit-box-shadow: 0px 13px 30px -1px rgba(0,0,0,0.36);
+	-moz-box-shadow: 0px 13px 30px -1px rgba(0,0,0,0.36);
+	box-shadow: 0px 13px 30px -1px rgba(0,0,0,0.36);
+	*/
+}
+
+.abv-btm-thumbnails ol li.ground .cover {
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+
+	-webkit-align-items: center;
+	align-items: center;
+
+	text-align: center;
+	
+	width: 100%;
+	height: 100%;
+}
+
+.abv-btm-thumbnails ol li.ground .cover > .wrap {
+	display: inline-block;
+	width: 100%;
+}
+
+.abv-btm-thumbnails ol li.ground .cover2 {
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	display: flexbox;
+	display: box;
+
+	-webkit-align-items: center;
+	align-items: center;
+	
+	width: 100%;
+	height: 100%;
+}
+
+.abv-btm-thumbnails ol.selected li.ground {
+	border: 1px solid rgba(239,136,52,.8);
+	border2: 0;
+
+	-webkit-box-shadow: 0px 0px 1px 1px rgba(239,136,52,.8);
+	-moz-box-shadow: 0px 0px 1px 1px rgba(239,136,52,.8);
+	box-shadow: 0px 0px 1px 1px rgba(239,136,52,.8);	
+}
+
+/*
+.abv-btm-thumbnails ol:hover li.ground {
+	border: 1px solid rgba(52,192,239,.6);
+	-webkit-box-shadow: 0px 0px 1px 1px rgba(52,192,239,.6);
+	-moz-box-shadow: 0px 0px 1px 1px rgba(52,192,239,.6);
+	box-shadow: 0px 0px 1px 1px rgba(52,192,239,.6);
+}
+*/
+
+.abv-btm-thumbnails ol:hover li.ground {
+	border: 1px solid rgba(146, 146, 146, 0.8);
+	
+	-webkit-box-shadow: 0px 0px 1px 0px rgba(181, 181, 181, 0.8);
+	-moz-box-shadow: 0px 0px 1px 0px rgba(181, 181, 181, 0.8);
+	box-shadow: 0px 0px 1px 0px rgba(181, 181, 181, 0.8);
+}
+
+.abv-btm-thumbnails ol.selected:hover li.ground {
+	border: 1px solid rgba(185,105,40,.8);
+	-webkit-box-shadow: 0px 0px 2px 2px rgba(185,105,40,.8);
+	-moz-box-shadow: 0px 0px 2px 2px rgba(185,105,40,.8);
+	box-shadow: 0px 0px 2px 2px rgba(185,105,40,.8);
+}
+
+.abv-btm-thumbnails ol li.display {
+	width: 140px;
+	word-break: break-all;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.abv-btm-thumbnails ol li.display .text {
+	font-size: 13px;
+}
+
+.abv-btm-thumbnails ol li .checkpoint {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+
+	padding-left: 25px;
+
+	opacity: 0.8;
+}
+
+
+.abv-btm-thumbnails ol li .checkbox .checkmark:after {
+	border2: solid red;
+}
+
+.abv-btm-thumbnails ol li .bookmark {
+	position: absolute;
+	right: 3px;
+	top: 0px;
+
+	opacity: 0.8;
+}
+
+.abv-btm-thumbnails ol li .info {
+	position: absolute;
+	width: 24px;
+	height: 24px;
+	right: 3px;
+	bottom: 3px;
+	background: url(../icon/info.png);
+
+	opacity: 0.2;
+
+	cursor: pointer;
+}
+
+.abv-btm-thumbnails ol li .info:hover {
+	opacity: 0.8;
+}
+
+.abv-btm-thumbnails ol li .annotation {
+	display: none;
+	
+	position: absolute;
+	width: 24px;
+	height: 24px;
+	left: 3px;
+	bottom: 3px;
+	background: url(../icon/annotation.png);
+
+	opacity: 0.4;
+
+	cursor: pointer;
+}
+
+.abv-btm-thumbnails ol li .annotation:hover {
+	opacity2: 1;
+}
+
+.abv-btm-thumbnails>section>nav {
+	padding: 0px 4px;
+	vertical-align: middle;
+}
+
+.abv-btm-thumbnails>section>nav .checkbox {
+	display: inline-block;
+	margin-top: 6px;
+}
+
+.abv-btm-thumbnails>section>nav select {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	-webkit-transition: -webkit-box-shadow 0.5s;
+	-moz-transition: -moz-box-shadow 0.5s;
+    transition: box-shadow 0.5s;
+
+	padding: 5px 30px 5px 10px;
+
+	font-size: 14px;
+
+	-webkit-border-radius: 3px;
+	border-radius: 3px;	
+}
+
+.abv-btm-thumbnails>section>nav select:hover {
+	-webkit-box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+	-moz-box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+	box-shadow: 0 0 1px 3px rgba(59, 153, 252, .25);
+
+	color: #222; /* Match-02 */
+}
+
+.abv-btm-thumbnails>section>nav .custom-select {
 	position: absolute;
 	right: 4px;
 	top: 4px;

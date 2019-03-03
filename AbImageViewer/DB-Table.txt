@@ -1,59 +1,63 @@
 CREATE TABLE AB_DOC
 (
-	ID VARCHAR(32),					-- 이미지 목록 ID
-	SEQ NUMBER,						-- 이미지 목록의 인덱스
-    IP VARCHAR(15),					-- 최초 등록자 아이피
-	IMG_ROT NUMBER,					-- 이미지 회전
-    IMG_DEC VARCHAR(5),				-- 이미지 렌더링 힌트
-    IMG_WID NUMBER,					-- 이미지 폭
-    IMG_HGT NUMBER,					-- 이미지 높이
-    IMG_SRC BLOB,					-- 이미지
-    IMG_SRC_SIZ NUMBER,				-- 이미지의 용량
-    IMG_RSLT BLOB,					-- 렌더링(워터마크, 주석/마스킹 등등)된 이미지
-    IMG_RSLT_SIZ NUMBER,			-- 렌더링된 이미지의 용량
-    SHAPES CLOB,					-- 주석/마스킹 정보 (XML)
-    THUMB_WID NUMBER,				-- 섬네일 이미지 폭
-    THUMB_HGT NUMBER,				-- 섬네일 이미지 높이
-    THUMB_SRC BLOB,					-- 섬네일 이미지
-    THUMB_SRC_SIZ NUMBER,			-- 섬네일 이미지의 용량
-	INF_NM VARCHAR2(200),			-- 파일명
-	INF_TXT VARCHAR2(1000),			-- 표시명
-	INF_TP VARCHAR2(200),			-- 파일 타입 (MIME TYPE)
-	INF_ORG_NM VARCHAR2(200),		-- 문서(원본) 파일명
-	INF_ORG_SIZ NUMBER,				-- 문서(원본) 용량
-	INF_ORG_PAGES NUMBER,			-- 문서(원본) 전체 페이지 수
-	INF_ORG_IDX NUMBER,				-- 문서(원본) 페이지 인덱스
-	EXIF_YN CHAR(1) DEFAULT 'N',	-- EXIF 존재 여부 (Y/N)
-	EXIF_MAKE VARCHAR2(200),		-- EXIF 제조사 (exif의 Make 태그)
-	EXIF_MODEL VARCHAR2(200),		-- EXIF 모델 (exif의 Model 태그)
-	EXIF_SW VARCHAR2(200),			-- EXIF 소프트웨어 (exif의 Software 태그)
-	EXIF_DT VARCHAR(14),			-- EXIF 촬영 일시 (exif의 DateTime 태그)
-	EXIF_X_DIM NUMBER,				-- EXIF PIXEL X (exif의 PixelXDimension 태그)
-	EXIF_Y_DIM NUMBER,				-- EXIF PIXEL Y (exif의 PixelYDimension 태그)
-	EXIF_OR NUMBER,					-- EXIF 사진방향 (exif의 Orientation 태그)
-	EXIF_X_RES NUMBER,				-- EXIF 가로 해상도 (exif의 Xresolution 태그)
-	EXIF_Y_RES NUMBER,				-- EXIF 세로 해상도 (exif의 YResolution 태그)
-	EXIF_RES_UNIT NUMBER,			-- EXIF 해상도 단위 (2=INCH, 3=CM) (exif의 ResolutionUnit 태그)
-	EXIF_GPS_YN CHAR(1) DEFAULT 'N',-- EXIF GPS 정보 존재 여부 (Y/N)
-	EXIF_GPS_LATREF VARCHAR(10),	-- EXIF 위도 참조 (N=북위, S=남위) (exif의 GPSLatitudeRef 태그)
-	EXIF_GPS_LAT NUMBER,			-- EXIF 위도 DEGREE (도) (exif의 GPSLatitude 태그)
-	EXIF_GPS_LAT_D NUMBER,			-- EXIF 위도 DMS (도) (exif의 GPSLatitude 태그)
-	EXIF_GPS_LAT_M NUMBER,			-- EXIF 위도 DMS (분) (exif의 GPSLatitude 태그)
-	EXIF_GPS_LAT_S NUMBER,			-- EXIF 위도 DMS (초) (exif의 GPSLatitude 태그)
-	EXIF_GPS_LNGREF VARCHAR(10),	-- EXIF 경도 참조 (E=동경, W=서경) (exif의 GPSLongitudeRef 태그)
-	EXIF_GPS_LNG NUMBER,			-- EXIF 경도 DEGREE (도) (exif의 GPSLongitude 태그)
-	EXIF_GPS_LNG_D NUMBER,			-- EXIF 경도 DMS (도) (exif의 GPSLongitude 태그)
-	EXIF_GPS_LNG_M NUMBER,			-- EXIF 경도 DMS (분) (exif의 GPSLongitude 태그)
-	EXIF_GPS_LNG_S NUMBER,			-- EXIF 경도 DMS (초) (exif의 GPSLongitude 태그)
-	EXIF_GPS_ALTREF NUMBER,			-- EXIF 고도 참조 (0=해발, 1=해수면 아래) (exif의 GPSAltitudeRef 태그)
-	EXIF_GPS_ALT NUMBER,			-- EXIF 고도 (단위: M) (exif의 GPSAltitude 태그)
-	REG_STS CHAR(1) DEFAULT 'R',	-- 등록 상태 (R=RECORDING, C=COMPLETE)
-    REG_DT VARCHAR(14)	 			-- 이미지 등록 일시
+	ID VARCHAR(32),						-- 이미지 목록 ID
+	SEQ NUMBER,							-- 이미지 목록의 인덱스
+	MAN_SEQ NUMBER DEFAULT -1,			-- 메인 인덱스
+	SUB_SEQ NUMBER DEFAULT -1,			-- 서브 인덱스
+    IP VARCHAR(15),						-- 최초 등록자 아이피
+	IMG_ROT NUMBER,						-- 이미지 회전
+    IMG_DEC VARCHAR(5),					-- 이미지 렌더링 힌트
+    IMG_WID NUMBER,						-- 이미지 폭
+    IMG_HGT NUMBER,						-- 이미지 높이
+    IMG_SRC BLOB,						-- 이미지
+    IMG_SRC_SIZ NUMBER,					-- 이미지의 용량
+    IMG_RSLT BLOB,						-- 렌더링(워터마크, 주석/마스킹 등등)된 이미지
+    IMG_RSLT_SIZ NUMBER,				-- 렌더링된 이미지의 용량
+    SHAPES CLOB,						-- 주석/마스킹 정보 (XML)
+    THUMB_WID NUMBER,					-- 섬네일 이미지 폭
+    THUMB_HGT NUMBER,					-- 섬네일 이미지 높이
+    THUMB_SRC BLOB,						-- 섬네일 이미지
+    THUMB_SRC_SIZ NUMBER,				-- 섬네일 이미지의 용량
+	INF_NM VARCHAR2(200),				-- 파일명
+	INF_TXT VARCHAR2(1000),				-- 표시명
+	INF_TP VARCHAR2(200),				-- 파일 타입 (MIME TYPE)
+	INF_ORG_NM VARCHAR2(200),			-- 문서(원본) 파일명
+	INF_ORG_SIZ NUMBER,					-- 문서(원본) 용량
+	INF_ORG_PAGES NUMBER,				-- 문서(원본) 전체 페이지 수
+	INF_ORG_IDX NUMBER,					-- 문서(원본) 페이지 인덱스
+	EXIF_YN CHAR(1) DEFAULT 'N',		-- EXIF 존재 여부 (Y/N)
+	EXIF_MAKE VARCHAR2(200),			-- EXIF 제조사 (exif의 Make 태그)
+	EXIF_MODEL VARCHAR2(200),			-- EXIF 모델 (exif의 Model 태그)
+	EXIF_SW VARCHAR2(200),				-- EXIF 소프트웨어 (exif의 Software 태그)
+	EXIF_DT VARCHAR(14),				-- EXIF 촬영 일시 (exif의 DateTime 태그)
+	EXIF_X_DIM NUMBER,					-- EXIF PIXEL X (exif의 PixelXDimension 태그)
+	EXIF_Y_DIM NUMBER,					-- EXIF PIXEL Y (exif의 PixelYDimension 태그)
+	EXIF_OR NUMBER,						-- EXIF 사진방향 (exif의 Orientation 태그)
+	EXIF_X_RES NUMBER,					-- EXIF 가로 해상도 (exif의 Xresolution 태그)
+	EXIF_Y_RES NUMBER,					-- EXIF 세로 해상도 (exif의 YResolution 태그)
+	EXIF_RES_UNIT NUMBER,				-- EXIF 해상도 단위 (2=INCH, 3=CM) (exif의 ResolutionUnit 태그)
+	EXIF_GPS_YN CHAR(1) DEFAULT 'N',	-- EXIF GPS 정보 존재 여부 (Y/N)
+	EXIF_GPS_LATREF VARCHAR(10),		-- EXIF 위도 참조 (N=북위, S=남위) (exif의 GPSLatitudeRef 태그)
+	EXIF_GPS_LAT NUMBER,				-- EXIF 위도 DEGREE (도) (exif의 GPSLatitude 태그)
+	EXIF_GPS_LAT_D NUMBER,				-- EXIF 위도 DMS (도) (exif의 GPSLatitude 태그)
+	EXIF_GPS_LAT_M NUMBER,				-- EXIF 위도 DMS (분) (exif의 GPSLatitude 태그)
+	EXIF_GPS_LAT_S NUMBER,				-- EXIF 위도 DMS (초) (exif의 GPSLatitude 태그)
+	EXIF_GPS_LNGREF VARCHAR(10),		-- EXIF 경도 참조 (E=동경, W=서경) (exif의 GPSLongitudeRef 태그)
+	EXIF_GPS_LNG NUMBER,				-- EXIF 경도 DEGREE (도) (exif의 GPSLongitude 태그)
+	EXIF_GPS_LNG_D NUMBER,				-- EXIF 경도 DMS (도) (exif의 GPSLongitude 태그)
+	EXIF_GPS_LNG_M NUMBER,				-- EXIF 경도 DMS (분) (exif의 GPSLongitude 태그)
+	EXIF_GPS_LNG_S NUMBER,				-- EXIF 경도 DMS (초) (exif의 GPSLongitude 태그)
+	EXIF_GPS_ALTREF NUMBER,				-- EXIF 고도 참조 (0=해발, 1=해수면 아래) (exif의 GPSAltitudeRef 태그)
+	EXIF_GPS_ALT NUMBER,				-- EXIF 고도 (단위: M) (exif의 GPSAltitude 태그)
+	REG_STS CHAR(1) DEFAULT 'R',		-- 등록 상태 (R=RECORDING, C=COMPLETE)
+    REG_DT VARCHAR(14)	 				-- 이미지 등록 일시
 );
 
 COMMENT ON TABLE AB_DOC IS '이미지 목록';
 COMMENT ON COLUMN AB_DOC.ID IS '이미지 목록 ID';
 COMMENT ON COLUMN AB_DOC.SEQ IS '이미지 목록의 인덱스';
+COMMENT ON COLUMN AB_DOC.MAN_SEQ IS '메인 인덱스';
+COMMENT ON COLUMN AB_DOC.SUB_SEQ IS '서브 인덱스';
 COMMENT ON COLUMN AB_DOC.IP IS '최초 등록자 아이피';
 COMMENT ON COLUMN AB_DOC.IMG_ROT IS '이미지 회전';
 COMMENT ON COLUMN AB_DOC.IMG_DEC IS '이미지 렌더링 힌트';

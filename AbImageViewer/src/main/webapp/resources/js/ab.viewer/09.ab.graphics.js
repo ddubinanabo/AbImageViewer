@@ -29,6 +29,26 @@ var AbGraphics = {
 	dpi: function () { return 72; },
 
 	/**
+	 * 다각형 편집점인지 확인합니다.
+	 * @param {String} dir 편집점
+	 * @return {Boolean} 다각형 편집점 여부
+	 */
+	isPolygonEditPoint: function (dir){
+		return dir && dir.length > 1 && dir.substr(0, 2) === 'P#';
+	},
+
+	/**
+	 * 다각형 편집점의 포인트 배열 인덱스를 가져옵니다.
+	 * @param {String} dir 편집점
+	 * @return {Number} 인덱스, -1이면 다각형 편집점 포인트가 아닙니다.
+	 */
+	getPolygonEditPointIndex: function (dir){
+		if (AbGraphics.isPolygonEditPoint(dir))
+			return parseInt(dir.substr(2));
+		return -1;
+	},
+
+	/**
 	 * 도형의 각도와 편집점에 맞는 커서를 가져옵니다.
 	 * @memberof AbGraphics
 	 * @param {String} dir 편집점
@@ -37,6 +57,8 @@ var AbGraphics = {
 	 */
 	cursor: function(dir, angle){
 		if (!angle) angle = 0;
+
+		if (AbGraphics.isPolygonEditPoint(dir)) return 'crosshair';
 
 		// ↑ ↓
 		if ((angle >= 0 && angle <= 22) || (angle >= 338 && angle <= 360) || (angle >= 158 && angle <= 202)){
@@ -792,25 +814,30 @@ var AbGraphics = {
 		 * @param {Number} y 점의 y좌표
 		 * @param {Number} scaleX X축 비율
 		 * @param {Number} scaleY Y축 비율
+		 * @param {Number} [startX=0] X축 시작 위치
+		 * @param {Number} [startY=0] Y축 시작 위치
 		 * @return {Boolean} 충돌하면 true
 		 */
-		polygonScale: function(points, x, y, scaleX, scaleY){
+		polygonScale: function(points, x, y, scaleX, scaleY, startX, startY){
 			if (!scaleX) scaleX = 1;
 			if (!scaleY) scaleY = 1;
 
+			if (!startX) startX = 0;
+			if (!startY) startY = 0;
+
 			var len = points.length;
 			if (len == 0) return false;
-			if (len == 1 && points[0].x * scaleX == x && points[0].y * scaleY == y) return true;
+			if (len == 1 && startX + points[0].x * scaleX == x && startY + points[0].y * scaleY == y) return true;
 			if (len == 2)
-				return this.line(points[0].x * scaleX, points[0].y * scaleY, points[1].x * scaleX, points[1].y * scaleY, x, y, 1);
+				return this.line(startX + points[0].x * scaleX, startY + points[0].y * scaleY, startX + points[1].x * scaleX, startY + points[1].y * scaleY, x, y, 1);
 
 			var cnt = 0, inter = 0;
 			var p2 = null, p2x = null, p2y = null;
-			var p1x = points[0].x * scaleX, p1y = points[0].y * scaleY;
+			var p1x = startX + points[0].x * scaleX, p1y = startY + points[0].y * scaleY;
 			for (var i=1; i <= len; i++){
 				var p2 = points[i % len];
-				p2x = p2.x * scaleX;
-				p2y = p2.y * scaleY;
+				p2x = startX + p2.x * scaleX;
+				p2y = startY + p2.y * scaleY;
 
 				if (y > Math.min(p1y, p2y)){
 					if (y <= Math.max(p1y, p2y)){
@@ -1050,6 +1077,36 @@ var AbGraphics = {
 	 * @namespace
 	 */
 	rotate: {
+
+		/**
+		 * 페이지 회전에 대한 도형 위치 정보 계산
+		 * @param {Number} pagePrevAngle 회전 전 페이지의 각도
+		 * @param {Number} pageAngle 회전 후 페이지의 각도
+		 * @param {Number} stepDegree 회전된 각도
+		 * @param {Number} prevPagePointX 회전 전 페이지의 X좌표
+		 * @param {Number} prevPagePointY 회전 전 페이지의 Y좌표
+		 * @param {Number} pagePointX 회전 후 페이지의 X좌표
+		 * @param {Number} pagePointY 회전 후 페이지의 Y좌표
+		 * @param {Number} shapeX 도형 X좌표
+		 * @param {Number} shapeY 도형 Y좌표
+		 * @param {Number} shapeCenterX 도형 중심의 X좌표
+		 * @param {Number} shapeCenterY 도형 중심의 Y좌표
+		 * @return {Point} 회전된 페이지에서의 도형 위치
+		 */
+		shapePosByPage: function (pagePrevAngle, pageAngle, stepDegree, prevPagePointX, prevPagePointY, pagePointX, pagePointY, shapeX, shapeY, shapeCenterX, shapeCenterY){
+			var cr = AbGraphics.angle.point(-pagePrevAngle, 0, 0, shapeCenterX + prevPagePointX, shapeCenterY + prevPagePointY);
+			var sr = AbGraphics.angle.point(-pagePrevAngle, 0, 0, shapeX + prevPagePointX, shapeY + prevPagePointY);
+
+			cr = AbGraphics.angle.point(pageAngle, 0, 0, cr.x, cr.y);
+			sr = AbGraphics.angle.point(pageAngle, 0, 0, sr.x, sr.y);
+			sr = AbGraphics.angle.point(-stepDegree, cr.x, cr.y, sr.x, sr.y);
+
+			return {
+				x: sr.x - pagePointX,
+				y: sr.y - pagePointY,
+			};
+		},
+
 		/**
 		 * (cx,cy) 좌표를 기준으로 (x,y) 좌표를 각도만큼 회전합니다.
 		 * @memberof AbGraphics.rotate

@@ -9,13 +9,15 @@
  * @memberof Server
  * @typedef {Object} ImageData
  * @property {Number} angle 이미지 회전 각도
+ * @property {String} kind 파일 종류 (def|pdf|tif|video|audio)
  * @property {String} decoder 이미지 렌더링 힌트 (jpeg|png)
  * @property {Number} width 이미지 폭
  * @property {Number} height 이미지 높이
  * @property {String} image 이미지 URL
  * @property {String} thumbnail 섬네일 이미지 URL
- * @property {String} shapes 도형 XML 문자열
+ * @property {String} shapes 도형 정의 XML 문자열
  * @property {AbImage.Metadata} info 이미지 메타데이터
+ * @property {Server.ImageList} images 서브 이미지 정보 목록
  */
 
 /**

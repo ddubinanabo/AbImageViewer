@@ -229,6 +229,8 @@ public class ApiController extends AbstractApiController {
 	 * @param modify 수정 여부(true|false)
 	 * @param id 아이디
 	 * @param index 인덱스
+	 * @param mainindex 메인 인덱스
+	 * @param subindex 서브 인덱스
 	 * @param type 전송작업 구분(image|image-source|image-result|thumb)
 	 * @param info 정보 (AbImagePack.ImageInfo/AbImagePack.ThumbnailInfo JSON)
 	 * @param partials 전체 분할 수
@@ -243,6 +245,8 @@ public class ApiController extends AbstractApiController {
 			@RequestParam(required=false, defaultValue="false") boolean modify,
 			String id,
 			int index,
+			int mainindex,
+			@RequestParam(required=false, defaultValue="-1") int subindex,
 			String type,
 			@RequestParam(required=false, defaultValue="") String info,
 			@RequestParam(required=false, defaultValue="0") int partials,
@@ -254,7 +258,13 @@ public class ApiController extends AbstractApiController {
 		// System.out.println("[SAVE-IMAGE][" + index + "]["+type+"]["+partial+"/"+partials+"] " + id);
 		
 		Object r = null, rf = null;
-		String filename = index + "_" + type;
+		String filename = null;
+		
+		if (subindex >= 0) {
+			filename = index + "_" + subindex + "_" + type;
+		}else {
+			filename = index + "_" + type;
+		}
 		
 		if (type.equals("image")){
 			rf = AbPartialFile.save(request, AbPartialFile.MID_PARTIALS, id, filename, partials, partial, info);
@@ -264,7 +274,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+mainindex+":"+subindex+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("image-source")){
@@ -275,7 +285,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+mainindex+":"+subindex+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("image-result")){
@@ -286,7 +296,7 @@ public class ApiController extends AbstractApiController {
 				AbPartialFile.Result result = (AbPartialFile.Result)rf;
 				
 				if (result.completed){
-					System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
+					System.out.println("[SAVE-IMAGE]["+index+"]["+mainindex+":"+subindex+"]["+type+"] " + id);
 				}
 			}
 		}else if (type.equals("thumb")){
@@ -308,7 +318,7 @@ public class ApiController extends AbstractApiController {
 					AbPartialFile.Result result = (AbPartialFile.Result)rf;
 					
 					if (result.completed){
-						System.out.println("[SAVE-IMAGE]["+index+"]["+type+"] " + id);
+						System.out.println("[SAVE-IMAGE]["+index+"]["+mainindex+":"+subindex+"]["+type+"] " + id);
 					}
 				}
 			}
@@ -319,32 +329,39 @@ public class ApiController extends AbstractApiController {
 			// 이미지 저장 작업을 여기서 처리하세요.
 			// 
 			
+			String prefix = null;
+			if (subindex >= 0) {
+				prefix = index + "_" + subindex;
+			}else {
+				prefix = index + "";
+			}
+			
 			// image info
-			filename = index + "_image";
+			filename = prefix + "_image";
 			
 			String imageInfo = AbPartialFile.readText(request, AbPartialFile.MID_PARTIALS, id, filename);
 			AbPartialFile.removeFile(request, AbPartialFile.MID_PARTIALS, id, filename);
 			
 			// image-source
-			filename = index + "_image-source";
+			filename = prefix + "_image-source";
 			
 			byte[] imageSource = AbPartialFile.readBytes(request, AbPartialFile.MID_PARTIALS, id, filename);
 			AbPartialFile.removeFile(request, AbPartialFile.MID_PARTIALS, id, filename);
 			
 			// image-result
-			filename = index + "_image-result";
+			filename = prefix + "_image-result";
 			
 			byte[] imageResult = AbPartialFile.readBytes(request, AbPartialFile.MID_PARTIALS, id, filename);
 			AbPartialFile.removeFile(request, AbPartialFile.MID_PARTIALS, id, filename);
 			
 			// thumb info
-			filename = index + "_thumb_info";
+			filename = prefix + "_thumb_info";
 			
 			String thumbInfo = AbPartialFile.readText(request, AbPartialFile.MID_PARTIALS, id, filename);
 			AbPartialFile.removeFile(request, AbPartialFile.MID_PARTIALS, id, filename);
 			
 			// thumb-source
-			filename = index + "_thumb";
+			filename = prefix + "_thumb";
 			
 			byte[] thumbSource = AbPartialFile.readBytes(request, AbPartialFile.MID_PARTIALS, id, filename);
 			AbPartialFile.removeFile(request, AbPartialFile.MID_PARTIALS, id, filename);
@@ -353,8 +370,8 @@ public class ApiController extends AbstractApiController {
 			
 			String ip = WebUtil.getRemoteIP();
 			
-			AbImagePack.ImageInfo imgDec = AbImagePack.ImageInfo.fromJSON(imageInfo);
-			AbImagePack.ThumbnailInfo thumbDec = AbImagePack.ThumbnailInfo.fromJSON(thumbInfo);
+			AbImagePack.ImageInfo imgDec = imageInfo != null ? AbImagePack.ImageInfo.fromJSON(imageInfo) : null;
+			AbImagePack.ThumbnailInfo thumbDec = thumbInfo != null ? AbImagePack.ThumbnailInfo.fromJSON(thumbInfo) : null;
 			AbImagePack.Bookmark bookmark = null;
 			
 			if (info != null && !info.isEmpty())
@@ -364,7 +381,7 @@ public class ApiController extends AbstractApiController {
 			// modify 인자는 현재 전송되는 이미지 목록을 수정하는 것을 의미일 뿐,
 			// DB 작업에 영향이 있는 것은 아니다.
 			
-			r = svc.record(id, index, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource, bookmark);
+			r = svc.record(id, index, mainindex, subindex, ip, imgDec, imageSource, imageResult, thumbDec, thumbSource, bookmark);
 			
 			//-----------------------------------------------------------
 	
@@ -447,15 +464,21 @@ public class ApiController extends AbstractApiController {
 		
 		List<Integer> bs = new ArrayList<>();
 		
+		AbImageDbData data = null, subdata = null;
+		AbImageMetadata info = null;
+		AbImageData row = null, subrow = null;
+		String q = null;
+		
 		if (datas != null && !datas.isEmpty()){
 			int siz = datas.size();
 			for (int i=0; i < siz; i++){
-				AbImageDbData data = datas.get(i);
-				AbImageMetadata info = data.metadata();
+				data = datas.get(i);
 				
-				String q = "q=" + id + "&s=" + data.seq;
+				info = data.metadata();
 				
-				AbImageData row = new AbImageData(
+				q = "q=" + id + "&s=" + data.seq;
+				
+				row = new AbImageData(
 					"img?" + q,
 					"img?t=thumb&" + q,
 					data.imgRot,
@@ -467,14 +490,43 @@ public class ApiController extends AbstractApiController {
 				row.setInfo(info);
 				
 				rs.add(row);
+				
+				// 서브 페이지인 경우
+				if (data.hasChildren()) {
+					List<AbImageData> subImages = new ArrayList<>();
+					
+					int numChildren = data.children.size();
+					for (int j=0; j < numChildren; j++) {
+						subdata = data.children.get(j);
+						
+						info = subdata.metadata();
+						
+						q = "q=" + id + "&s=" + subdata.seq;
+						
+						subrow = new AbImageData(
+							"img?" + q,
+							"img?t=thumb&" + q,
+							subdata.imgRot,
+							(int)subdata.imgWid,
+							(int)subdata.imgHgt,
+							subdata.shapes,
+							subdata.imgDec
+						);
+						subrow.setInfo(info);
+						
+						subImages.add(subrow);
+					}
+					
+					row.setImages(subImages);
+				}
 			}
 		}
 		
 		if (bookmarks != null && !bookmarks.isEmpty()){
 			int siz = bookmarks.size();
 			for (int i=0; i < siz; i++){
-				AbBookmarkDbData data = bookmarks.get(i);
-				bs.add(data.getSeq());
+				AbBookmarkDbData bmdata = bookmarks.get(i);
+				bs.add(bmdata.getSeq());
 			}
 		}
 		

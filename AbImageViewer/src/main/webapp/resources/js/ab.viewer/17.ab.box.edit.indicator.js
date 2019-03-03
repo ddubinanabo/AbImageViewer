@@ -77,7 +77,7 @@ function AbBoxEditIndicator(options){
 		/**
 		 * 회전 편집점 사용 여부
 		 */
-		angle: controls.angle || true,
+		angle: AbCommon.isBool(controls.angle) ? controls.angle : true,
 		/**
 		 * 도형과 회전 편집점의 거리
 		 */
@@ -86,35 +86,35 @@ function AbBoxEditIndicator(options){
 		/**
 		 * 좌상단 편집점 사용 여부
 		 */
-		leftTop: controls.leftTop || true,
+		leftTop: AbCommon.isBool(controls.leftTop) ? controls.leftTop : true,
 		/**
 		 * 중상단 편집점 사용여부
 		 */
-		top: controls.top || true,
+		top: AbCommon.isBool(controls.top) ? controls.top : true,
 		/**
 		 * 우상단 편집점 사용여부
 		 */
-		rightTop: controls.rightTop || true,
+		rightTop: AbCommon.isBool(controls.rightTop) ? controls.rightTop : true,
 		/**
 		 * 좌중단 편집점 사용여부
 		 */
-		left: controls.left || true,
+		left: AbCommon.isBool(controls.left) ? controls.left : true,
 		/**
 		 * 우중단 편집점 사용여부
 		 */
-		right: controls.right || true,
+		right: AbCommon.isBool(controls.right) ? controls.right : true,
 		/**
 		 * 좌하단 편집점 사용여부
 		 */
-		leftBottom: controls.leftBottom || true,
+		leftBottom: AbCommon.isBool(controls.leftBottom) ? controls.leftBottom : true,
 		/**
 		 * 중하단 편집점 사용여부
 		 */
-		bottom: controls.bottom || true,
+		bottom: AbCommon.isBool(controls.bottom) ? controls.bottom : true,
 		/**
 		 * 우하단 편집점 사용여부
 		 */
-		rightBottom: controls.rightBottom || true,
+		rightBottom: AbCommon.isBool(controls.rightBottom) ? controls.rightBottom : true,
 	};
 
 	var style = controls.style || {};
@@ -486,7 +486,7 @@ AbBoxEditIndicator.prototype = {
 	 * @param {Number} px X좌표
 	 * @param {Number} py Y좌표
 	 */
-	resize: function (point, px, py){
+	resize: function (point, px, py, checkMin){
 		if (!point)
 			return;
 
@@ -513,6 +513,8 @@ AbBoxEditIndicator.prototype = {
 
 			return incAngle;
 		}else{
+			if (!AbCommon.isBool(checkMin)) checkMin = true;
+
 			var x1 = tbox.x, y1 = tbox.y, x2 = tbox.x + tbox.width, y2 = tbox.y + tbox.height;
 			var hw = (tbox.width >> 1), hh = (tbox.height >> 1);
 
@@ -554,37 +556,39 @@ AbBoxEditIndicator.prototype = {
 			var cr = true;
 			//var rwidth = Math.abs(x2 - x1), rheight = Math.abs(y2 - y1);
 			var rwidth = x2 - x1, rheight = y2 - y1;
-			if (AbCommon.supportResizable(this.target)){
-				var r = this.target.resizable(rwidth / page.scale.x, rheight / page.scale.y);
-				r.width *= page.scale.x;
-				r.height *= page.scale.y;
+			if (checkMin === true){
+				if (AbCommon.supportResizable(this.target)){
+					var r = this.target.resizable(rwidth / page.scale.x, rheight / page.scale.y);
+					r.width *= page.scale.x;
+					r.height *= page.scale.y;
 
-				cr = r.result;
-				rwidth = r.width;
-				rheight = r.height;
-				// if (cr === false) { rwidth = r.width; rheight = r.height; }
-				// else if (cr === 'h' || cr === 'H') { rwidth = r.width; }
-				// else if (cr === 'v' || cr === 'V') { rheight = r.height; }
-			}else{
-				var minW = 1, minH = 1;
-				if (AbCommon.hasMinimum(this.target)){
-					var m = this.target.minimum();
+					cr = r.result;
+					rwidth = r.width;
+					rheight = r.height;
+					// if (cr === false) { rwidth = r.width; rheight = r.height; }
+					// else if (cr === 'h' || cr === 'H') { rwidth = r.width; }
+					// else if (cr === 'v' || cr === 'V') { rheight = r.height; }
+				}else{
+					var minW = 1, minH = 1;
+					if (AbCommon.hasMinimum(this.target)){
+						var m = this.target.minimum();
 
-					//console.log('[LIMIT][M] width=' + m.width + ', height=' + m.height);
+						//console.log('[LIMIT][M] width=' + m.width + ', height=' + m.height);
 
-					minW = m.width * page.scale.x;
-					minH = m.height * page.scale.y;
+						minW = m.width * page.scale.x;
+						minH = m.height * page.scale.y;
+					}
+
+					var overX = rwidth < minW;
+					var overY = rheight < minH;
+		
+					rwidth = minW;
+					rheight = minH;
+
+					if (overX && overY) { cr = false; }
+					else if (overX) { cr = 'h'; }
+					else if (overY) { cr = 'v'; }
 				}
-
-				var overX = rwidth < minW;
-				var overY = rheight < minH;
-	
-				rwidth = minW;
-				rheight = minH;
-
-				if (overX && overY) { cr = false; }
-				else if (overX) { cr = 'h'; }
-				else if (overY) { cr = 'v'; }
 			}
 
 			//console.log('[LIMIT]['+point+'] cr=' + cr + ', rwidth=' + rwidth + ', rheight=' + rheight + ', m-width=' + (x2 - x1) + ', m-height=' + (y2 - y1));

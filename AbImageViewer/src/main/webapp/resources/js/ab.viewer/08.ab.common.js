@@ -859,6 +859,34 @@ var AbCommon = {
 	},
 
 	//-----------------------------------------------------------
+
+	/**
+	 * 이미지 디코더 정보를 생성합니다.
+	 * @param {(String|Object)} decoder 렌더링 정보 또는 디코더 정보
+	 * @param {String} kind 이미지 정보 종류
+	 */
+	createDecoder: function(decoder, kind){
+		if (decoder){
+			if (kind){
+				if (AbCommon.isString(decoder)){
+					decoder = {
+						render: decoder,
+						kind: kind,
+					};
+				}else{
+					decoder.kind = kind;
+				}						
+			}
+		}else if (kind){
+			decoder = {
+				kind: kind,
+			};					
+		}
+		
+		return decoder;
+	},
+
+	//-----------------------------------------------------------
 	
 	// support editor
 	/**
@@ -935,6 +963,26 @@ var AbCommon = {
 	 */
 	wannaCollectPoints: function (o){
 		return this.isStrokeShape(o) && o.hasOwnProperty('collectPoints') && o.collectPoints === true;
+	},
+
+	/**
+	 * 도형 객체가 라인 포인트를 수집해야 하는 지 확인합니다.
+	 * @memberof AbCommon
+	 * @param {Object} o 도형 객체
+	 * @return {Boolean} 수집해야 하면 true
+	 */
+	wannaCollectLines: function (o){
+		return this.isStrokeShape(o) && o.hasOwnProperty('collectLines') && o.collectLines === true;
+	},
+
+	/**
+	 * 도형 객체가 마지막 포인트 체크를 하는 지 여부를 확인합니다.
+	 * @memberof AbCommon
+	 * @param {Object} o 도형 객체
+	 * @return {Boolean} 체크 하면 true
+	 */
+	supportEndPointCheck: function (o){
+		return o && o.shapeStyle && typeof o.isEndPoint == 'function';
 	},
 
 	/**

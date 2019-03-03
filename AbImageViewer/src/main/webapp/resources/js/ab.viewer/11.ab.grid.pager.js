@@ -282,6 +282,14 @@ function AbGridPager (options){
 }
 
 /**
+ * 페이징 정보들을 초기화합니다.
+ */
+AbGridPager.prototype.clear = function (){
+	this.$page = 0;
+	this.$index = 0;
+}
+
+/**
  * 페이지를 설정하거나 가져옵니다.
  * @param {Number} [page] 이동할 페이지 (1~N)
  * @return {Number} 인자를 안 줄 경우, 현재 페이지를 리턴합니다.
