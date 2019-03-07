@@ -135,6 +135,31 @@
  */
 
 /**
+ * TIFF 이미지 디코더 정보
+ * @typedef {Object} AbVendor.TiffDecoder
+ * @property {ArrayBuffer} buffer TIFF 이미지 바이너리 배열
+ * @property {Array} map TIFF IFDS 정보
+ * @property {Number} numImages 이미지 개수
+ * @property {AbVendor.TiffDecoder_Decode} decode 이미지 디코드 함수
+ */
+
+/**
+ * TIFF 이미지 디코더 정보
+ * @callback AbVendor.TiffDecoder_Decode
+ * @param {Number} index 이미지 인덱스
+ * @return {AbVendor.TiffDecoder_DecodeResult}
+ */
+
+/**
+ * TIFF 이미지 디코더 정보
+ * @typedef {Object} AbVendor.TiffDecoder_DecodeResult
+ * @property {Number} index 이미지 인덱스
+ * @property {Number} width TIFF IFDS 정보
+ * @property {Number} height 이미지 개수
+ * @property {TypedArray} rgba RGBA 이미지 배열 (Uint8Array)
+ */
+
+/**
  * 외부 라이브러리 링커
  * @namespace
  */
@@ -315,5 +340,41 @@ var AbVendor = {
 			.catch(function(e){
 				callback(e);
 			});
+	},
+
+	/**
+	 * TIFF 이미지를 렌더링합니다.
+	 * <p>* UTIF.js가 필요합니다.
+	 * @memberof AbVendor
+	 * @see {@link https://github.com/photopea/UTIF.js} Fast and advanced TIFF decoder
+	 * @param {ArrayBuffer} arrayBuffer TIFF 이미지 바이너리 배열
+	 * @return {AbVendor.TiffDecoder} 이미지 디코더
+	 */
+	tiff: function(arrayBuffer){
+		var ifds = UTIF.decode(arrayBuffer);
+
+		//console.log(ifds);
+
+		return {
+			buffer: arrayBuffer,
+			map: ifds,
+
+			numImages: ifds && $.isArray(ifds) ? ifds.length : 0,
+
+			decode: function(index){
+				var mapPage = this.map[index];
+
+				UTIF.decodeImage(this.buffer, mapPage, this.map);
+
+				var rgba = UTIF.toRGBA8(mapPage);
+
+				return {
+					index: index,
+					width: mapPage.width,
+					height: mapPage.height,
+					rgba: rgba,
+				};
+			},
+		};
 	},
 };

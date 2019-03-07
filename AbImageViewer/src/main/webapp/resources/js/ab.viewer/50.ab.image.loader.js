@@ -195,7 +195,9 @@ var AbImageLoader = {
 
 		case 'tif':
 			//this.multiImages.push({ decoder: decoder, data: data});
-			return null;
+
+			loader = this.loadTiff(data);
+			return loader;
 
 		case 'j2k':
 			return null;
@@ -410,6 +412,138 @@ var AbImageLoader = {
 		loader.decoder = decoder;
 		loader.info = info;
 		loader.subTexts = subTexts;
+		loader.from = from;
+
+		return loader;
+	},
+
+	/**
+	 * TIFF 파일 이미지를 렌더링합니다.
+	 * @param {(String|File)} data PDF 문서 URI 또는 {@link https://developer.mozilla.org/en-US/docs/Web/API/File|File} 인스턴스
+	 * @return {Function} 이미지 로드 함수
+	 */
+	loadTiff: function (data, decoder, info, options){
+		if (!options) options = {};
+		var from = options.from ? options.from : null;
+
+		var loader = function(){
+			var data = arguments.callee.data;
+			var decoder = arguments.callee.decoder;
+			var info = arguments.callee.info;
+			var from = arguments.callee.from;
+
+			var r = null;
+
+			return new Promise(function (resolve, reject){
+				try
+				{
+					var xhr = AbCommon.xmlHttpRequest({
+						path: URL.createObjectURL(data),
+
+						load: function (e, xhr){
+							var arrayBuffer = AbCommon.xhrArrayBufferResponse(xhr);
+							var decoder = AbVendor.tiff(arrayBuffer);
+
+							var images = [];
+							var numImages = decoder.numImages;
+
+							if (numImages < 1){
+								setTimeout(resolve.bind(null, r), 0);
+								return;
+							}
+
+							var promise = info ? Promise.resolve(info) : AbImageLoader.makeResultInfoByFileData(data);
+
+							promise
+								.then(function(info){
+									//console.log(info);
+
+									for (var i=0; i < numImages; i++){
+										var subInfo = AbImageLoader.cloneOriginMetadata(info, i, numImages, decoder.render);
+										var p = decoder.decode(i);
+		
+										//--------------------------------------------------------
+		
+										var ctx = AbGraphics.canvas.createContext(p.width, p.height);
+										var imgd = ctx.createImageData(p.width, p.height);
+		
+										//--------------------------------------------------------
+		
+										var numRgba = p.rgba.length;
+										for(var j=0; j<numRgba; j++) imgd.data[j]=p.rgba[j];
+		
+										ctx.putImageData(imgd,0,0);
+		
+										//--------------------------------------------------------
+		
+										var image = AbGraphics.canvas.toImage(ctx);
+		
+										//--------------------------------------------------------
+		
+										var gen = new AbThumbnailGenerator({
+											width: p.width,
+											height: p.height,
+										});
+		
+										gen.draw(ctx.canvas);
+		
+										var thumbnail = gen.toImage(decoder.render);
+		
+										//--------------------------------------------------------
+		
+										images.push({
+											index: i,
+		
+											from: from || 'local',
+											decoder: decoder,
+											image: image,
+		
+											width: p.width,
+											height: p.height,
+											
+											thumbnail: thumbnail,
+											info: subInfo,
+										});
+									}
+		
+									var f = images[0];
+		
+									r = {
+										from: from || 'local',
+										decoder: decoder,
+										image: f.image,
+										thumbnail: f.thumbnail,
+										//info: info,
+										info: f.info,
+										images: images,
+									};
+		
+									setTimeout(resolve.bind(null, r), 0);		
+								})
+								.catch(function(e){
+									setTimeout(reject.bind(null,e), 0);
+								});
+						},
+
+						error: function(e, xhr){
+							if (!(e instanceof Error))
+								e = new Error(e);
+
+							setTimeout(reject.bind(null,e), 0);
+						},
+					});
+
+					xhr.send();
+				}
+				catch (e)
+				{
+					setTimeout(reject.bind(null,e), 0);
+				}	
+			});
+		};
+		loader.data = data;
+		loader.decoder = decoder;
+		loader.info = info;
 		loader.from = from;
 
 		return loader;
